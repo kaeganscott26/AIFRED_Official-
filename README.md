@@ -106,3 +106,31 @@ It calculates real signal data such as:
 - Progressive Memory
 
 ---
+
+AI Interpretation Layer
+
+The AI layer recieves verified data from the truth layer and explains it in context.
+
+The AI MUST consider:
+
+- User question
+
+- Active mode
+
+- Relevant metrics
+
+- Mix state
+
+- DSP mathematics
+
+- Reference Context (reference_pool or user_reference)
+
+- Compare Context if applicable
+
+- Export / history context if applicable (Up to 10 mix sessions)
+
+- User goal if stated
+
+The AI output must always stay non-deterministic. No pre-determined responses / phrases shall be used by the AI interpretation level.
+
+___
