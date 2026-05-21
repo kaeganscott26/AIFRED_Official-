@@ -1,0 +1,76 @@
+# AIFRED_Official- ignore rules
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+Secrets/
+*_secret*
+*_token*
+*_private*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# Node / web
+node_modules/
+.npm/
+.next/
+.vite/
+.vercel/
+.wrangler/
+wrangler.toml.local
+
+# CMake / C++ / plugin builds
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+out/
+bin/
+obj/
+*.sln
+*.vcxproj.user
+*.vst3
+*.dll
+*.exe
+*.msi
+*.zip
+
+# JUCE generated
+JuceLibraryCode/
+
+# Logs
+*.log
+logs/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Reports/output
+AIFRED Reports/
+reports/generated/
+artifacts/
+release-artifacts/
+
+# Local scratch
+scratch/
+agent-test/
+local-model-test/
