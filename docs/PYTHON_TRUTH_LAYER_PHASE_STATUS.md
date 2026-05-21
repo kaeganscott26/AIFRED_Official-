@@ -772,3 +772,86 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the tonal balance summary behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as dynamics or transients, with synthetic inputs and no interpretation text.
+
+## Phase 3L — Dynamics Metrics Foundation
+
+Implemented factual dynamics metrics for normalized sample arrays. No transient detection, compression advice, subjective labels, tonal/EQ analysis, reference comparison, report writing, AI interpretation, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/dynamics_metrics.py`
+- `python_brain/tests/test_dynamics_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `DynamicsWindow` dataclass
+- `DynamicsMetrics` dataclass
+- sample-window splitting
+- complete-window handling by default
+- optional incomplete-window inclusion
+- per-window RMS
+- per-window peak
+- per-window crest factor
+- linear dB range helper
+- percentile helper
+- RMS range
+- peak range
+- crest factor range
+- dynamic range from quiet/loud positive RMS windows
+- unavailable states represented as `None`
+- finite sample validation
+- positive sample-rate and window-duration validation
+
+### Tests Added
+
+- empty samples do not crash
+- invalid sample rate rejection
+- invalid window duration rejection
+- invalid sample rejection
+- expected dynamics window sample counts
+- incomplete windows excluded by default
+- incomplete windows included when requested
+- per-window RMS on known values
+- per-window peak on known values
+- silence returns `None` dB ranges where appropriate
+- dB range on known linear values
+- percentile helper behavior
+- dynamic range from known RMS windows
+- full dataclass factual fields
+- no fake `-999` values
+- no advice text
+- no subjective labels
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Existing implemented tests pass.
+- Dynamics metrics tests pass.
+- Unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- transient detection
+- compression advice
+- subjective labels such as overcompressed, smashed, punchy, flat, or lifeless
+- tonal/EQ analysis
+- reference comparison
+- report writing
+- AI interpretation
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the dynamics metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, likely transient metrics if explicitly approved, without compression advice or subjective labels.
