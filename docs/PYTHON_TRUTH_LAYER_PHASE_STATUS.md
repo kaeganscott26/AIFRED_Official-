@@ -1256,3 +1256,91 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the factual Compare A/B behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as Reference comparison when explicitly approved, without reference-pool leakage, AI interpretation, or generated advice.
+
+## Phase 3R — Reference Compare Foundation
+
+Implemented factual Reference Mode current-mix-vs-selected-target metric comparison from already-calculated metric facts and packet-like dictionaries. No Compare A/B behavior, global reference-pool logic by default, better-mix judgment, AI interpretation, final user-facing advice, canned response phrases, report writing beyond data objects, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/reference_compare.py`
+- `python_brain/tests/test_reference_compare.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `ReferenceComparisonAvailability` enum
+- `ReferenceMetricComparison` dataclass
+- `ReferenceCompareResult` dataclass
+- finite numeric-value detection
+- signed current-minus-target delta calculation
+- absolute target-deviation calculation
+- percent delta calculation relative to target when target is nonzero
+- honest missing, current-unavailable, target-unavailable, both-unavailable, and non-numeric states
+- metric fact comparison with family, name, unit, and raw current/target value preservation
+- collection comparison aligned by `(family, name)`
+- packet-like fact comparison against selected target facts
+- selected target label and target type preservation with private path redaction
+- compatibility wrapper for existing `compare_to_reference`
+- Reference context validation requiring an explicit selected target and rejecting Compare-style A/B keys
+- fake `-999` metric rejection
+
+### Tests Added
+
+- numeric delta from target
+- absolute delta
+- percent delta from target
+- percent delta with zero target denominator returning `None`
+- `0.0` current value as valid
+- `0.0` target value as valid for delta but not percent denominator
+- missing current metric availability
+- missing target metric availability
+- current unavailable
+- target unavailable
+- both unavailable
+- non-numeric values producing no fake numeric delta
+- unit preservation
+- family and name preservation
+- collection comparison alignment by family and name
+- packet-like dictionary comparison
+- Reference mode labeling without Compare A/B mode
+- selected target label safety
+- no global reference-pool language by default
+- no better-mix language
+- no fake `-999` values
+- no advice text
+- no canned phrases
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 284 tests.
+- Result: `OK`.
+- 48 unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- Compare A/B implementation in this module
+- global reference-pool logic by default
+- reference-pool profile comparison without explicit approved profile data
+- better-mix judgment
+- AI interpretation
+- final user-facing advice
+- canned response generation
+- report writing beyond factual data objects
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the factual Reference comparison behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as export history or progress memory when explicitly approved, without AI interpretation, generated advice, or hidden reference-pool behavior.
