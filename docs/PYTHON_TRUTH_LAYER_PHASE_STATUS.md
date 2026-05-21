@@ -1344,3 +1344,88 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the factual Reference comparison behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as export history or progress memory when explicitly approved, without AI interpretation, generated advice, or hidden reference-pool behavior.
+
+## Phase 3S — Export History Foundation
+
+Implemented factual local export-history tracking from packet-like dictionaries and already assembled metric facts. No AI memory, progress coaching, generated advice, canned response phrases, reference comparison, compare analysis, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/export_history.py`
+- `python_brain/tests/test_export_history.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `ExportRecord` dataclass
+- `ExportHistory` dataclass
+- `ExportHistoryDelta` dataclass
+- timestamp-based export id generation with safe session labels
+- export record creation from packet-like dictionaries or objects
+- privacy-safe metadata handling through existing privacy helpers
+- immutable export-record append behavior
+- JSON-safe history serialization
+- history deserialization from dictionaries
+- deterministic JSON file save behavior
+- JSON file load behavior with absent-file fallback to empty history
+- latest-two export comparison at a high factual level only
+- changed, added, and removed metric-name detection
+- `0.0` metric-value preservation
+- fake `-999` metric rejection
+
+### Tests Added
+
+- export id generation from timestamp and session label
+- export record creation from packet-like dictionary
+- append without mutating original history
+- export history serialization to dictionary
+- export history deserialization from dictionary
+- JSON save to temporary directory
+- JSON load from temporary directory
+- empty-history comparison without crash
+- one-record comparison limitation
+- changed metric-name detection
+- added metric-name detection
+- removed metric-name detection
+- `0.0` metric-value preservation
+- metadata privacy sanitization
+- local path redaction
+- no fake `-999` values
+- no advice text
+- no subjective labels
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- First run exposed a double-redaction artifact in export-history metadata handling.
+- Final run after documentation update: 302 tests.
+- Result: `OK`.
+- 48 unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- AI memory
+- progress coaching
+- generated advice
+- canned response generation
+- subjective labels
+- reference comparison
+- compare analysis
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the factual export-history behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as progress memory storage when explicitly approved, without AI memory, coaching, or generated advice.
