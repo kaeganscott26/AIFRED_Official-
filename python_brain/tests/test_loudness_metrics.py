@@ -26,7 +26,10 @@ from aifred_brain.loudness_metrics import (  # noqa: E402
     calculate_duration_seconds,
     calculate_mean_square,
     calculate_window_frame_count,
+    get_k_weighting_coefficient_source,
     get_k_weighting_filter_description,
+    get_supported_k_weighting_sample_rates,
+    get_verified_k_weighting_coefficients,
     identity_biquad_coefficients,
     process_biquad_interleaved,
     process_biquad_samples,
@@ -194,6 +197,12 @@ class GenericBiquadPrimitiveTests(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             validate_supported_loudness_sample_rate(48_000)
         with self.assertRaises(NotImplementedError):
+            get_supported_k_weighting_sample_rates()
+        with self.assertRaises(NotImplementedError):
+            get_k_weighting_coefficient_source()
+        with self.assertRaises(NotImplementedError):
+            get_verified_k_weighting_coefficients(48_000)
+        with self.assertRaises(NotImplementedError):
             get_k_weighting_filter_description(48_000)
         with self.assertRaises(NotImplementedError):
             apply_k_weighting((0.0,), 48_000)
@@ -212,6 +221,42 @@ class GenericBiquadPrimitiveTests(unittest.TestCase):
 
 
 class FutureLoudnessAlgorithmTests(unittest.TestCase):
+    @unittest.skip("Phase 3G contract only; coefficient source approval is not implemented yet.")
+    def test_coefficient_source_must_be_documented(self) -> None:
+        """Future test: coefficient source metadata identifies traceable standard references."""
+
+    @unittest.skip("Phase 3G contract only; supported coefficient sample rates are not implemented yet.")
+    def test_supported_sample_rates_must_be_explicit(self) -> None:
+        """Future test: approved coefficient sample rates are explicit and documented."""
+
+    @unittest.skip("Phase 3G contract only; unsupported coefficient sample-rate behavior is not implemented yet.")
+    def test_unsupported_sample_rates_reject_clearly(self) -> None:
+        """Future test: unsupported rates fail clearly or return unavailable."""
+
+    @unittest.skip("Phase 3G contract only; coefficient values are not approved yet.")
+    def test_coefficient_values_must_not_be_invented(self) -> None:
+        """Future test: coefficients require source notes and approval before use."""
+
+    @unittest.skip("Phase 3G contract only; coefficient tolerance policy is not implemented yet.")
+    def test_coefficient_precision_tolerance_must_be_documented(self) -> None:
+        """Future test: coefficient precision and filter-output tolerances are documented."""
+
+    @unittest.skip("Phase 3G contract only; 44100 Hz coefficient behavior is not implemented yet.")
+    def test_44100_hz_coefficient_behavior(self) -> None:
+        """Future test: 44100 Hz coefficient behavior matches documented tolerance."""
+
+    @unittest.skip("Phase 3G contract only; 48000 Hz coefficient behavior is not implemented yet.")
+    def test_48000_hz_coefficient_behavior(self) -> None:
+        """Future test: 48000 Hz coefficient behavior matches documented tolerance."""
+
+    @unittest.skip("Phase 3G contract only; coefficient fallback behavior is not implemented yet.")
+    def test_no_fake_coefficient_fallback(self) -> None:
+        """Future test: unsupported rates do not silently use approximate fallback coefficients."""
+
+    @unittest.skip("Phase 3G contract only; coefficient lookup must not produce LUFS.")
+    def test_no_lufs_from_coefficient_lookup(self) -> None:
+        """Future test: coefficient lookup returns coefficients only, never loudness values."""
+
     @unittest.skip("Future phase only; K-weighting is not implemented yet.")
     def test_k_weighting_behavior(self) -> None:
         """Future test: K-weighting filter behavior is standards-aware."""

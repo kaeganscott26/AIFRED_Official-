@@ -451,3 +451,52 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the generic biquad primitive and test behavior. If explicitly approved, the next narrow phase may document and implement verified sample-rate-specific K-weighting coefficients, with coefficient sources and tolerance tests, but still without integrated LUFS gating or true peak claims unless separately approved.
+
+## Phase 3G — Verified K-Weighting Coefficient Decision Contract
+
+Created the coefficient decision contract and interface placeholders only. No coefficient values, K-weighting processing, LUFS calculation, integrated gating, or true peak behavior was implemented.
+
+### Files Changed
+
+- `python_brain/K_WEIGHTING_COEFFICIENT_DECISION.md`
+- `python_brain/aifred_brain/loudness_metrics.py`
+- `python_brain/tests/test_loudness_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### Contract Created
+
+- `python_brain/K_WEIGHTING_COEFFICIENT_DECISION.md`
+
+The contract defines the approval rules for future K-weighting coefficients, including traceable source requirements, initial sample-rate policy, tolerance policy, safe test signal policy, implementation order, failure conditions, and phase boundaries.
+
+### Intentionally Not Implemented
+
+- K-weighting coefficient values
+- active supported sample-rate list
+- coefficient lookup behavior
+- K-weighting filter processing
+- BS.1770 coefficient presets
+- final LUFS calculation
+- integrated loudness gating
+- true peak
+- dependencies
+- plugin/backend/GUI/AI/reporting code
+- old repo migration
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 99 tests.
+- Result: `OK`.
+- 40 future-phase placeholder tests remain intentionally skipped.
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review and approve the coefficient decision contract. If explicitly approved, Phase 3H may add verified coefficient values for selected sample rates with documented sources and tolerance tests, but still without final LUFS unless separately approved.

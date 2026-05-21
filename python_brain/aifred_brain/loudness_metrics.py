@@ -49,6 +49,21 @@ class KWeightingFilterDescription:
 
 
 @dataclass(frozen=True)
+class KWeightingCoefficientSource:
+    """Future approval metadata for K-weighting coefficients.
+
+    Phase 3G defines approval metadata only. No coefficient values or active
+    sample-rate support are provided by this dataclass.
+    """
+
+    standard_name: str
+    source_reference: str
+    supported_sample_rates: tuple[int, ...]
+    tolerance_notes: str
+    is_approved: bool = False
+
+
+@dataclass(frozen=True)
 class BiquadCoefficients:
     """Generic biquad coefficients.
 
@@ -298,6 +313,25 @@ def validate_supported_loudness_sample_rate(sample_rate: int) -> None:
     """Future sample-rate support validation for K-weighting coefficients."""
     _ = sample_rate
     raise NotImplementedError("K-weighting sample-rate validation is not implemented yet.")
+
+
+def get_supported_k_weighting_sample_rates() -> tuple[int, ...]:
+    """Future explicit list of approved K-weighting coefficient sample rates.
+
+    No sample rates are active in Phase 3G because no coefficients are approved.
+    """
+    raise NotImplementedError("K-weighting sample-rate support is not approved yet.")
+
+
+def get_k_weighting_coefficient_source() -> KWeightingCoefficientSource:
+    """Future traceable source metadata for approved K-weighting coefficients."""
+    raise NotImplementedError("K-weighting coefficient source metadata is not approved yet.")
+
+
+def get_verified_k_weighting_coefficients(sample_rate: int) -> tuple[BiquadCoefficients, ...]:
+    """Future lookup for verified K-weighting coefficients by sample rate."""
+    _ = sample_rate
+    raise NotImplementedError("Verified K-weighting coefficients are not implemented yet.")
 
 
 def get_k_weighting_filter_description(sample_rate: int) -> KWeightingFilterDescription:
