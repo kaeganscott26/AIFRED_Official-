@@ -937,3 +937,82 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the transient metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as analysis state integration or metric relevance when explicitly approved, without advice or subjective labels.
+
+## Phase 3N — Metric Relevance Foundation
+
+Implemented factual metric-family routing based on user intent, active mode, available metric families, and optional risk flags. No AI interpretation, final user-facing advice, canned response phrases, report writing, reference comparison, compare analysis, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/metric_relevance.py`
+- `python_brain/tests/test_metric_relevance.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `MetricFamily` enum
+- `UserIntentCategory` enum
+- `MetricRelevanceResult` dataclass
+- user-intent classification from direct question strings
+- factual metric-family routing by intent
+- Analyze/Reference/Compare mode context gates
+- available metric-family filtering
+- optional risk-flag routing for level and stereo families
+- compatibility wrapper for existing `select_relevant_metrics`
+- factual metadata helper for selected metric-family keys
+
+### Tests Added
+
+- saturation intent classification
+- compression intent classification
+- limiting intent classification
+- EQ intent classification
+- stereo-width intent classification
+- vocal intent classification
+- mastering intent classification
+- compare intent classification
+- reference-target intent classification
+- unknown intent safe fallback
+- Analyze mode does not require reference context by default
+- Reference mode requires reference context for reference intent
+- Compare mode requires compare context without global reference context
+- saturation selection includes tonal/frequency/level-style families
+- compression selection includes dynamics/transients
+- limiting selection includes level/loudness/dynamics
+- EQ selection includes frequency/tonal balance
+- stereo-width selection includes stereo
+- available metrics filtering removes unavailable families
+- no advice text in result representation
+- no canned phrases in result representation
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Existing implemented tests pass.
+- Metric relevance tests pass.
+- Unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- AI interpretation
+- final user-facing advice
+- canned response generation
+- reference comparison implementation
+- compare analysis implementation
+- report writing
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the metric-family routing behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as interpretation packet packaging or report contracts when explicitly approved, without final advice or canned response text.
