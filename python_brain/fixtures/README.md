@@ -11,10 +11,13 @@ Allowed fixture sources:
 Forbidden fixture sources:
 
 - private songs
+- copyrighted commercial audio
 - client material
 - commercial reference tracks without approval
+- personal DAW project files unless intentionally approved
 - files containing private metadata
 - absolute local paths
 
-No fixture may imply production analysis is implemented before the Python Truth Layer is approved.
+Tests should generate temporary synthetic files when possible instead of storing audio fixtures in the repo.
 
+No fixture may imply production analysis is implemented before the Python Truth Layer is approved.

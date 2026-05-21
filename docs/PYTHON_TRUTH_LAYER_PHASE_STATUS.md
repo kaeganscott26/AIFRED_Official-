@@ -120,3 +120,47 @@ The existing backend cleanup inventory from phase one was read for context only.
 
 Review and approve the Python interfaces. The next phase should implement and test one narrow module at a time, starting with safe fixture policy plus `audio_loader` validation behavior before any metric math.
 
+## Phase 3A — Python Foundation Utilities
+
+Implemented a narrow standard-library foundation for portable paths, privacy-safe display strings, validation, source-of-truth state objects, and WAV metadata loading.
+
+### Files Implemented
+
+- `python_brain/aifred_brain/config_paths.py`
+- `python_brain/aifred_brain/privacy.py`
+- `python_brain/aifred_brain/validation.py`
+- `python_brain/aifred_brain/analysis_state.py`
+- `python_brain/aifred_brain/audio_loader.py`
+
+### Tests Added
+
+- `python_brain/tests/test_config_paths.py`
+- `python_brain/tests/test_privacy.py`
+- `python_brain/tests/test_validation.py`
+- `python_brain/tests/test_analysis_state.py`
+- `python_brain/tests/test_audio_loader.py`
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Intentionally Unimplemented
+
+- Loudness math
+- RMS, peak, ceiling, and clipping math
+- FFT, EQ, tonal, stereo, dynamics, and transient analysis
+- Reference comparison
+- Report writing
+- AI interpretation
+- Backend routing
+- Plugin, GUI, and installer code
+- GitHub Actions and Cloudflare config
+- External dependencies
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Implement the next narrow Python Truth Layer slice with tests, likely `level_metrics.py`, using synthetic fixtures only and preserving unavailable/stale/zero distinctions.
