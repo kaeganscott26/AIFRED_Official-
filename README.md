@@ -5,7 +5,7 @@ AIFRED is an AI-assisted mix interpretation system for music producers.
 
 It is not an "AI mixes for you" plugin.
 
-AIFRED's purpose is to help porducers understand hwat their tools are doing, measure their progress over time, and make more confident mix decisions.
+AIFRED's purpose is to help producers understand what their tools are doing, measure their progress over time, and make more confident mix decisions.
 
 Processing changes the sound.
 AIFRED changes the producer.
@@ -28,7 +28,7 @@ ___
 
 Most producers do not get stuck because they lack plugins.
 
-They get stuck because they do no know wheter the move they just made actually helped.
+They get stuck because they do not know whether the move they just made actually helped.
 
 AIFRED shortens that loop:
 
@@ -109,7 +109,7 @@ It calculates real signal data such as:
 
 AI Interpretation Layer
 
-The AI layer recieves verified data from the truth layer and explains it in context.
+The AI layer receives verified data from the truth layer and explains it in context.
 
 The AI MUST consider:
 
