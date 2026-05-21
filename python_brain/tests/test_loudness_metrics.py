@@ -135,6 +135,42 @@ class FutureLoudnessAlgorithmTests(unittest.TestCase):
     def test_k_weighting_behavior(self) -> None:
         """Future test: K-weighting filter behavior is standards-aware."""
 
+    @unittest.skip("Phase 3E contract only; K-weighting silence behavior is not implemented yet.")
+    def test_k_weighting_silence_behavior(self) -> None:
+        """Future test: silence remains silence through K-weighting."""
+
+    @unittest.skip("Phase 3E contract only; filter processing is not implemented yet.")
+    def test_filter_output_length_preservation(self) -> None:
+        """Future test: filter output length matches input length."""
+
+    @unittest.skip("Phase 3E contract only; sample-rate support is not implemented yet.")
+    def test_unsupported_sample_rate_rejection(self) -> None:
+        """Future test: unsupported sample rates are rejected clearly."""
+
+    @unittest.skip("Phase 3E contract only; filter input validation is not implemented yet.")
+    def test_invalid_sample_rejection(self) -> None:
+        """Future test: invalid samples are rejected before filtering."""
+
+    @unittest.skip("Phase 3E contract only; mono filter behavior is not implemented yet.")
+    def test_mono_filter_behavior(self) -> None:
+        """Future test: mono input can be filtered safely."""
+
+    @unittest.skip("Phase 3E contract only; stereo/interleaved filter behavior is not implemented yet.")
+    def test_stereo_interleaved_filter_behavior(self) -> None:
+        """Future test: stereo/interleaved input is handled safely."""
+
+    @unittest.skip("Phase 3E contract only; coefficient documentation is not implemented yet.")
+    def test_coefficient_documentation_requirement(self) -> None:
+        """Future test: coefficients include documented source and tolerance."""
+
+    @unittest.skip("Phase 3E contract only; filter stage must not produce LUFS.")
+    def test_no_fake_lufs_from_filter_stage(self) -> None:
+        """Future test: filter stage does not create fake LUFS values."""
+
+    @unittest.skip("Phase 3E contract only; advice generation belongs outside filter code.")
+    def test_no_advice_text_from_filter_stage(self) -> None:
+        """Future test: filter stage emits no advice text."""
+
     @unittest.skip("Future phase only; BS.1770 filtering is not implemented yet.")
     def test_bs1770_filter_behavior(self) -> None:
         """Future test: BS.1770-style filter behavior is verified."""

@@ -36,6 +36,19 @@ class LoudnessWindowKind(str, Enum):
 
 
 @dataclass(frozen=True)
+class KWeightingFilterDescription:
+    """Future metadata for verified K-weighting coefficients.
+
+    No coefficients are stored in Phase 3E.
+    """
+
+    sample_rate: int
+    stages: tuple[str, ...]
+    coefficient_source: str | None
+    is_verified: bool = False
+
+
+@dataclass(frozen=True)
 class LoudnessWindow:
     """A factual window of PCM samples, without any LUFS result."""
 
@@ -162,6 +175,30 @@ def summarize_loudness_availability(duration_seconds: float, required_seconds: f
     if duration_seconds < required_seconds:
         return LoudnessAvailability.LIMITED
     return LoudnessAvailability.AVAILABLE
+
+
+def validate_supported_loudness_sample_rate(sample_rate: int) -> None:
+    """Future sample-rate support validation for K-weighting coefficients."""
+    _ = sample_rate
+    raise NotImplementedError("K-weighting sample-rate validation is not implemented yet.")
+
+
+def get_k_weighting_filter_description(sample_rate: int) -> KWeightingFilterDescription:
+    """Future description of verified K-weighting filter stages."""
+    _ = sample_rate
+    raise NotImplementedError("K-weighting filter descriptions are not implemented yet.")
+
+
+def apply_k_weighting(samples: Sequence[float], sample_rate: int, channels: int = 1) -> tuple[float, ...]:
+    """Future K-weighting processing for normalized PCM samples."""
+    _ = (samples, sample_rate, channels)
+    raise NotImplementedError("K-weighting processing is not implemented yet.")
+
+
+def apply_loudness_filter_chain(samples: Sequence[float], sample_rate: int, channels: int = 1) -> tuple[float, ...]:
+    """Future loudness filter chain before BS.1770-style energy calculation."""
+    _ = (samples, sample_rate, channels)
+    raise NotImplementedError("Loudness filter chain is not implemented yet.")
 
 
 def calculate_momentary_loudness(samples: Sequence[float], sample_rate: int, *, window_seconds: float = MOMENTARY_WINDOW_SECONDS) -> float | None:

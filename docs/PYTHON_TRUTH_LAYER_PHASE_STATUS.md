@@ -330,3 +330,50 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review Phase 3D, then approve a narrow Phase 3E only if ready. The next safe option is documenting or implementing K-weighting/BS.1770 filter primitives with proof tests, without integrated gating or true peak claims unless explicitly approved.
+
+## Phase 3E — K-Weighting Filter Design Contract
+
+Created the K-weighting/filter design contract and interface placeholders only.
+
+### Files Changed
+
+- `python_brain/K_WEIGHTING_FILTER_CONTRACT.md`
+- `python_brain/aifred_brain/loudness_metrics.py`
+- `python_brain/tests/test_loudness_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### Contract Created
+
+- `python_brain/K_WEIGHTING_FILTER_CONTRACT.md`
+
+The contract explains why K-weighting is required before trustworthy LUFS-style loudness can exist, why unweighted mean-square is not LUFS, and why coefficients must be verified before implementation.
+
+### Intentionally Not Implemented
+
+- K-weighting filter processing
+- BS.1770 filter coefficients
+- final LUFS calculation
+- integrated loudness gating
+- true peak
+- dependencies
+- plugin/backend/GUI/AI/reporting code
+- old repo migration
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Existing implemented tests still pass.
+- Phase 3D loudness window tests still pass.
+- New K-weighting/filter tests remain intentionally skipped.
+- No fake passing LUFS/filter tests were added.
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+If explicitly approved, Phase 3F may implement generic biquad/filter primitives with tests. It must not implement final LUFS, integrated gating, true peak, or undocumented coefficients.
