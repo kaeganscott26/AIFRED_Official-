@@ -699,3 +699,76 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the frequency metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as dynamics or transients, with synthetic inputs and no interpretation text.
+
+## Phase 3K — Tonal Balance Foundation
+
+Implemented factual tonal-balance summary metrics from verified frequency-band ratio data. No EQ advice, subjective mix labels, reference comparison, report writing, AI interpretation, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/tonal_balance.py`
+- `python_brain/tests/test_tonal_balance.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `TonalBalanceMetrics` dataclass
+- neutral low/mid/high group definitions
+- band-ratio extraction from `FrequencyMetrics`, `BandEnergy`, and dictionary-like inputs
+- grouped low, mid, and high energy-ratio summaries
+- low-to-mid ratio
+- high-to-mid ratio
+- spectral centroid from DFT magnitudes
+- neutral tilt value as high ratio minus low ratio
+- unavailable states represented as `None`
+- factual availability flag
+
+### Tests Added
+
+- band-ratio extraction by band name
+- dictionary-based band-ratio extraction
+- low group ratio
+- mid group ratio
+- high group ratio
+- low-to-mid ratio
+- high-to-mid ratio
+- denominator-zero handling
+- unavailable band-ratio handling
+- spectral centroid on known simple magnitudes
+- spectral centroid unavailable for zero total magnitude
+- tilt value calculation
+- full dataclass factual fields
+- no fake `-999` values
+- no advice text in metric output
+- no subjective labels in metric output
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 151 tests.
+- Result: `OK`.
+- 48 future-phase placeholder tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- EQ advice
+- subjective mix labels
+- reference comparison
+- report writing
+- AI interpretation
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the tonal balance summary behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as dynamics or transients, with synthetic inputs and no interpretation text.
