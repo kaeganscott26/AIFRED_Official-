@@ -25,9 +25,15 @@ Python tells the truth. It measures audio, validates analysis state, selects fac
 
 ## Implementation Status
 
-Implementation is not allowed yet.
+Production implementation is not allowed yet.
 
-This folder is Phase 1 skeleton only. Python implementation must wait for the approved Python Truth Layer phase and acceptance criteria.
+This folder currently contains Phase 2 interface contracts, module stubs, and skipped test skeletons only. Real DSP math, file analysis, report writing, persistence, and metric calculations must wait for the next approved implementation phase.
+
+## Local Contracts
+
+- `MODULE_CONTRACT.md`
+- `DATA_MODEL_CONTRACT.md`
+- `ACCEPTANCE_CRITERIA.md`
 
 ## Controlling Contract
 
@@ -40,4 +46,3 @@ Supporting contracts:
 - `docs/SOURCE_OF_TRUTH_CONTRACT.md`
 - `docs/METRIC_RELEVANCE_CONTRACT.md`
 - `docs/REPORT_CONTRACT.md`
-
