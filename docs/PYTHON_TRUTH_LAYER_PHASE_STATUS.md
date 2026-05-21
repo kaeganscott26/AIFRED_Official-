@@ -251,3 +251,82 @@ No old repos were modified.
 ### Next Recommended Phase
 
 After review, approve Phase 3D as either basic loudness windowing helpers only or a narrow BS.1770-style implementation slice. Do not implement true peak, plugin/backend/GUI/AI/reporting, or dependency-based loudness until explicitly approved.
+
+## Phase 3D — Loudness Window Infrastructure
+
+Implemented loudness window infrastructure only. No LUFS, K-weighting, BS.1770 filters, integrated gating, or true peak behavior was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/loudness_metrics.py`
+- `python_brain/tests/test_loudness_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- Loudness availability enum
+- Loudness window kind enum
+- Loudness window dataclass
+- sample-rate and channel-count validation
+- duration calculation from interleaved sample count
+- window frame-count calculation
+- mean-square helper for sample slices
+- non-overlapping loudness window builder
+- complete/incomplete window labeling
+- availability helper for unavailable, limited, and available states
+
+These helpers prepare factual window data only. Mean square is not labeled as LUFS.
+
+### Tests Added
+
+- duration calculation from sample count, sample rate, and channels
+- invalid sample rate rejection
+- invalid channel count rejection
+- empty sample handling
+- silence mean-square behavior
+- known mean-square behavior
+- 400 ms momentary frame count at 48000 Hz
+- 3 second short-term frame count at 48000 Hz
+- momentary window construction
+- short-term window construction
+- incomplete window exclusion by default
+- incomplete window inclusion when requested
+- availability state distinctions
+- no fake `-999` values in window helpers
+
+Future LUFS, K-weighting, BS.1770, and gating tests remain intentionally skipped.
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Existing implemented tests still pass.
+- Loudness window infrastructure tests pass.
+- Future LUFS tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- final LUFS calculation
+- K-weighting
+- BS.1770 filters
+- integrated loudness gating
+- true peak
+- stereo correlation
+- FFT, tonal balance, EQ, dynamics, and transients
+- reference comparison
+- report writing
+- AI interpretation
+- backend routing
+- plugin, GUI, installer, GitHub Actions, and Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review Phase 3D, then approve a narrow Phase 3E only if ready. The next safe option is documenting or implementing K-weighting/BS.1770 filter primitives with proof tests, without integrated gating or true peak claims unless explicitly approved.
