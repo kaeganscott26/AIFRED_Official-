@@ -855,3 +855,85 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the dynamics metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, likely transient metrics if explicitly approved, without compression advice or subjective labels.
+
+## Phase 3M — Transient Metrics Foundation
+
+Implemented factual transient metrics for normalized sample arrays. No compression advice, subjective labels, tonal/EQ analysis, reference comparison, report writing, AI interpretation, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/transient_metrics.py`
+- `python_brain/tests/test_transient_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `TransientEvent` dataclass
+- `TransientMetrics` dataclass
+- absolute envelope calculation
+- trailing moving-average smoothing
+- adjacent level-delta calculation
+- thresholded positive amplitude-change event detection
+- event sample index and time calculation
+- transient event count
+- transient density per second
+- average transient strength
+- max transient strength
+- unavailable strength states represented as `None`
+- finite sample validation
+- positive sample-rate validation
+- non-negative threshold validation
+- positive smoothing-window validation
+
+### Tests Added
+
+- empty samples do not crash
+- invalid sample rate rejection
+- invalid threshold rejection
+- invalid smoothing window rejection
+- invalid sample rejection
+- absolute envelope behavior
+- moving average on known values
+- level deltas on known values
+- silence produces zero transient events
+- simple impulse produces at least one event
+- event time from sample index and sample rate
+- transient density from known event count and duration
+- average strength
+- max strength
+- full dataclass factual fields
+- no fake `-999` values
+- no advice text
+- no subjective labels
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Existing implemented tests pass.
+- Transient metrics tests pass.
+- Unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- compression advice
+- subjective labels such as punchy, weak, snappy, dull, smashed, or overcompressed
+- tonal/EQ analysis
+- reference comparison
+- report writing
+- AI interpretation
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the transient metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as analysis state integration or metric relevance when explicitly approved, without advice or subjective labels.
