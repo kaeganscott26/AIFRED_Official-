@@ -212,3 +212,42 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Implement the next narrow Python Truth Layer slice with tests, likely `loudness_metrics.py` only after selecting and documenting the approved loudness algorithm. Do not start plugin, backend, GUI, or AI work before the remaining Python facts are validated.
+
+## Phase 3C — Loudness Algorithm Decision Contract
+
+Created the loudness algorithm decision contract and updated loudness module/test placeholders without implementing loudness math.
+
+### Files Changed
+
+- `python_brain/LOUDNESS_ALGORITHM_CONTRACT.md`
+- `python_brain/aifred_brain/loudness_metrics.py`
+- `python_brain/tests/test_loudness_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### Contract Created
+
+- `python_brain/LOUDNESS_ALGORITHM_CONTRACT.md`
+
+The contract defines loudness terminology, separates RMS/dBFS/sample peak from LUFS/true peak, and records the intended future ITU-R BS.1770-style direction.
+
+### Implementation Status
+
+No LUFS implementation was added.
+
+`loudness_metrics.py` remains interface-only. Public functions raise `NotImplementedError`.
+
+### Why LUFS Was Not Implemented Yet
+
+LUFS requires an approved standards-aware approach. The future implementation must decide between a manual BS.1770-style implementation and a reviewed dependency. No dependency is approved yet, and RMS must not be relabeled as loudness.
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+After review, approve Phase 3D as either basic loudness windowing helpers only or a narrow BS.1770-style implementation slice. Do not implement true peak, plugin/backend/GUI/AI/reporting, or dependency-based loudness until explicitly approved.
