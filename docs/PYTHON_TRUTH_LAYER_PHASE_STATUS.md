@@ -1429,3 +1429,89 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the factual export-history behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as progress memory storage when explicitly approved, without AI memory, coaching, or generated advice.
+
+## Phase 3T — Progress Memory Foundation
+
+Implemented factual progress memory from export-history-like records and approved metric facts. No AI memory, progress coaching, generated advice, canned response phrases, reference comparison, compare analysis, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/progress_memory.py`
+- `python_brain/tests/test_progress_memory.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `ProgressTrendAvailability` enum
+- `MetricProgressTrend` dataclass
+- `ProgressMemory` dataclass
+- numeric metric fact extraction from export records
+- metric key collection across export records
+- first/latest numeric value tracking
+- signed delta calculation
+- absolute delta calculation
+- percent delta calculation when the first value is nonzero
+- valid `0.0` metric-value preservation
+- honest missing, non-numeric, and insufficient-history availability states
+- export count and first/latest export id tracking
+- first/latest timestamp tracking
+- limitation tracking for empty history, missing metrics, non-numeric values, and insufficient samples
+- progress memory serialization to dictionaries
+- progress memory deserialization from dictionaries
+- compatibility wrappers for existing progress-memory function names
+- fake `-999` metric rejection
+
+### Tests Added
+
+- empty history does not crash
+- one-record history marks insufficient history
+- numeric metric fact extraction
+- non-numeric values ignored for numeric trend calculations
+- metric keys collected across records
+- first/latest values calculated
+- signed delta calculated
+- absolute delta calculated
+- percent delta calculated
+- percent delta with zero first value returns `None`
+- `0.0` values preserved as valid
+- missing metric in one export represented with a limitation
+- full progress memory includes export count
+- full progress memory includes first/latest export ids
+- serialization to dict works
+- deserialization from dict works
+- no fake `-999` values appear
+- no advice text appears
+- no subjective or motivational labels appear
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 321 tests.
+- Result: `OK`.
+- 48 unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- AI memory
+- progress coaching
+- generated advice
+- canned response generation
+- subjective labels
+- reference comparison
+- compare analysis
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the factual progress-memory behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only when explicitly approved, without AI memory, coaching, generated advice, reference comparison, compare analysis, or plugin/backend/GUI/VST work.
