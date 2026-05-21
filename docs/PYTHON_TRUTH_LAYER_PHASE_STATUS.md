@@ -1173,3 +1173,86 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the factual report writer behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as Compare A/B or Reference contracts when explicitly approved, without AI interpretation or generated advice.
+
+## Phase 3Q — Compare A/B Foundation
+
+Implemented factual Compare Mode A/B metric comparison from already-calculated metric facts and packet-like dictionaries. No reference-pool comparison, reference-target comparison, better-mix judgment, AI interpretation, final user-facing advice, canned response phrases, report writing beyond data objects, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/compare_ab.py`
+- `python_brain/tests/test_compare_ab.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `ComparisonAvailability` enum
+- `MetricComparison` dataclass
+- `CompareABResult` dataclass
+- finite numeric-value detection
+- signed B-minus-A delta calculation
+- absolute delta calculation
+- percent delta calculation when A is nonzero
+- honest missing, unavailable, both-unavailable, and non-numeric states
+- metric fact comparison with family, name, unit, and raw A/B value preservation
+- collection comparison aligned by `(family, name)`
+- packet-like fact comparison
+- compatibility wrapper for existing `compare_mix_a_to_mix_b`
+- Compare context validation that rejects reference/pool/target keys
+- fake `-999` metric rejection
+
+### Tests Added
+
+- numeric delta
+- absolute delta
+- percent delta
+- percent delta with zero denominator returning `None`
+- `0.0` as a valid value
+- missing metric availability
+- A unavailable
+- B unavailable
+- both unavailable
+- non-numeric values producing no fake numeric delta
+- unit preservation
+- family and name preservation
+- collection comparison alignment by family and name
+- packet-like dictionary comparison
+- Compare A/B mode labeling without Reference mode
+- no reference-pool, target, or reference language
+- no better-mix language
+- no fake `-999` values
+- no advice text
+- no canned phrases
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 261 tests.
+- Result: `OK`.
+- 48 unrelated future-phase tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- reference-pool comparison
+- reference-target comparison
+- better-mix judgment
+- AI interpretation
+- final user-facing advice
+- canned response generation
+- report writing beyond factual data objects
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the factual Compare A/B behavior and tests. The next safe phase should implement one remaining Python Truth Layer slice only, such as Reference comparison when explicitly approved, without reference-pool leakage, AI interpretation, or generated advice.
