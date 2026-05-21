@@ -26,6 +26,14 @@ class MissingAudioFileError(AifredValidationError):
     """Raised when an expected audio file does not exist."""
 
 
+class UnsupportedWavEncodingError(AifredValidationError):
+    """Raised when a WAV encoding or sample width is not supported."""
+
+
+class InvalidAudioBufferError(AifredValidationError):
+    """Raised when decoded audio samples are not valid for metric calculation."""
+
+
 def is_supported_audio_extension(path: str | PathLike[str]) -> bool:
     """Return whether `path` uses a supported audio extension."""
     return Path(path).suffix.lower() in SUPPORTED_AUDIO_EXTENSIONS

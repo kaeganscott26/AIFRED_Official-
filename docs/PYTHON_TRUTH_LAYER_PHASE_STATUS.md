@@ -164,3 +164,51 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Implement the next narrow Python Truth Layer slice with tests, likely `level_metrics.py`, using synthetic fixtures only and preserving unavailable/stale/zero distinctions.
+
+## Phase 3B — Level Metrics Foundation
+
+Implemented standard-library PCM WAV buffer loading and factual level metrics.
+
+### Files Implemented
+
+- `python_brain/aifred_brain/audio_loader.py`
+- `python_brain/aifred_brain/level_metrics.py`
+- `python_brain/aifred_brain/validation.py`
+
+### Tests Added
+
+- `python_brain/tests/test_audio_loader.py`
+- `python_brain/tests/test_level_metrics.py`
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 46 tests.
+- Result: `OK`.
+- 13 unrelated future-phase placeholder tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- LUFS
+- True peak oversampling
+- Stereo correlation
+- FFT, EQ, and tonal balance
+- Dynamics and transients
+- Reference comparison
+- Report writing
+- AI interpretation
+- Backend routing
+- Plugin, GUI, installer, GitHub Actions, and Cloudflare config
+- External dependencies
+- Old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Implement the next narrow Python Truth Layer slice with tests, likely `loudness_metrics.py` only after selecting and documenting the approved loudness algorithm. Do not start plugin, backend, GUI, or AI work before the remaining Python facts are validated.

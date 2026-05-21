@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .privacy import safe_display_path
-from .validation import validate_audio_file_path
+from .validation import UnsupportedWavEncodingError, validate_audio_file_path
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,18 @@ class AudioMetadata:
     duration_seconds: float
 
 
-AudioInput = AudioMetadata
+@dataclass(frozen=True)
+class AudioBuffer:
+    """Decoded PCM sample data for factual level metrics only."""
+
+    metadata: AudioMetadata
+    samples: tuple[float, ...]
+    channels: int
+    sample_rate: int
+    frame_count: int
+
+
+AudioInput = AudioBuffer | AudioMetadata
 
 
 def load_wav_metadata(path: str | PathLike[str]) -> AudioMetadata:
@@ -55,17 +66,72 @@ def load_wav_metadata(path: str | PathLike[str]) -> AudioMetadata:
     )
 
 
+def _decode_8_bit_pcm(raw: bytes) -> tuple[float, ...]:
+    return tuple((sample - 128) / 128.0 for sample in raw)
+
+
+def _decode_signed_pcm(raw: bytes, sample_width: int) -> tuple[float, ...]:
+    if sample_width not in {2, 3, 4}:
+        raise UnsupportedWavEncodingError(f"Unsupported WAV sample width: {sample_width} bytes")
+
+    samples: list[float] = []
+    bits = sample_width * 8
+    positive_scale = float((1 << (bits - 1)) - 1)
+    negative_scale = float(1 << (bits - 1))
+
+    for offset in range(0, len(raw), sample_width):
+        chunk = raw[offset:offset + sample_width]
+        if len(chunk) != sample_width:
+            raise UnsupportedWavEncodingError("WAV data ended mid-sample.")
+        value = int.from_bytes(chunk, byteorder="little", signed=True)
+        scale = negative_scale if value < 0 else positive_scale
+        samples.append(max(-1.0, min(1.0, value / scale)))
+    return tuple(samples)
+
+
+def load_wav_buffer(path: str | PathLike[str]) -> AudioBuffer:
+    """Load normalized PCM samples from an approved WAV file.
+
+    Samples are interleaved by channel and normalized to roughly -1.0..1.0.
+    No metrics are calculated here.
+    """
+    audio_path = validate_audio_file_path(path)
+    metadata = load_wav_metadata(audio_path)
+
+    with wave.open(str(audio_path), "rb") as wav_file:
+        if wav_file.getcomptype() != "NONE":
+            raise UnsupportedWavEncodingError(f"Unsupported WAV compression: {wav_file.getcomptype()}")
+        sample_width = wav_file.getsampwidth()
+        raw = wav_file.readframes(wav_file.getnframes())
+
+    if sample_width == 1:
+        samples = _decode_8_bit_pcm(raw)
+    elif sample_width in {2, 3, 4}:
+        samples = _decode_signed_pcm(raw, sample_width)
+    else:
+        raise UnsupportedWavEncodingError(f"Unsupported WAV sample width: {sample_width} bytes")
+
+    return AudioBuffer(
+        metadata=metadata,
+        samples=samples,
+        channels=metadata.channels,
+        sample_rate=metadata.sample_rate,
+        frame_count=metadata.frame_count,
+    )
+
+
 def load_audio_file(path: str | PathLike[str], *, source_label: str) -> AudioInput:
-    """Load an approved WAV file as metadata only for this phase."""
+    """Load an approved WAV file as decoded PCM buffer for level metrics."""
     _ = source_label
-    return load_wav_metadata(path)
+    return load_wav_buffer(path)
 
 
 def validate_audio_input(audio: AudioInput) -> dict[str, Any]:
     """Validate loaded audio before metric calculation."""
+    metadata = audio.metadata if isinstance(audio, AudioBuffer) else audio
     return {
-        "valid": audio.sample_rate > 0 and audio.channels > 0 and audio.frame_count >= 0,
-        "sample_rate": audio.sample_rate,
-        "channels": audio.channels,
-        "duration_seconds": audio.duration_seconds,
+        "valid": metadata.sample_rate > 0 and metadata.channels > 0 and metadata.frame_count >= 0,
+        "sample_rate": metadata.sample_rate,
+        "channels": metadata.channels,
+        "duration_seconds": metadata.duration_seconds,
     }
