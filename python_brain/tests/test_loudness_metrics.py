@@ -11,16 +11,29 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aifred_brain.loudness_metrics import (  # noqa: E402
+    BiquadCoefficients,
     MOMENTARY_WINDOW_SECONDS,
     SHORT_TERM_WINDOW_SECONDS,
     LoudnessAvailability,
     LoudnessWindowKind,
+    apply_k_weighting,
+    apply_loudness_filter_chain,
     build_loudness_windows,
+    calculate_integrated_loudness,
+    calculate_loudness_metrics,
+    calculate_momentary_loudness,
+    calculate_short_term_loudness,
     calculate_duration_seconds,
     calculate_mean_square,
     calculate_window_frame_count,
+    get_k_weighting_filter_description,
+    identity_biquad_coefficients,
+    process_biquad_interleaved,
+    process_biquad_samples,
     summarize_loudness_availability,
+    validate_biquad_coefficients,
     validate_loudness_inputs,
+    validate_supported_loudness_sample_rate,
 )
 
 
@@ -128,6 +141,74 @@ class LoudnessWindowInfrastructureTests(unittest.TestCase):
         )
         values = [windows[0].mean_square, windows[0].duration_seconds, windows[0].frame_count]
         self.assertNotIn(-999, values)
+
+
+class GenericBiquadPrimitiveTests(unittest.TestCase):
+    def test_identity_filter_returns_input_unchanged(self) -> None:
+        samples = (0.0, 0.25, -0.5, 1.0, -1.0)
+        self.assertEqual(process_biquad_samples(samples, identity_biquad_coefficients()), samples)
+
+    def test_silence_remains_silence_under_identity_filter(self) -> None:
+        output = process_biquad_samples((0.0, 0.0, 0.0), identity_biquad_coefficients())
+        self.assertEqual(output, (0.0, 0.0, 0.0))
+
+    def test_output_length_matches_input_length(self) -> None:
+        samples = (0.1, 0.2, 0.3, 0.4)
+        output = process_biquad_samples(samples, BiquadCoefficients(0.5, 0.25, 0.0, 1.0, 0.0, 0.0))
+        self.assertEqual(len(output), len(samples))
+
+    def test_invalid_a0_zero_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_biquad_coefficients(BiquadCoefficients(1.0, 0.0, 0.0, 0.0, 0.0, 0.0))
+
+    def test_non_finite_coefficient_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            validate_biquad_coefficients(BiquadCoefficients(float("inf"), 0.0, 0.0, 1.0, 0.0, 0.0))
+
+    def test_non_finite_sample_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            process_biquad_samples((0.0, float("nan")), identity_biquad_coefficients())
+
+    def test_interleaved_stereo_processing_preserves_length(self) -> None:
+        samples = (1.0, 0.0, 0.5, 0.0, 0.25, 0.0)
+        output = process_biquad_interleaved(samples, identity_biquad_coefficients(), channels=2)
+        self.assertEqual(len(output), len(samples))
+
+    def test_interleaved_stereo_processing_uses_independent_channel_state(self) -> None:
+        samples = (1.0, 0.0, 0.0, 0.0)
+        coefficients = BiquadCoefficients(b0=1.0, b1=0.5, b2=0.0, a0=1.0, a1=0.0, a2=0.0)
+        output = process_biquad_interleaved(samples, coefficients, channels=2)
+        self.assertEqual(output, (1.0, 0.0, 0.5, 0.0))
+
+    def test_repeated_calls_do_not_share_hidden_state(self) -> None:
+        coefficients = BiquadCoefficients(b0=1.0, b1=0.5, b2=0.0, a0=1.0, a1=0.0, a2=0.0)
+        first = process_biquad_samples((1.0, 0.0), coefficients)
+        second = process_biquad_samples((1.0, 0.0), coefficients)
+        self.assertEqual(first, second)
+
+    def test_no_fake_minus_999_values_in_biquad_primitives(self) -> None:
+        output = process_biquad_samples((0.0, 1.0), identity_biquad_coefficients())
+        self.assertNotIn(-999, output)
+
+    def test_k_weighting_placeholders_still_raise_not_implemented(self) -> None:
+        with self.assertRaises(NotImplementedError):
+            validate_supported_loudness_sample_rate(48_000)
+        with self.assertRaises(NotImplementedError):
+            get_k_weighting_filter_description(48_000)
+        with self.assertRaises(NotImplementedError):
+            apply_k_weighting((0.0,), 48_000)
+        with self.assertRaises(NotImplementedError):
+            apply_loudness_filter_chain((0.0,), 48_000)
+
+    def test_lufs_facing_functions_still_raise_not_implemented(self) -> None:
+        with self.assertRaises(NotImplementedError):
+            calculate_momentary_loudness((0.0,), 48_000)
+        with self.assertRaises(NotImplementedError):
+            calculate_short_term_loudness((0.0,), 48_000)
+        with self.assertRaises(NotImplementedError):
+            calculate_integrated_loudness((0.0,), 48_000)
+        with self.assertRaises(NotImplementedError):
+            calculate_loudness_metrics(object())
 
 
 class FutureLoudnessAlgorithmTests(unittest.TestCase):

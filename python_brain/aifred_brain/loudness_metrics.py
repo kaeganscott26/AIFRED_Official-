@@ -49,6 +49,30 @@ class KWeightingFilterDescription:
 
 
 @dataclass(frozen=True)
+class BiquadCoefficients:
+    """Generic biquad coefficients.
+
+    These coefficients are intentionally generic. They are not K-weighting,
+    BS.1770, LUFS, or true-peak coefficients.
+    """
+
+    b0: float
+    b1: float
+    b2: float
+    a0: float
+    a1: float
+    a2: float
+
+
+@dataclass
+class BiquadFilterState:
+    """Direct Form II Transposed filter state for one channel."""
+
+    z1: float = 0.0
+    z2: float = 0.0
+
+
+@dataclass(frozen=True)
 class LoudnessWindow:
     """A factual window of PCM samples, without any LUFS result."""
 
@@ -175,6 +199,99 @@ def summarize_loudness_availability(duration_seconds: float, required_seconds: f
     if duration_seconds < required_seconds:
         return LoudnessAvailability.LIMITED
     return LoudnessAvailability.AVAILABLE
+
+
+def _is_finite_number(value: float) -> bool:
+    return isinstance(value, (int, float)) and value == value and value not in (float("inf"), float("-inf"))
+
+
+def identity_biquad_coefficients() -> BiquadCoefficients:
+    """Return generic identity coefficients.
+
+    Processing with these coefficients returns the input sequence unchanged.
+    """
+    return BiquadCoefficients(b0=1.0, b1=0.0, b2=0.0, a0=1.0, a1=0.0, a2=0.0)
+
+
+def validate_biquad_coefficients(coefficients: BiquadCoefficients) -> None:
+    """Validate generic biquad coefficients.
+
+    This does not validate any K-weighting or BS.1770 coefficient source.
+    """
+    values = (
+        coefficients.b0,
+        coefficients.b1,
+        coefficients.b2,
+        coefficients.a0,
+        coefficients.a1,
+        coefficients.a2,
+    )
+    for value in values:
+        if not _is_finite_number(value):
+            raise ValueError("biquad coefficients must be finite numbers.")
+    if coefficients.a0 == 0:
+        raise ValueError("biquad coefficient a0 must not be zero.")
+
+
+def process_biquad_samples(samples: Sequence[float], coefficients: BiquadCoefficients) -> tuple[float, ...]:
+    """Process one mono sample sequence with a generic biquad.
+
+    The implementation uses Direct Form II Transposed:
+
+    `y[n] = b0/a0*x[n] + z1`
+    `z1 = b1/a0*x[n] - a1/a0*y[n] + z2`
+    `z2 = b2/a0*x[n] - a2/a0*y[n]`
+
+    The primitive is deterministic, keeps output length equal to input length,
+    and does not clip, normalize, label, or interpret the output.
+    """
+    validate_biquad_coefficients(coefficients)
+
+    b0 = coefficients.b0 / coefficients.a0
+    b1 = coefficients.b1 / coefficients.a0
+    b2 = coefficients.b2 / coefficients.a0
+    a1 = coefficients.a1 / coefficients.a0
+    a2 = coefficients.a2 / coefficients.a0
+    state = BiquadFilterState()
+    output: list[float] = []
+
+    for sample in samples:
+        if not _is_finite_number(sample):
+            raise ValueError("biquad samples must be finite numbers.")
+        x = float(sample)
+        y = b0 * x + state.z1
+        state.z1 = b1 * x - a1 * y + state.z2
+        state.z2 = b2 * x - a2 * y
+        output.append(y)
+
+    return tuple(output)
+
+
+def process_biquad_interleaved(
+    samples: Sequence[float],
+    coefficients: BiquadCoefficients,
+    channels: int,
+) -> tuple[float, ...]:
+    """Process interleaved samples with independent generic biquad state per channel."""
+    validate_biquad_coefficients(coefficients)
+    if channels <= 0:
+        raise ValueError("channels must be greater than zero.")
+    if not samples:
+        return ()
+
+    channel_samples: list[list[float]] = [[] for _ in range(channels)]
+    for index, sample in enumerate(samples):
+        if not _is_finite_number(sample):
+            raise ValueError("biquad samples must be finite numbers.")
+        channel_samples[index % channels].append(float(sample))
+
+    processed_channels = [process_biquad_samples(channel, coefficients) for channel in channel_samples]
+    output: list[float] = []
+    for index in range(len(samples)):
+        channel_index = index % channels
+        frame_index = index // channels
+        output.append(processed_channels[channel_index][frame_index])
+    return tuple(output)
 
 
 def validate_supported_loudness_sample_rate(sample_rate: int) -> None:

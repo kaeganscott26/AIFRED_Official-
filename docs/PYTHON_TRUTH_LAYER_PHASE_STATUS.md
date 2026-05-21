@@ -377,3 +377,77 @@ No old repos were modified.
 ### Next Recommended Phase
 
 If explicitly approved, Phase 3F may implement generic biquad/filter primitives with tests. It must not implement final LUFS, integrated gating, true peak, or undocumented coefficients.
+
+## Phase 3F — Generic Biquad Filter Primitives
+
+Implemented reusable generic biquad filter primitives only. No K-weighting coefficients, BS.1770 presets, LUFS calculation, integrated gating, or true peak behavior was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/loudness_metrics.py`
+- `python_brain/tests/test_loudness_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `BiquadCoefficients` dataclass
+- `BiquadFilterState` dataclass
+- identity coefficient helper
+- coefficient validation for finite values and nonzero `a0`
+- Direct Form II Transposed mono sample processing
+- interleaved multi-channel processing with independent per-channel state
+- finite sample validation
+- deterministic output with output length matching input length
+
+These primitives are generic filter infrastructure only. They do not contain K-weighting coefficients and do not output loudness values.
+
+### Tests Added
+
+- identity filter returns input unchanged
+- silence remains silence under identity coefficients
+- output length matches input length
+- invalid `a0=0` is rejected
+- non-finite coefficients are rejected
+- non-finite samples are rejected
+- interleaved stereo output preserves length
+- interleaved stereo channels use independent filter state
+- repeated calls do not share hidden state
+- no fake `-999` values appear in biquad output
+- K-weighting placeholder functions still raise `NotImplementedError`
+- LUFS-facing functions still raise `NotImplementedError`
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 90 tests.
+- Result: `OK`.
+- 31 future-phase placeholder tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- K-weighting coefficients
+- BS.1770 coefficient presets
+- K-weighting filter chain behavior
+- final LUFS calculation
+- integrated loudness gating
+- true peak
+- stereo correlation
+- FFT, tonal balance, EQ, dynamics, and transients
+- reference comparison
+- report writing
+- AI interpretation
+- backend routing
+- plugin, GUI, installer, GitHub Actions, and Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the generic biquad primitive and test behavior. If explicitly approved, the next narrow phase may document and implement verified sample-rate-specific K-weighting coefficients, with coefficient sources and tolerance tests, but still without integrated LUFS gating or true peak claims unless separately approved.
