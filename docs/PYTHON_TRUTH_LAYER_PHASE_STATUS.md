@@ -500,3 +500,51 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review and approve the coefficient decision contract. If explicitly approved, Phase 3H may add verified coefficient values for selected sample rates with documented sources and tolerance tests, but still without final LUFS unless separately approved.
+
+## Phase 3H — K-Weighting Coefficient Evidence Pack
+
+Created the coefficient evidence pack and evidence-only interface placeholders. No coefficient values, K-weighting processing, LUFS calculation, integrated gating, or true peak behavior was implemented.
+
+### Files Changed
+
+- `python_brain/K_WEIGHTING_COEFFICIENT_EVIDENCE.md`
+- `python_brain/aifred_brain/loudness_metrics.py`
+- `python_brain/tests/test_loudness_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### Evidence Document Created
+
+- `python_brain/K_WEIGHTING_COEFFICIENT_EVIDENCE.md`
+
+The document defines required evidence before future coefficients may be implemented, including source metadata, an unapproved sample-rate evidence table template, approved/rejected source types, manual verification checklist, implementation gate, and release-blocking failure conditions.
+
+### Intentionally Not Implemented
+
+- K-weighting coefficient values
+- BS.1770 coefficient presets
+- K-weighting processing
+- final LUFS calculation
+- integrated loudness gating
+- true peak
+- fake approval state
+- dependencies
+- plugin/backend/GUI/AI/reporting code
+- old repo migration
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 107 tests.
+- Result: `OK`.
+- 48 future-phase placeholder tests remain intentionally skipped.
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the evidence pack. If explicitly approved, Phase 3I may add coefficient values only for sample rates with documented evidence and reviewer approval. If no approved source exists, Phase 3I must not implement coefficients.

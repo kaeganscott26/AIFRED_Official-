@@ -64,6 +64,24 @@ class KWeightingCoefficientSource:
 
 
 @dataclass(frozen=True)
+class KWeightingCoefficientEvidence:
+    """Future evidence record required before coefficient implementation.
+
+    Phase 3H provides this shape only. It does not approve sample rates or
+    include coefficient values.
+    """
+
+    sample_rate: int
+    source_name: str
+    source_type: str
+    source_reference: str
+    coefficient_precision: str
+    output_tolerance: str
+    approved_for_implementation: bool
+    notes: str = ""
+
+
+@dataclass(frozen=True)
 class BiquadCoefficients:
     """Generic biquad coefficients.
 
@@ -332,6 +350,22 @@ def get_verified_k_weighting_coefficients(sample_rate: int) -> tuple[BiquadCoeff
     """Future lookup for verified K-weighting coefficients by sample rate."""
     _ = sample_rate
     raise NotImplementedError("Verified K-weighting coefficients are not implemented yet.")
+
+
+def get_k_weighting_coefficient_evidence(sample_rate: int) -> KWeightingCoefficientEvidence:
+    """Future evidence lookup required before coefficient implementation."""
+    _ = sample_rate
+    raise NotImplementedError("K-weighting coefficient evidence is not implemented yet.")
+
+
+def is_k_weighting_sample_rate_approved(sample_rate: int) -> bool:
+    """Future approval check for coefficient-backed K-weighting sample rates.
+
+    Phase 3H must not return fake approval. Approval behavior is unavailable
+    until evidence is reviewed in a later approved phase.
+    """
+    _ = sample_rate
+    raise NotImplementedError("K-weighting sample-rate approval is not implemented yet.")
 
 
 def get_k_weighting_filter_description(sample_rate: int) -> KWeightingFilterDescription:

@@ -26,6 +26,7 @@ from aifred_brain.loudness_metrics import (  # noqa: E402
     calculate_duration_seconds,
     calculate_mean_square,
     calculate_window_frame_count,
+    get_k_weighting_coefficient_evidence,
     get_k_weighting_coefficient_source,
     get_k_weighting_filter_description,
     get_supported_k_weighting_sample_rates,
@@ -33,6 +34,7 @@ from aifred_brain.loudness_metrics import (  # noqa: E402
     identity_biquad_coefficients,
     process_biquad_interleaved,
     process_biquad_samples,
+    is_k_weighting_sample_rate_approved,
     summarize_loudness_availability,
     validate_biquad_coefficients,
     validate_loudness_inputs,
@@ -203,6 +205,10 @@ class GenericBiquadPrimitiveTests(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             get_verified_k_weighting_coefficients(48_000)
         with self.assertRaises(NotImplementedError):
+            get_k_weighting_coefficient_evidence(48_000)
+        with self.assertRaises(NotImplementedError):
+            is_k_weighting_sample_rate_approved(48_000)
+        with self.assertRaises(NotImplementedError):
             get_k_weighting_filter_description(48_000)
         with self.assertRaises(NotImplementedError):
             apply_k_weighting((0.0,), 48_000)
@@ -221,6 +227,38 @@ class GenericBiquadPrimitiveTests(unittest.TestCase):
 
 
 class FutureLoudnessAlgorithmTests(unittest.TestCase):
+    @unittest.skip("Phase 3H evidence-only; evidence lookup is not implemented yet.")
+    def test_evidence_exists_before_coefficient_lookup(self) -> None:
+        """Future test: coefficient lookup requires approved evidence first."""
+
+    @unittest.skip("Phase 3H evidence-only; sample-rate approval is not implemented yet.")
+    def test_unsupported_sample_rate_cannot_be_approved_silently(self) -> None:
+        """Future test: unsupported rates are unavailable or fail clearly."""
+
+    @unittest.skip("Phase 3H evidence-only; evidence table parsing is not implemented yet.")
+    def test_evidence_table_marks_unapproved_rates_clearly(self) -> None:
+        """Future test: evidence records make unapproved rates explicit."""
+
+    @unittest.skip("Phase 3H evidence-only; reviewer approval behavior is not implemented yet.")
+    def test_coefficient_values_require_reviewer_approval(self) -> None:
+        """Future test: approved coefficient values require a reviewer approval note."""
+
+    @unittest.skip("Phase 3H evidence-only; approved sample-rate evidence is not implemented yet.")
+    def test_approved_sample_rate_must_have_source_reference(self) -> None:
+        """Future test: approved sample rates include traceable source references."""
+
+    @unittest.skip("Phase 3H evidence-only; approval behavior is not implemented yet.")
+    def test_no_fake_approval_default(self) -> None:
+        """Future test: no sample rate is approved by default."""
+
+    @unittest.skip("Phase 3H evidence-only; coefficient values are not implemented yet.")
+    def test_no_coefficient_values_from_evidence_only_phase(self) -> None:
+        """Future test: evidence records do not contain coefficient values."""
+
+    @unittest.skip("Phase 3H evidence-only; evidence lookup must not produce LUFS.")
+    def test_no_lufs_from_evidence_lookup(self) -> None:
+        """Future test: evidence lookup never returns loudness values."""
+
     @unittest.skip("Phase 3G contract only; coefficient source approval is not implemented yet.")
     def test_coefficient_source_must_be_documented(self) -> None:
         """Future test: coefficient source metadata identifies traceable standard references."""
