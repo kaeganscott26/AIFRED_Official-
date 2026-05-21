@@ -1592,3 +1592,131 @@ No old repos were modified. Only files inside `AIFRED_Official-` were changed.
 ### Next Recommended Phase
 
 Review Phase 3U assembly behavior and tests. The next safe phase should remain a single narrow Python Truth Layer slice approved explicitly, without AI interpretation, generated advice, or plugin/backend/GUI/VST work.
+
+## Phase 3V — Python Truth Layer Integration Tests
+
+Added integration tests that prove the existing Python Truth Layer modules can work together using synthetic data only. No production modules, DSP algorithms, AI interpretation, generated advice, canned response phrases, backend, plugin, GUI, VST, GitHub Actions, Cloudflare config, dependencies, or old repo code were added.
+
+### Files Changed
+
+- `python_brain/tests/test_truth_layer_integration.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### Integration Paths Tested
+
+- synthetic stereo signal through level, stereo, frequency, tonal balance, dynamics, and transient metrics
+- analysis context, metric bundle, result assembly, availability, limitations, and dictionary serialization
+- metric relevance classification and selection into interpretation packet assembly
+- text and HTML report rendering plus `.txt` and `.html` report writing to a temporary directory
+- Compare A/B and Reference comparison separation with valid zero-value handling
+- export history record creation, append, save/load roundtrip, latest-export comparison, and progress memory trend calculation
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- First run exposed one integration-test expectation mismatch: HTML report facts render family and name in separate table cells rather than as a combined `family.name` string.
+- Final run: 343 tests.
+- Result: `OK`.
+- 48 unrelated future-phase tests remain intentionally skipped.
+- Existing implemented tests pass.
+- New integration tests pass.
+- No fake passing tests were added.
+
+### Intentionally Unimplemented
+
+- new DSP calculations
+- AI interpretation
+- final user-facing advice
+- canned response generation
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+- private or commercial audio fixtures
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Review Phase 3V integration coverage. The next safe phase should remain explicitly approved and narrow, such as tightening documented acceptance gates or adding another isolated Python Truth Layer validation slice, without starting AI, backend, plugin, GUI, or VST work.
+
+## Phase 3W — Python Truth Layer CLI Smoke Test
+
+Added a small command-line smoke runner and tests for the existing Python Truth Layer. The runner uses existing factual modules only, can generate a temporary synthetic WAV when no input is supplied, can validate a provided WAV through existing loader behavior, can print a factual summary or JSON-safe output, and can optionally write factual `.txt` and `.html` reports.
+
+### Files Changed
+
+- `python_brain/scripts/aifred_truth_smoke.py`
+- `python_brain/tests/test_truth_layer_cli_smoke.py`
+- `python_brain/scripts/README.md`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- CLI argument parsing for `--input`, `--question`, `--output-dir`, `--write-reports`, `--json`, and `--no-synthetic`
+- safe temporary synthetic stereo WAV generation using the Python standard library
+- WAV loading through existing audio loader behavior
+- factual level, stereo, frequency, tonal balance, dynamics, and transient metric calculation
+- analysis context, analysis result, metric relevance, and interpretation packet assembly
+- factual stdout summary without full local path exposure
+- JSON-safe output mode
+- optional factual `.txt` and `.html` report writing through the existing report writer
+- nonzero validation-failure behavior when synthetic input is disabled and no input is provided
+
+### Tests Added
+
+- script runs successfully with generated synthetic WAV
+- script runs successfully with generated synthetic WAV and `--json`
+- JSON output is parseable
+- script writes `.txt` and `.html` reports when `--write-reports` is used
+- script rejects missing input when `--no-synthetic` is used
+- stdout does not expose private temp parent paths
+- stdout does not contain advice text
+- stdout does not contain subjective labels
+- stdout does not contain fake `-999`
+- report files are created in the temp output directory
+
+### Commands Run
+
+- `python -m unittest python_brain.tests.test_truth_layer_cli_smoke -v`
+- `python python_brain/scripts/aifred_truth_smoke.py --json`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- CLI smoke test file: 10 tests, result `OK`.
+- Full suite: 353 tests.
+- Result: `OK`.
+- 48 unrelated future-phase tests remain intentionally skipped.
+- Existing implemented tests pass.
+- Integration tests pass.
+- CLI smoke tests pass.
+- No fake passing tests were added.
+
+### Intentionally Unimplemented
+
+- new DSP algorithms
+- AI interpretation
+- final user-facing advice
+- canned response generation
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+- private or commercial audio fixtures
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Review Phase 3W smoke-runner behavior. The next safe phase should remain explicitly approved and narrow, such as documenting a manual local validation checklist or adding another isolated truth-layer validation utility without starting AI, backend, plugin, GUI, or VST work.
