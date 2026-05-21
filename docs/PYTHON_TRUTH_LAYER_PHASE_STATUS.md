@@ -626,3 +626,76 @@ No old repos were modified.
 ### Next Recommended Phase
 
 Review the stereo metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, likely frequency metrics or dynamics, with synthetic inputs and no interpretation text.
+
+## Phase 3J — Frequency Band Metrics Foundation
+
+Implemented factual frequency-band energy metrics with a simple standard-library DFT helper for small testable arrays. No tonal balance interpretation, EQ advice, subjective mix labels, reference comparison, report writing, AI interpretation, backend, plugin, GUI, VST, GitHub Actions, or Cloudflare work was implemented.
+
+### Files Changed
+
+- `python_brain/aifred_brain/frequency_metrics.py`
+- `python_brain/tests/test_frequency_metrics.py`
+- `docs/PYTHON_TRUTH_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `FrequencyBand` dataclass
+- `BandEnergy` dataclass
+- `FrequencyMetrics` dataclass
+- neutral predefined numeric frequency bands
+- frequency resolution calculation
+- simple one-sided DFT magnitude calculation for small arrays
+- band energy calculation
+- total energy calculation
+- band energy ratio calculation
+- frequency metrics aggregation
+- empty/silent input handling without fake ratios
+- finite sample and positive sample-rate validation
+
+### Tests Added
+
+- frequency resolution calculation
+- invalid sample-rate rejection
+- invalid sample rejection
+- empty sample handling
+- silence total energy is `0.0`
+- silence band ratios are `None`
+- generated sine energy appears near expected frequency
+- target band energy detection
+- band energy ratio for nonzero total energy
+- predefined bands exist and are ordered
+- no fake `-999` values
+- no advice text in metric output
+- no subjective tonal labels beyond neutral band names
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- Ran 135 tests.
+- Result: `OK`.
+- 48 future-phase placeholder tests remain intentionally skipped.
+
+### Intentionally Unimplemented
+
+- tonal balance interpretation
+- EQ advice
+- subjective labels such as mud, harshness, warmth, brightness, thinness, or professional quality
+- reference comparison
+- report writing
+- AI interpretation
+- backend, plugin, GUI, and VST code
+- GitHub Actions
+- Cloudflare config
+- external dependencies
+- old repo migration
+
+### Old Repo Modification Check
+
+No old repos were modified.
+
+### Next Recommended Phase
+
+Review the frequency metric behavior and tests. The next safe phase should implement one remaining Python truth-layer slice only, such as dynamics or transients, with synthetic inputs and no interpretation text.
