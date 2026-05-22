@@ -399,3 +399,145 @@ No old repos were modified. Only files inside `AIFRED_Official-` were changed.
 ### Next Recommended Phase
 
 Phase 4F should continue with adapter-safe response handling or a narrow response-validation integration pass, still without provider calls, secrets, backend routes, plugin/VST/GUI work, dependencies, canned analysis logic, or metric-threshold response templates.
+
+## Phase 4F — Prompt Builder Structural Implementation
+
+Implemented model-neutral prompt context building for future adapters. This phase preserves packet facts, mode, source, freshness, confidence, metric families, limitations, and warnings while keeping provider prompt generation and final AI response generation out of scope.
+
+### Files Changed
+
+- `ai_engine/prompts/prompt_builder.py`
+- `ai_engine/tests/test_prompt_contract.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `PromptSection` dataclass for model-neutral prompt sections.
+- Expanded `PromptBuildResult` with `system_constraints`, freshness, confidence, and structured sections.
+- `build_system_constraints()` for behavioral constraints as data only.
+- `build_prompt_sections(packet)` for model-neutral packet sections.
+- `prompt_context_to_dict(context)` for standard-library serializable prompt context output.
+- Safe packet context extraction now preserves facts and privacy-safe metadata.
+- Unsafe metadata is removed or redacted.
+- Secret-like metadata keys are omitted.
+- Windows-style and Unix-style local paths are redacted.
+- Fake `-999` values in prompt context are represented as unavailable placeholders.
+- OpenAI and local prompt builders remain stubs that raise `NotImplementedError`.
+
+### Tests Added
+
+- Packet facts are extracted.
+- Windows-style local paths are not exposed.
+- Unix-style local paths are not exposed.
+- Model-neutral prompt sections are built.
+- Freshness and confidence are preserved.
+- Prompt context can be converted to a dictionary.
+- Prompt context dictionary contains no fake `-999`.
+- Existing prompt tests for question, mode, source label, metric families, limitations, warnings, missing fields, secrets, no final response text, provider stubs, and canned phrases continue to pass.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 96 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No network, API key, local endpoint, provider call, or local model was required.
+
+### Intentionally Unimplemented
+
+- OpenAI prompt generation.
+- Local/Ollama/LM Studio prompt generation.
+- Provider calls.
+- API-key reading.
+- Secrets.
+- Final AI interpretation response generation.
+- Canned analysis logic.
+- Metric-threshold response templates.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Phase 4G should prove prompt context and response validation guardrails work together using synthetic packets and synthetic structured results only.
+
+## Phase 4G — Prompt/Response Guardrail Integration Tests
+
+Added integration-style tests proving structural prompt context can support response validation without provider calls, network access, API keys, local model loading, or generated AI interpretation.
+
+### Files Changed
+
+- `ai_engine/tests/test_prompt_response_guardrails.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- Synthetic packet-to-prompt-context guardrail coverage.
+- Synthetic `AIInterpretationResult` validation coverage using prompt context mode/source/facts.
+- Cross-checks that prompt context remains privacy-safe and avoids fake placeholders.
+- Cross-checks that response validation catches mode, source, mode-leakage, and unavailable-fact violations.
+
+### Tests Added
+
+- Prompt context built from a packet can support response validator expectations.
+- Prompt context includes mode, source label, and facts needed for validation alignment.
+- Synthetic response with matching mode/source validates.
+- Synthetic response with mismatched mode fails validation.
+- Synthetic response with mismatched source fails validation.
+- Analyze Mode response mentioning reference pool fails validation by default.
+- Compare Mode response calling B a reference fails validation.
+- Response claiming LUFS without a LUFS fact fails validation.
+- Response claiming true peak without a true peak fact fails validation.
+- NoAI/status-only response passes validation when status is `NO_AI_CONFIGURED`.
+- NoAI/status-only response fails when it contains advice text.
+- Prompt context contains no fake `-999`.
+- Prompt context contains no private paths.
+- Prompt context contains no canned diagnosis phrase.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 96 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No network, API key, local endpoint, provider call, or local model was required.
+
+### Intentionally Unimplemented
+
+- OpenAI implementation.
+- Ollama implementation.
+- LM Studio implementation.
+- Local model loading.
+- Provider calls.
+- API-key reading.
+- Secrets.
+- Final AI interpretation response generation.
+- Canned analysis logic.
+- Metric-threshold response templates.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Phase 4H should continue with adapter-safe response handling or NoAI/router integration around the validated prompt/response structures, still without provider calls, secrets, backend routes, plugin/VST/GUI work, dependencies, canned analysis logic, or metric-threshold response templates.

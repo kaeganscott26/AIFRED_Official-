@@ -5,7 +5,9 @@ from ai_engine.prompts.prompt_builder import (
     build_local_prompt,
     build_openai_prompt,
     build_prompt_context,
+    build_prompt_sections,
     extract_prompt_packet_context,
+    prompt_context_to_dict,
 )
 
 
@@ -26,6 +28,7 @@ def sample_packet():
         "warnings": ["synthetic packet"],
         "metadata": {
             "path": r"C:\Users\North\Private Session\mix.wav",
+            "unix_path": "/Users/North/Private Session/mix.wav",
             "api_key": "sk-test-secret",
         },
     }
@@ -62,6 +65,12 @@ class PromptContractTests(unittest.TestCase):
 
         self.assertEqual(context["selected_metric_families"], ("level", "tonal_balance"))
 
+    def test_extracts_facts(self):
+        context = extract_prompt_packet_context(sample_packet())
+
+        self.assertEqual(context["facts"][0]["name"], "sample_peak_dbfs")
+        self.assertEqual(context["facts"][0]["value"], -6.0)
+
     def test_preserves_limitations(self):
         result = build_prompt_context(sample_packet())
 
@@ -82,6 +91,13 @@ class PromptContractTests(unittest.TestCase):
         context_text = flatten_text(extract_prompt_packet_context(sample_packet()))
 
         self.assertNotIn(r"C:\Users\North\Private Session", context_text)
+        self.assertNotIn(r"C:\Users\North", context_text)
+
+    def test_does_not_expose_unix_style_local_paths(self):
+        context_text = flatten_text(extract_prompt_packet_context(sample_packet()))
+
+        self.assertNotIn("/Users/North/Private Session", context_text)
+        self.assertNotIn("/Users/North", context_text)
 
     def test_does_not_include_secrets(self):
         context_text = flatten_text(extract_prompt_packet_context(sample_packet()))
@@ -106,6 +122,34 @@ class PromptContractTests(unittest.TestCase):
         context_text = flatten_text(build_prompt_context(sample_packet())).lower()
 
         self.assertFalse(any(phrase in context_text for phrase in CANNED_PHRASES))
+
+    def test_builds_model_neutral_prompt_sections(self):
+        sections = build_prompt_sections(sample_packet())
+        section_names = {section.name for section in sections}
+
+        self.assertIn("system_constraints", section_names)
+        self.assertIn("packet_identity", section_names)
+        self.assertIn("facts", section_names)
+
+    def test_prompt_context_preserves_freshness_and_confidence(self):
+        result = build_prompt_context(sample_packet())
+
+        self.assertEqual(result.freshness, "recent")
+        self.assertEqual(result.confidence, "High")
+
+    def test_prompt_context_can_be_converted_to_dict(self):
+        context_dict = prompt_context_to_dict(build_prompt_context(sample_packet()))
+
+        self.assertEqual(context_dict["user_question"], "Is saturation relevant here?")
+        self.assertEqual(context_dict["mode"], "analyze")
+        self.assertIn("sections", context_dict)
+
+    def test_prompt_context_dict_contains_no_fake_minus_999(self):
+        packet = sample_packet()
+        packet["facts"] = [{"family": "level", "name": "placeholder", "value": -999}]
+        context_text = flatten_text(prompt_context_to_dict(build_prompt_context(packet)))
+
+        self.assertNotIn("-999", context_text)
 
 
 if __name__ == "__main__":
