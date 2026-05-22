@@ -316,3 +316,86 @@ No old repos were modified. Only files inside `AIFRED_Official-` were changed.
 ### Next Recommended Phase
 
 Phase 4E should add response validation or narrow prompt-context validation for adapter outputs, still without provider calls, secrets, backend routes, plugin/VST/GUI work, dependencies, canned analysis logic, or metric-threshold response templates.
+
+## Phase 4E — AI Response Validation Foundation
+
+Added response validation guardrails for future `AIInterpretationResult` objects. This phase validates structure, mode/source alignment, status consistency, privacy safety, fake-value avoidance, and obvious contract violations without generating AI interpretation or calling providers.
+
+### Files Changed
+
+- `ai_engine/response_validation.py`
+- `ai_engine/tests/test_response_validation.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `AIResponseValidationSeverity` for `INFO`, `WARNING`, and `ERROR` issue levels.
+- `AIResponseValidationIssue` for structured validation findings.
+- `AIResponseValidationResult` with `is_valid`, issues, error count, and warning count.
+- `validate_ai_interpretation_result(result, packet=None)` as the main structural validator.
+- `find_forbidden_response_text(text)` for obvious prohibited response phrases.
+- `detect_fake_metric_values(value)` for nested fake `-999` detection.
+- `detect_private_path_leak(value)` for obvious Windows and Unix local path leaks.
+- `validate_mode_alignment(result, packet=None)` for packet/result mode consistency.
+- `validate_source_alignment(result, packet=None)` for packet/result source-label consistency.
+- `validate_status_consistency(result)` for READY, NO_AI_CONFIGURED, ERROR, and TIMEOUT status rules.
+- Guardrails for Analyze Mode reference-pool leakage.
+- Guardrails for Compare Mode treating B as a reference by default.
+- Guardrails for true peak and LUFS claims when those facts are missing from the packet.
+
+### Tests Added
+
+- Valid ready result passes when structure aligns with packet mode/source.
+- READY with empty response text fails.
+- No-AI configured status-only text passes.
+- No-AI configured advice text fails.
+- TIMEOUT and ERROR results are rejected when they pretend to be interpretation.
+- Fake `-999` values are detected.
+- Private Windows-style local paths are detected.
+- Private Unix-style local paths are detected.
+- Mode mismatch between packet and result is detected.
+- Source-label mismatch between packet and result is detected.
+- Analyze Mode reference-pool leakage is detected.
+- Compare Mode `B is a reference` leakage is detected.
+- True peak claims without true peak facts are detected.
+- LUFS claims without LUFS facts are detected.
+- Limitations and warnings structure is accepted.
+- Validation result error and warning counts are verified.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 76 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No network, API key, local endpoint, provider call, or local model was required.
+
+### Intentionally Unimplemented
+
+- OpenAI implementation.
+- Ollama implementation.
+- LM Studio implementation.
+- Local model loading.
+- Provider calls.
+- API-key reading.
+- Secrets.
+- Final AI interpretation response generation.
+- Canned analysis logic.
+- Metric-threshold response templates.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Phase 4F should continue with adapter-safe response handling or a narrow response-validation integration pass, still without provider calls, secrets, backend routes, plugin/VST/GUI work, dependencies, canned analysis logic, or metric-threshold response templates.
