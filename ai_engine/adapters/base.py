@@ -39,6 +39,7 @@ class AIInterpretationResult:
     status: AIAdapterStatus
     response_text: str = ""
     used_metric_families: tuple[str, ...] = field(default_factory=tuple)
+    facts_referenced: tuple[str, ...] = field(default_factory=tuple)
     source_label: str | None = None
     mode: str | None = None
     limitations: tuple[str, ...] = field(default_factory=tuple)

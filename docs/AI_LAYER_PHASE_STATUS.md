@@ -237,3 +237,82 @@ No old repos were modified. Only files inside `AIFRED_Official-` were changed.
 ### Next Recommended Phase
 
 Phase 4D should define the AI response contract and tests for response-shape validation without implementing OpenAI/local providers, backend routes, plugin/VST/GUI work, dependencies, secrets, canned analysis logic, or metric-threshold response templates.
+
+## Phase 4D — AI Prompt and Response Contract Foundation
+
+Defined the prompt and response contracts for future AI interpretation while keeping provider calls, final response generation, and adapter implementation out of scope. This phase added structural prompt context extraction and response-field support only.
+
+### Files Changed
+
+- `ai_engine/AI_RESPONSE_CONTRACT.md`
+- `ai_engine/prompts/PROMPT_CONTRACT.md`
+- `ai_engine/prompts/__init__.py`
+- `ai_engine/prompts/prompt_builder.py`
+- `ai_engine/tests/test_prompt_contract.py`
+- `ai_engine/tests/test_response_contract.py`
+- `ai_engine/adapters/base.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- AI response contract documentation covering required fields, status rules, forbidden response behavior, mode-specific behavior, metric relevance, uncertainty handling, privacy, and future boundaries.
+- Prompt contract documentation covering allowed inputs, forbidden inputs, prompt shape, no-canned-response rules, local/online parity, and future boundaries.
+- `PromptBuildResult` for structural prompt context data.
+- Safe packet context extraction from packet-like dictionaries and dataclass-like objects.
+- Structural prompt context assembly that preserves question, mode, source label, selected metric families, limitations, and warnings.
+- Defensive redaction for local/private path-like values and secret-like metadata in prompt context.
+- Placeholder replacement for fake `-999` values in prompt context.
+- OpenAI and local prompt builder stubs that raise `NotImplementedError`.
+- `AIInterpretationResult` support for `facts_referenced`.
+
+### Tests Added
+
+- Prompt context extracts packet question, mode, source label, selected metric families, limitations, and warnings.
+- Prompt context handles missing packet fields gracefully.
+- Prompt context avoids local/private path exposure.
+- Prompt context avoids secret exposure.
+- Prompt context does not generate final response text.
+- OpenAI and local prompt builder stubs raise `NotImplementedError`.
+- Prompt context avoids canned phrases.
+- Response result supports required fields, statuses, fallback reason, used metric families, limitations, warnings, raw response availability, and referenced facts.
+- Response result does not require raw provider response.
+- Response result representation avoids fake `-999` and canned advice phrases.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 59 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No network, API key, local endpoint, provider call, or local model was required.
+
+### Intentionally Unimplemented
+
+- OpenAI implementation.
+- Ollama implementation.
+- LM Studio implementation.
+- Local model loading.
+- Provider calls.
+- API-key reading.
+- Secrets.
+- Final AI interpretation response generation.
+- Response validation enforcement beyond structural tests.
+- Canned analysis logic.
+- Metric-threshold response templates.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Phase 4E should add response validation or narrow prompt-context validation for adapter outputs, still without provider calls, secrets, backend routes, plugin/VST/GUI work, dependencies, canned analysis logic, or metric-threshold response templates.
