@@ -707,3 +707,88 @@ No old repos were modified. Only files inside `AIFRED_Official-` were modified, 
 ### Next Recommended Phase
 
 Phase 4J should define the next narrow adapter boundary, such as OpenAI provider execution rules or local adapter contract details, before any live provider calls are added. It should still avoid backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, and old repo migration unless explicitly approved.
+
+## Phase 4J — Local Adapter Config Boundary
+
+Implemented safe local AI configuration boundary helpers and tests only. This phase defines local provider settings, endpoint/model/timeout validation, and safe summaries without implementing Ollama, LM Studio, HTTP requests, local model loading, provider calls, backend routes, or final AI interpretation.
+
+### Files Changed
+
+- `ai_engine/config/local_config.py`
+- `ai_engine/config/adapter_config.py`
+- `ai_engine/tests/test_local_config.py`
+- `ai_engine/tests/test_adapter_router.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- `LocalProviderType` enum for `OLLAMA`, `LM_STUDIO`, and `CUSTOM`.
+- `LocalConfigStatus` enum for `READY`, `DISABLED`, `MISSING_MODEL`, `MISSING_ENDPOINT`, and `INVALID_CONFIG`.
+- `LocalAdapterSettings` dataclass for local provider references.
+- `LocalConfigCheck` dataclass for privacy-safe config check results.
+- Default Ollama settings with `http://127.0.0.1:11434` as an endpoint reference only.
+- Default LM Studio settings with `http://127.0.0.1:1234/v1` as an endpoint reference only.
+- Local config validation for positive timeout, endpoint shape, loopback-only Ollama/LM Studio endpoints, explicit `CUSTOM` endpoints, and credential-embedded endpoint rejection.
+- Local config readiness checks that do not require model or endpoint when disabled.
+- Safe local config summaries that include provider, model, status, endpoint reference, timeout, and issues without exposing embedded credentials.
+- General adapter config now includes optional `local_settings` with safe Ollama defaults.
+- Router coverage was kept strict and extended to confirm endpoint credentials are not exposed in NoAI fallback output.
+
+### Tests Added
+
+- Default Ollama settings use the local Ollama endpoint.
+- Default LM Studio settings use the local LM Studio endpoint.
+- Disabled settings do not require a model.
+- Disabled settings do not require an endpoint.
+- Enabled settings without a model return `MISSING_MODEL`.
+- Enabled settings without an endpoint return `MISSING_ENDPOINT`.
+- Enabled valid Ollama settings return `READY`.
+- Enabled valid LM Studio settings return `READY`.
+- Invalid timeout is rejected.
+- Credential-embedded endpoint is rejected.
+- Safe summary includes provider, model, and status.
+- Safe summary does not include credentials.
+- Custom provider can reference an explicit custom endpoint.
+- Non-custom providers reject non-local endpoints.
+- Safe summary contains no fake `-999`, advice text, or canned phrases.
+- Router fallback does not expose endpoint credentials.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 131 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No provider calls, network/API access, local model access, OpenAI SDK import, real local endpoint, backend route, plugin, VST, or GUI behavior was required.
+
+### Intentionally Unimplemented
+
+- Ollama calls.
+- LM Studio calls.
+- HTTP requests.
+- Local model loading.
+- OpenAI API calls.
+- OpenAI SDK import.
+- Provider calls.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Secrets or hardcoded API keys.
+- Hardcoded personal local model paths.
+- Canned analysis responses.
+- Metric-threshold response templates.
+- Final AI interpretation responses.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were modified.
+
+### Next Recommended Phase
+
+Phase 4K should define the next narrow adapter boundary, such as provider execution/error-handling rules or response-validation wiring for future adapters, before any live local or OpenAI provider calls are added. It should still avoid backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, and old repo migration unless explicitly approved.

@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .local_config import LocalAdapterSettings, create_default_ollama_settings
 from .openai_config import OpenAIAdapterSettings, create_default_openai_settings
 
 
@@ -27,6 +28,7 @@ class AIAdapterConfig:
 
     preferred_adapter: PreferredAdapter = PreferredAdapter.AUTO
     openai_settings: OpenAIAdapterSettings = field(default_factory=create_default_openai_settings)
+    local_settings: LocalAdapterSettings = field(default_factory=create_default_ollama_settings)
     openai_enabled: bool = False
     local_enabled: bool = False
     no_ai_fallback_enabled: bool = True

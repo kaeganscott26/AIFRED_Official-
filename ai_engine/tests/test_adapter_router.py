@@ -5,6 +5,7 @@ from ai_engine.adapters.base import AIAdapterStatus, AIAdapterType
 from ai_engine.adapters.no_ai_adapter import NoAIAdapter
 from ai_engine.adapters.router import AdapterRouter
 from ai_engine.config.adapter_config import AIAdapterConfig, PreferredAdapter
+from ai_engine.config.local_config import LocalAdapterSettings
 from ai_engine.config.openai_config import OpenAIAdapterSettings
 
 ADVICE_TEXT = ("you should", "do this", "add saturation", "boost", "cut", "fix your mix")
@@ -88,6 +89,19 @@ class AdapterRouterTests(unittest.TestCase):
         result = AdapterRouter(config).interpret(sample_packet())
 
         self.assertEqual(result.adapter_type, AIAdapterType.NO_AI)
+
+    def test_router_does_not_expose_endpoint_credentials(self):
+        config = AIAdapterConfig(
+            local_settings=LocalAdapterSettings(
+                enabled=True,
+                model="local-test-model",
+                endpoint="http://user:pass@127.0.0.1:11434",
+            )
+        )
+        result_text = flatten_text(AdapterRouter(config).interpret(sample_packet()))
+
+        self.assertNotIn("user:pass", result_text)
+        self.assertNotIn("http://user:pass@127.0.0.1:11434", result_text)
 
     def test_router_does_not_call_network(self):
         config = AIAdapterConfig(openai_enabled=True, local_enabled=True)
