@@ -627,3 +627,83 @@ No old repos were modified. Only files inside `AIFRED_Official-` were changed.
 ### Next Recommended Phase
 
 The next phase should define the OpenAI provider implementation boundary or the local adapter contract before adding any live provider calls. It should specify API-key reference rules, direct-vs-backend provider routing, timeout/error behavior, response validation enforcement, raw response handling, and NoAI fallback behavior.
+
+## Phase 4I — OpenAI Adapter Config Boundary
+
+Resumed after an interrupted or possibly incomplete run. The Phase 4I code was already partially implemented when resumed: `openai_config.py`, OpenAI config tests, and the optional `openai_settings` field in adapter config were present. This pass verified the implementation, confirmed the tests, and completed the phase status documentation without rewriting complete code unnecessarily.
+
+### Files Changed
+
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### Files Verified From Partial Work
+
+- `ai_engine/config/openai_config.py`
+- `ai_engine/config/adapter_config.py`
+- `ai_engine/tests/test_openai_config.py`
+- `ai_engine/tests/test_adapter_router.py`
+
+### What Was Implemented Or Completed
+
+- Safe OpenAI config boundary objects are present: `OpenAIConfigStatus`, `OpenAIConfigCheck`, and `OpenAIAdapterSettings`.
+- Default OpenAI settings use `OPENAI_API_KEY` as an environment variable name only.
+- OpenAI config validation checks positive timeout, non-empty model when enabled, non-empty API key environment variable name, and positive max output token limits when provided.
+- OpenAI config checks support injected environment mappings for tests.
+- Empty and whitespace API key values count as missing.
+- Disabled OpenAI settings do not require a key.
+- Safe summaries expose API key presence as a boolean only and never expose the key value.
+- General adapter config includes optional OpenAI settings with safe defaults.
+- Router tests still prove NoAI fallback when OpenAI is unavailable, without requiring a real API key, exposing fake injected keys, or calling providers.
+
+### Tests Added Or Verified
+
+- Default settings use `OPENAI_API_KEY` as the environment variable name.
+- Disabled settings do not require a key.
+- Enabled settings without a key return `MISSING_API_KEY`.
+- Enabled settings with an injected fake key return `READY`.
+- Fake key values are never present in safe summaries.
+- Key presence is boolean only.
+- Empty and whitespace keys count as missing.
+- Invalid timeout is rejected.
+- Empty model is rejected when enabled.
+- Safe summary includes model and status.
+- Safe summary does not include secrets, fake `-999`, advice text, or canned phrases.
+- Router fallback tests remain strict and do not require provider access.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 113 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No provider calls, network/API access, local model access, OpenAI SDK import, real API key, backend route, plugin, VST, or GUI behavior was required.
+
+### Intentionally Unimplemented
+
+- OpenAI API calls.
+- OpenAI SDK import.
+- Ollama calls.
+- LM Studio calls.
+- Local model loading.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Secrets or hardcoded API keys.
+- Hardcoded local model paths.
+- Canned analysis responses.
+- Metric-threshold response templates.
+- Final AI interpretation responses.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were modified, and the only file changed during this resume pass was `docs/AI_LAYER_PHASE_STATUS.md`.
+
+### Next Recommended Phase
+
+Phase 4J should define the next narrow adapter boundary, such as OpenAI provider execution rules or local adapter contract details, before any live provider calls are added. It should still avoid backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, and old repo migration unless explicitly approved.
