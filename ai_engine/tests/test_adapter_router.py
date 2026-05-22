@@ -5,6 +5,7 @@ from ai_engine.adapters.base import AIAdapterStatus, AIAdapterType
 from ai_engine.adapters.no_ai_adapter import NoAIAdapter
 from ai_engine.adapters.router import AdapterRouter
 from ai_engine.config.adapter_config import AIAdapterConfig, PreferredAdapter
+from ai_engine.config.openai_config import OpenAIAdapterSettings
 
 ADVICE_TEXT = ("you should", "do this", "add saturation", "boost", "cut", "fix your mix")
 
@@ -69,6 +70,18 @@ class AdapterRouterTests(unittest.TestCase):
         result = AdapterRouter(config).interpret(sample_packet())
 
         self.assertEqual(result.adapter_type, AIAdapterType.NO_AI)
+
+    def test_router_does_not_expose_fake_injected_key_reference(self):
+        config = AIAdapterConfig(
+            openai_settings=OpenAIAdapterSettings(
+                enabled=True,
+                api_key_env_var="AIFRED_TEST_KEY_NAME_ONLY",
+            )
+        )
+        result_text = flatten_text(AdapterRouter(config).interpret(sample_packet()))
+
+        self.assertNotIn("sk-test", result_text)
+        self.assertNotIn("AIFRED_TEST_KEY_NAME_ONLY", result_text)
 
     def test_router_does_not_require_local_endpoint(self):
         config = AIAdapterConfig(local_enabled=True, local_endpoint=None)

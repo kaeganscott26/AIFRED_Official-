@@ -6,8 +6,10 @@ variables, inspect endpoints, call providers, or load local models.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+
+from .openai_config import OpenAIAdapterSettings, create_default_openai_settings
 
 
 class PreferredAdapter(str, Enum):
@@ -24,6 +26,7 @@ class AIAdapterConfig:
     """Configuration references for future adapter selection."""
 
     preferred_adapter: PreferredAdapter = PreferredAdapter.AUTO
+    openai_settings: OpenAIAdapterSettings = field(default_factory=create_default_openai_settings)
     openai_enabled: bool = False
     local_enabled: bool = False
     no_ai_fallback_enabled: bool = True
