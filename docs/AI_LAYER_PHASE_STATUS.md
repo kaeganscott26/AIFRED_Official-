@@ -792,3 +792,103 @@ No old repos were modified. Only files inside `AIFRED_Official-` were modified.
 ### Next Recommended Phase
 
 Phase 4K should define the next narrow adapter boundary, such as provider execution/error-handling rules or response-validation wiring for future adapters, before any live local or OpenAI provider calls are added. It should still avoid backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, and old repo migration unless explicitly approved.
+
+## Phase 4K — Adapter Config Integration Audit
+
+Completed an audit-only integration pass for OpenAI config, local config, adapter router fallback, NoAI fallback safety, and provider-stub boundaries. This phase added documentation and integration tests only; no production adapter/config modules were modified.
+
+### Files Changed
+
+- `docs/AI_ADAPTER_CONFIG_INTEGRATION_AUDIT.md`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+- `ai_engine/tests/test_adapter_config_integration.py`
+
+### Tests Added
+
+- OpenAI config can be checked with an injected fake key without exposing the fake key.
+- Local Ollama config can be checked without calling the endpoint.
+- Local LM Studio config can be checked without calling the endpoint.
+- Router still falls back to NoAI when OpenAI/local adapter implementations are unavailable.
+- Router does not become ready just because config is structurally ready.
+- Router does not require a real API key.
+- Router does not require a real local endpoint connection.
+- Router does not call network.
+- Safe OpenAI summary does not include secret values.
+- Safe local summary does not include endpoint credentials.
+- Credential-embedded local endpoint is rejected.
+- Disabled OpenAI config does not require a key.
+- Disabled local config does not require endpoint or model.
+- Invalid timeout fails safely for OpenAI and local configs.
+- Empty model fails safely when enabled.
+- AUTO mode and preferred NoAI routing return NoAI fallback while providers are unavailable.
+- Disabled NoAI fallback returns structured unavailable state.
+- NoAI fallback remains status-only, avoids analysis advice, redacts private paths, and avoids fake `-999`.
+- OpenAI and local adapters remain unavailable stubs.
+- No OpenAI SDK or third-party HTTP/provider module is required.
+- No environment secret value is printed or returned.
+
+### Commands Run
+
+- `python -m unittest discover -s python_brain\tests -v`
+- `python -m unittest discover -s ai_engine\tests -v`
+- `Get-Date -Format o`
+
+### Python Truth-Layer Test Result
+
+- Baseline before integration test addition: 353 tests, result `OK`, 48 skipped, 0 failures, 0 errors.
+- Final after integration test addition: 353 tests, result `OK`, 48 skipped, 0 failures, 0 errors.
+
+### AI Engine Test Result
+
+- Baseline before integration test addition: 131 tests, result `OK`, 0 skipped, 0 failures, 0 errors.
+- Final after integration test addition: 156 tests, result `OK`, 0 skipped, 0 failures, 0 errors.
+- New adapter config integration tests: 25 tests, result `OK`.
+
+### Audit Result
+
+- OpenAI config boundary is integrated with injected-environment testing and safe summaries.
+- Local config boundary is integrated with endpoint/model/timeout validation and safe summaries.
+- Router fallback remains NoAI-first while provider adapters are unavailable.
+- NoAI fallback remains status-only, factual, privacy-aware, and free of fake `-999`.
+- OpenAI and local adapter implementations remain unavailable stubs.
+- No provider calls, network calls, API calls, local model loading, real API key, real endpoint connection, backend route, plugin, VST, or GUI behavior was required.
+
+### Readiness Decision
+
+- `READY_FOR_NOAI_ONLY_INTEGRATION`
+- `READY_FOR_OPENAI_ADAPTER_STUB_HARDENING`
+- `READY_FOR_LOCAL_ADAPTER_STUB_HARDENING`
+- `NOT_READY_FOR_PROVIDER_CALLS`
+- Not selected: `BLOCKED`
+
+### Intentionally Unimplemented
+
+- OpenAI API calls.
+- OpenAI SDK import.
+- Ollama calls.
+- LM Studio calls.
+- HTTP requests.
+- Local model loading.
+- Provider execution.
+- Real API key loading into a client.
+- Local endpoint probing.
+- Streaming behavior.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Secrets or hardcoded API keys.
+- Hardcoded personal local model paths.
+- Canned analysis responses.
+- Metric-threshold response templates.
+- Final AI interpretation responses.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were modified.
+
+### Next Recommended Phase
+
+Phase 4L should harden OpenAI/local adapter stubs or define response-validation wiring for future adapter execution without adding live provider calls. It should still avoid backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, metric-threshold response templates, and old repo migration unless explicitly approved.
