@@ -155,3 +155,85 @@ No old repos were modified. Only files inside `AIFRED_Official-` were changed.
 ### Next Recommended Phase
 
 Phase 4C may implement and test NoAIAdapter behavior more fully, still without OpenAI/local provider calls, secrets, backend routes, plugin/VST/GUI work, dependencies, canned analysis logic, or generated metric-threshold response templates.
+
+## Phase 4C — NoAI Fallback Behavior Hardening
+
+Hardened the NoAI fallback adapter and router behavior so no-AI mode remains structured, factual, privacy-aware, and honest about unavailable AI interpretation. This phase did not implement provider calls or final AI interpretation advice.
+
+### Files Changed
+
+- `ai_engine/adapters/no_ai_adapter.py`
+- `ai_engine/adapters/router.py`
+- `ai_engine/tests/test_no_ai_adapter.py`
+- `ai_engine/tests/test_adapter_router.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Was Implemented
+
+- NoAI capability now clearly reports available vs unavailable based on fallback configuration.
+- NoAI interpretation preserves packet mode, source label, metric families, warnings, and limitations when available.
+- NoAI interpretation adds an AI-unavailable limitation.
+- NoAI interpretation handles missing packet fields gracefully.
+- NoAI interpretation handles packet-like dictionaries and dataclass-like objects.
+- NoAI interpretation uses only the approved status text: `AI interpretation is unavailable. Factual metrics and reports remain available.`
+- NoAI output avoids `READY` status, generated advice, canned analysis, subjective labels, fake `-999`, and full private/local path exposure.
+- AdapterRouter returns structured unavailable state when no provider and no NoAI fallback are available.
+- AdapterRouter preserves structured fallback behavior without requiring API keys, local endpoints, network access, provider calls, or local model loading.
+
+### Tests Added
+
+- Fallback enabled capability is available.
+- Fallback disabled capability is unavailable.
+- NoAI preserves mode and source label from dict packets.
+- NoAI preserves selected metric families.
+- NoAI preserves warnings and limitations while adding AI-unavailable limitation.
+- NoAI handles missing packet fields gracefully.
+- NoAI handles dataclass-like packet objects.
+- NoAI disabled fallback returns unavailable status.
+- NoAI response text is status-only.
+- NoAI result contains no advice, subjective labels, canned analysis phrases, fake `-999`, or full private paths.
+- Router AUTO falls back to NoAI when OpenAI/local are unavailable.
+- Router preferred NoAI selects NoAI.
+- Router disabled NoAI fallback returns structured unavailable state.
+- Router handles missing packet fields gracefully.
+- Router does not require API key or local endpoint.
+- Router does not call network/providers.
+- Router output contains no advice or fake `-999`.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+
+### Test Result
+
+- AI engine tests: 35 tests, result `OK`.
+- Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- No network, API key, local endpoint, provider call, or local model was required.
+
+### Intentionally Unimplemented
+
+- OpenAI implementation.
+- Ollama implementation.
+- LM Studio implementation.
+- Local model loading.
+- Provider calls.
+- API-key reading.
+- Secrets.
+- Canned analysis logic.
+- Metric-threshold response templates.
+- Final AI interpretation advice.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were changed.
+
+### Next Recommended Phase
+
+Phase 4D should define the AI response contract and tests for response-shape validation without implementing OpenAI/local providers, backend routes, plugin/VST/GUI work, dependencies, secrets, canned analysis logic, or metric-threshold response templates.

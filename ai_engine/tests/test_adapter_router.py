@@ -1,9 +1,12 @@
 import unittest
+from dataclasses import asdict, is_dataclass
 
 from ai_engine.adapters.base import AIAdapterStatus, AIAdapterType
 from ai_engine.adapters.no_ai_adapter import NoAIAdapter
 from ai_engine.adapters.router import AdapterRouter
 from ai_engine.config.adapter_config import AIAdapterConfig, PreferredAdapter
+
+ADVICE_TEXT = ("you should", "do this", "add saturation", "boost", "cut", "fix your mix")
 
 
 def sample_packet():
@@ -22,6 +25,16 @@ def sample_packet():
     }
 
 
+def flatten_text(value):
+    if is_dataclass(value):
+        value = asdict(value)
+    if isinstance(value, dict):
+        return " ".join(flatten_text(item) for item in value.values())
+    if isinstance(value, (list, tuple, set)):
+        return " ".join(flatten_text(item) for item in value)
+    return str(value)
+
+
 class AdapterRouterTests(unittest.TestCase):
     def test_auto_config_falls_back_to_no_ai_when_openai_and_local_unavailable(self):
         config = AIAdapterConfig(openai_enabled=True, local_enabled=True, no_ai_fallback_enabled=True)
@@ -35,6 +48,14 @@ class AdapterRouterTests(unittest.TestCase):
         router = AdapterRouter(config)
 
         self.assertIsInstance(router.select_adapter(), NoAIAdapter)
+
+    def test_disabled_no_ai_fallback_returns_structured_unavailable_result(self):
+        config = AIAdapterConfig(openai_enabled=False, local_enabled=False, no_ai_fallback_enabled=False)
+        result = AdapterRouter(config).interpret(sample_packet())
+
+        self.assertEqual(result.status, AIAdapterStatus.UNAVAILABLE)
+        self.assertEqual(result.adapter_type, AIAdapterType.NO_AI)
+        self.assertIn("No AI adapter is available.", result.limitations)
 
     def test_router_returns_structured_result(self):
         result = AdapterRouter(AIAdapterConfig()).interpret(sample_packet())
@@ -68,6 +89,16 @@ class AdapterRouterTests(unittest.TestCase):
         self.assertEqual(result.adapter_type, AIAdapterType.NO_AI)
         self.assertEqual(result.status, AIAdapterStatus.LIMITED)
         self.assertTrue(any("Missing packet fields" in item for item in result.limitations))
+
+    def test_router_result_contains_no_advice(self):
+        result_text = flatten_text(AdapterRouter(AIAdapterConfig()).interpret(sample_packet())).lower()
+
+        self.assertFalse(any(phrase in result_text for phrase in ADVICE_TEXT))
+
+    def test_router_result_contains_no_fake_minus_999(self):
+        result_text = flatten_text(AdapterRouter(AIAdapterConfig()).interpret(sample_packet()))
+
+        self.assertNotIn("-999", result_text)
 
 
 if __name__ == "__main__":

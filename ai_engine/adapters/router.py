@@ -6,14 +6,20 @@ does not call providers, read secrets, contact endpoints, or load models.
 
 from __future__ import annotations
 
+from pathlib import PurePath, PureWindowsPath
+import re
 from typing import Any
 
 from ai_engine.config.adapter_config import AIAdapterConfig, PreferredAdapter
 
-from .base import AIAdapter, AIAdapterStatus, AIAdapterType, AIInterpretationResult
+from .base import AIAdapter, AIAdapterStatus, AIAdapterType, AIInterpretationResult, packet_value
 from .local_adapter import LocalAIAdapter
 from .no_ai_adapter import NoAIAdapter
 from .openai_adapter import OpenAIAdapter
+
+_PRIVATE_PATH_PATTERN = re.compile(
+    r"(?P<path>(?:[A-Za-z]:\\|/)[^\s\"'<>|]+)"
+)
 
 
 class AdapterRouter:
@@ -51,6 +57,8 @@ class AdapterRouter:
                 adapter_name="AdapterRouter",
                 adapter_type=AIAdapterType.NO_AI,
                 status=AIAdapterStatus.UNAVAILABLE,
+                source_label=_safe_optional_text(packet_value(packet, "source_label")),
+                mode=_safe_optional_text(packet_value(packet, "mode")),
                 limitations=("No AI adapter is available.",),
                 fallback_reason="No configured adapter capability is available.",
             )
@@ -71,3 +79,21 @@ class AdapterRouter:
         if self.config.no_ai_fallback_enabled:
             return self.no_ai_adapter
         return adapter
+
+
+def _safe_optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(getattr(value, "value", value))
+    text = text.replace("-999", "[unavailable]")
+    return _PRIVATE_PATH_PATTERN.sub(_redact_path_match, text)
+
+
+def _redact_path_match(match: re.Match[str]) -> str:
+    raw_path = match.group("path").rstrip(".,;:)")
+    trailing = match.group("path")[len(raw_path):]
+    try:
+        filename = PureWindowsPath(raw_path).name or PurePath(raw_path).name
+    except ValueError:
+        filename = "redacted"
+    return f"[redacted path]/{filename}{trailing}"
