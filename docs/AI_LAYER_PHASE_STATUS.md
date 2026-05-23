@@ -1047,3 +1047,72 @@ No old repos were modified. Only files inside `AIFRED_Official-` were modified.
 ### Next Recommended Phase
 
 Phase 4N should define response-validation wiring for future adapter execution or the next narrow provider-boundary contract without adding live provider calls. It should still avoid OpenAI API calls, Ollama calls, LM Studio calls, HTTP requests, local model loading, backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, metric-threshold response templates, and old repo migration unless explicitly approved.
+
+## Phase 4N — AI Layer Integration Smoke Tests
+
+Added AI layer integration smoke tests that exercise prompt context extraction, router fallback, provider-stub boundaries, response validation, and config boundary behavior using synthetic packet-like dictionaries only. This phase did not modify production adapter/config/prompt modules.
+
+### Files Changed
+
+- `ai_engine/tests/test_ai_layer_integration.py`
+- `docs/AI_LAYER_PHASE_STATUS.md`
+
+### What Integration Paths Were Tested
+
+- Synthetic packet dictionary to `extract_prompt_packet_context`.
+- Synthetic packet dictionary to `build_prompt_context`.
+- Prompt context to serializable `prompt_context_to_dict`.
+- AUTO router path with OpenAI/local unavailable and NoAI fallback enabled.
+- NoAI fallback structured result preservation of mode, source label, and selected metric families.
+- Structurally configured OpenAI adapter stub remains unavailable/limited and non-provider-ready.
+- Structurally configured local Ollama adapter stub remains unavailable/limited and non-provider-ready.
+- Structurally configured local LM Studio adapter stub remains unavailable/limited and non-provider-ready.
+- Response validation accepts a valid NoAI/status-only result.
+- Response validation rejects empty READY responses, mode mismatches, source mismatches, Analyze reference-pool leakage, Compare Mode `B is reference` leakage, LUFS claims without LUFS facts, true peak claims without true peak facts, private path leaks, and fake `-999`.
+- OpenAI config can be structurally ready with an injected fake key without exposing the fake key.
+- Local Ollama and LM Studio config checks can be structurally ready without endpoint calls.
+- Router still selects NoAI as the only functional fallback path while provider adapters remain stubs.
+
+### Commands Run
+
+- `python -m unittest discover -s ai_engine\tests -v`
+- `python -m unittest discover -s python_brain\tests -v`
+- `python -m unittest discover -s ai_engine\tests -v`
+
+### Test Result
+
+- AI engine tests before status documentation update: 189 tests, result `OK`.
+- Final Python Truth Layer tests: 353 tests, result `OK`, 48 intentional future-phase skips.
+- Final AI engine tests: 189 tests, result `OK`.
+- No provider calls, network/API access, local model access, OpenAI SDK import, real API key, real local endpoint, backend route, plugin, VST, or GUI behavior was required.
+
+### Intentionally Unimplemented
+
+- OpenAI API calls.
+- OpenAI SDK import.
+- Ollama calls.
+- LM Studio calls.
+- HTTP requests.
+- Local model loading.
+- Provider calls.
+- Real API key reads.
+- Real endpoint probing.
+- Backend routes.
+- Plugin, VST, or GUI code.
+- GitHub Actions.
+- Cloudflare config.
+- Dependencies.
+- Secrets or hardcoded API keys.
+- Hardcoded personal local model paths.
+- Canned analysis responses.
+- Metric-threshold response templates.
+- Final AI interpretation responses.
+- Old repo migration.
+
+### Old Repo Modification Check
+
+No old repos were modified. Only files inside `AIFRED_Official-` were modified.
+
+### Next Recommended Phase
+
+Phase 4O should define response-validation wiring expectations for any future provider execution path, still without adding live provider calls unless explicitly approved. It should continue to avoid backend routes, plugin/VST/GUI work, dependencies, secrets, canned response logic, metric-threshold response templates, and old repo migration.
