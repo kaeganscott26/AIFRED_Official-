@@ -35,7 +35,7 @@ class AdapterRouter:
     ) -> None:
         self.config = config or AIAdapterConfig()
         self.openai_adapter = openai_adapter or OpenAIAdapter()
-        self.local_adapter = local_adapter or LocalAIAdapter()
+        self.local_adapter = local_adapter or LocalAIAdapter(self.config.local_settings)
         self.no_ai_adapter = no_ai_adapter or NoAIAdapter(self.config.no_ai_fallback_enabled)
 
     def select_adapter(self) -> AIAdapter | None:
