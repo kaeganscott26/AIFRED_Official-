@@ -121,9 +121,74 @@ Acceptance gate:
 
 OpenAI and local outputs do not need identical intelligence, but both preserve the same trust value.
 
-## Phase 5 — Backend and Security
+## Phase 5 — Backend / Plugin Bridge and Security
 
 Only after local truth and interpretation contracts exist.
+
+### Phase 5A - Backend / Plugin Bridge Contract Decision
+
+Status: completed.
+
+Scope:
+
+- Architecture documentation only.
+- No backend implementation yet.
+- No plugin implementation yet.
+- No JUCE/VST implementation yet.
+- No GUI implementation yet.
+- No local server implementation yet.
+- No Cloudflare routes.
+- No provider calls.
+
+Decision:
+
+- Use a hybrid staged bridge.
+- Stage 1: file/JSON handoff contract for smoke testing and CLI compatibility.
+- Stage 2: local subprocess bridge wrapper.
+- Stage 3: optional local HTTP or socket service after file/subprocess behavior is proven.
+- Backend/cloud is not required for the first local analysis path.
+
+Created contracts:
+
+- `docs/BRIDGE_ARCHITECTURE_DECISION.md`
+- `docs/PLUGIN_BACKEND_BRIDGE_CONTRACT.md`
+- `docs/PHASE_5_STATUS.md`
+
+### Phase 5B - Bridge Request/Response Dataclasses and Tests
+
+Status: completed.
+
+Scope:
+
+- Bridge contract dataclasses only.
+- Bridge serialization helpers only.
+- Bridge shape validation helpers only.
+- Synthetic bridge contract tests only.
+- No backend implementation yet.
+- No plugin implementation yet.
+- No JUCE/VST implementation yet.
+- No GUI implementation yet.
+- No local server implementation yet.
+- No subprocess bridge execution yet.
+- No file/JSON runner behavior yet.
+- No Cloudflare routes.
+- No provider calls.
+
+Created contract code:
+
+- `bridge/__init__.py`
+- `bridge/bridge_contract.py`
+- `bridge/tests/__init__.py`
+- `bridge/tests/test_bridge_contract.py`
+
+Next tasks:
+
+- 5C File/JSON Bridge Smoke Runner
+- 5D Subprocess Bridge Contract
+- 5E Plugin Bridge State Contract
+- Later JUCE VST Shell Foundation
+
+### Phase 5B+ - Backend and Security Planning
 
 Required:
 

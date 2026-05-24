@@ -1,0 +1,1 @@
+"""Bridge contract tests."""
