@@ -22,6 +22,16 @@ from .bridge_contract import (
     validate_bridge_request_shape,
     validate_bridge_response_shape,
 )
+from .file_json_bridge import (
+    SMOKE_BRIDGE_VERSION,
+    create_smoke_response_from_request,
+    read_bridge_request_json,
+    read_bridge_response_json,
+    roundtrip_bridge_request_json,
+    roundtrip_bridge_response_json,
+    write_bridge_request_json,
+    write_bridge_response_json,
+)
 
 __all__ = [
     "BridgeAIStatus",
@@ -44,4 +54,12 @@ __all__ = [
     "sanitize_bridge_value",
     "validate_bridge_request_shape",
     "validate_bridge_response_shape",
+    "SMOKE_BRIDGE_VERSION",
+    "create_smoke_response_from_request",
+    "read_bridge_request_json",
+    "read_bridge_response_json",
+    "roundtrip_bridge_request_json",
+    "roundtrip_bridge_response_json",
+    "write_bridge_request_json",
+    "write_bridge_response_json",
 ]

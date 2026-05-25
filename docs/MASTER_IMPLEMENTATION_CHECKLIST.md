@@ -181,11 +181,44 @@ Created contract code:
 - `bridge/tests/__init__.py`
 - `bridge/tests/test_bridge_contract.py`
 
+### Phase 5C - File/JSON Bridge Smoke Runner
+
+Status: completed.
+
+Scope:
+
+- File/JSON bridge smoke runner only.
+- Request JSON write/read helpers.
+- Response JSON write/read helpers.
+- Request and response JSON roundtrip helpers.
+- Synthetic LIMITED / UNAVAILABLE smoke response from a request.
+- Sanitization and validation before/after JSON roundtrip.
+- Temporary-file tests only.
+- No backend implementation yet.
+- No plugin implementation yet.
+- No JUCE/VST implementation yet.
+- No GUI implementation yet.
+- No local server implementation yet.
+- No subprocess bridge execution yet.
+- No Cloudflare routes.
+- No provider calls.
+
+Created smoke code:
+
+- `bridge/file_json_bridge.py`
+- `bridge/tests/test_file_json_bridge.py`
+
+Phase 5 checklist:
+
+- 5A Bridge architecture decision completed.
+- 5B Bridge request/response dataclasses and tests completed.
+- 5C File/JSON bridge smoke runner completed.
+
 Next tasks:
 
-- 5C File/JSON Bridge Smoke Runner
 - 5D Subprocess Bridge Contract
 - 5E Plugin Bridge State Contract
+- 5F Bridge Integration Smoke Audit
 - Later JUCE VST Shell Foundation
 
 ### Phase 5B+ - Backend and Security Planning
