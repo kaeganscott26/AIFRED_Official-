@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AIFRED VERSION 4.0.0 LANGUAGES CXX)
+project(AIFRED VERSION 4.0.0 LANGUAGES C CXX)
 
 include(FetchContent)
 
