@@ -1,0 +1,7 @@
+{
+  "version": "4.0.0-alpha.2",
+  "channel": "alpha",
+  "download": "MOCK_DOWNLOAD_URL",
+  "sha256": "MOCK_ONLY_REPLACE_WITH_RELEASE_SHA256",
+  "minimumUpdaterVersion": "1.0.0"
+}
