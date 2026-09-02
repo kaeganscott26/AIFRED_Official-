@@ -46,6 +46,10 @@ private:
         std::atomic<std::uint64_t> hasSignal_ { 0 };
         std::array<std::atomic<std::uint64_t>, 6> metricValues_;
         std::array<std::atomic<std::uint64_t>, 6> metricValidity_;
+        std::atomic<std::uint64_t> spectrumBinWidthValue_ { 0 };
+        std::atomic<std::uint64_t> spectrumBinWidthValidity_ { 0 };
+        std::array<std::atomic<std::uint64_t>, AnalysisSnapshot::spectrumBinCount> binValues_;
+        std::array<std::atomic<std::uint64_t>, AnalysisSnapshot::spectrumBinCount> binValidity_;
         std::array<std::atomic<std::uint64_t>, AnalysisSnapshot::spectrumBandCount> bandValues_;
         std::array<std::atomic<std::uint64_t>, AnalysisSnapshot::spectrumBandCount> bandValidity_;
     };
@@ -62,6 +66,7 @@ private:
     dsp::LoudnessAnalyzer loudnessAnalyzer_;
     dsp::StereoAnalyzer stereoAnalyzer_;
     dsp::SpectrumAnalyzer spectrumAnalyzer_;
+    dsp::SpectrumResult spectrumResult_;
 
     AtomicSnapshotStorage publishedSnapshot_;
     std::atomic<bool> resetRequested_ { false };

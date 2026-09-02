@@ -19,6 +19,9 @@ constexpr std::size_t correlationIndex = 5;
 static_assert(sizeof(double) == sizeof(std::uint64_t));
 static_assert(std::atomic<std::uint64_t>::is_always_lock_free,
               "AIFRED snapshots require lock-free 64-bit atomics.");
+static_assert(AnalysisSnapshot::spectrumFftSize == dsp::SpectrumResult::fftSize);
+static_assert(AnalysisSnapshot::spectrumBinCount == dsp::SpectrumResult::binCount);
+static_assert(AnalysisSnapshot::spectrumBandCount == dsp::SpectrumResult::bandCount);
 }
 
 AnalysisCoordinator::AtomicSnapshotStorage::AtomicSnapshotStorage() noexcept
@@ -26,6 +29,10 @@ AnalysisCoordinator::AtomicSnapshotStorage::AtomicSnapshotStorage() noexcept
     for (auto& value : metricValues_)
         value.store(0, std::memory_order_relaxed);
     for (auto& valid : metricValidity_)
+        valid.store(0, std::memory_order_relaxed);
+    for (auto& value : binValues_)
+        value.store(0, std::memory_order_relaxed);
+    for (auto& valid : binValidity_)
         valid.store(0, std::memory_order_relaxed);
     for (auto& value : bandValues_)
         value.store(0, std::memory_order_relaxed);
@@ -84,6 +91,9 @@ void AnalysisCoordinator::AtomicSnapshotStorage::publish(
     storeMetric(metricValues_[loudnessIndex], metricValidity_[loudnessIndex], snapshot.shortTermLufs);
     storeMetric(metricValues_[widthIndex], metricValidity_[widthIndex], snapshot.width);
     storeMetric(metricValues_[correlationIndex], metricValidity_[correlationIndex], snapshot.correlation);
+    storeMetric(spectrumBinWidthValue_, spectrumBinWidthValidity_, snapshot.spectrumBinWidthHz);
+    for (std::size_t bin = 0; bin < snapshot.spectrumBins.size(); ++bin)
+        storeMetric(binValues_[bin], binValidity_[bin], snapshot.spectrumBins[bin]);
     for (std::size_t band = 0; band < snapshot.spectrumBands.size(); ++band)
         storeMetric(bandValues_[band], bandValidity_[band], snapshot.spectrumBands[band]);
 
@@ -109,6 +119,9 @@ AnalysisSnapshot AnalysisCoordinator::AtomicSnapshotStorage::load() const noexce
         snapshot.shortTermLufs = loadMetric(metricValues_[loudnessIndex], metricValidity_[loudnessIndex]);
         snapshot.width = loadMetric(metricValues_[widthIndex], metricValidity_[widthIndex]);
         snapshot.correlation = loadMetric(metricValues_[correlationIndex], metricValidity_[correlationIndex]);
+        snapshot.spectrumBinWidthHz = loadMetric(spectrumBinWidthValue_, spectrumBinWidthValidity_);
+        for (std::size_t bin = 0; bin < snapshot.spectrumBins.size(); ++bin)
+            snapshot.spectrumBins[bin] = loadMetric(binValues_[bin], binValidity_[bin]);
         for (std::size_t band = 0; band < snapshot.spectrumBands.size(); ++band)
             snapshot.spectrumBands[band] = loadMetric(bandValues_[band], bandValidity_[band]);
 
@@ -151,6 +164,7 @@ void AnalysisCoordinator::resetOnAudioThread() noexcept
     loudnessAnalyzer_.reset();
     stereoAnalyzer_.reset();
     spectrumAnalyzer_.reset();
+    spectrumResult_ = {};
     currentSnapshot_ = {};
     signalHoldRemainingFrames_ = 0;
     publishedSnapshot_.publish(currentSnapshot_);
@@ -226,13 +240,23 @@ void AnalysisCoordinator::process(const float* const* channels,
             currentSnapshot_.correlation = { stereo.correlation, true };
     }
 
-    dsp::SpectrumResult spectrum;
-    if (spectrumAnalyzer_.process(channels, numChannels, numSamples, spectrum) && blockHasSignal)
+    if (spectrumAnalyzer_.process(channels, numChannels, numSamples, spectrumResult_)
+        && blockHasSignal)
     {
-        for (std::size_t band = 0; band < spectrum.bandDbfs.size(); ++band)
+        currentSnapshot_.spectrumBinWidthHz = {
+            spectrumResult_.binWidthHz, spectrumResult_.binWidthValid
+        };
+        for (std::size_t bin = 0; bin < spectrumResult_.binDbfs.size(); ++bin)
         {
-            if (spectrum.valid[band])
-                currentSnapshot_.spectrumBands[band] = { spectrum.bandDbfs[band], true };
+            currentSnapshot_.spectrumBins[bin] = spectrumResult_.binValid[bin]
+                ? MetricValue { spectrumResult_.binDbfs[bin], true }
+                : MetricValue {};
+        }
+        for (std::size_t band = 0; band < spectrumResult_.bandDbfs.size(); ++band)
+        {
+            currentSnapshot_.spectrumBands[band] = spectrumResult_.bandValid[band]
+                ? MetricValue { spectrumResult_.bandDbfs[band], true }
+                : MetricValue {};
         }
     }
 

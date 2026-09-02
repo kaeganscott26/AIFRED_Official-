@@ -10,6 +10,7 @@ namespace
 constexpr double pi = 3.14159265358979323846;
 constexpr double smoothingCoefficient = 0.65;
 constexpr double hannEquivalentNoiseBandwidth = 1.5;
+constexpr double inverseSqrtTwo = 0.70710678118654752440;
 
 double finiteSample(const float value) noexcept
 {
@@ -54,14 +55,23 @@ bool SpectrumAnalyzer::process(const float* const* channels,
         || numSamples <= 0 || input_.size() != fftSize)
         return false;
 
+    const auto* const left = channels[0];
+    const auto* const right = numChannels > 1 ? channels[1] : nullptr;
+    if (numChannels > 1 && right == nullptr)
+        return false;
+
     bool produced = false;
     for (int frame = 0; frame < numSamples; ++frame)
     {
-        input_[inputIndex_++] = finiteSample(channels[0][frame]);
+        const auto leftSample = finiteSample(left[frame]);
+        input_[inputIndex_++] = right != nullptr
+            ? (leftSample + finiteSample(right[frame])) * inverseSqrtTwo
+            : leftSample;
         if (inputIndex_ == fftSize)
         {
             inputIndex_ = 0;
             transform();
+            calculateBins(result);
             calculateBands(result);
             produced = true;
         }
@@ -132,6 +142,30 @@ void SpectrumAnalyzer::transform() noexcept
     }
 }
 
+void SpectrumAnalyzer::calculateBins(SpectrumResult& result) noexcept
+{
+    const auto binWidth = sampleRate_ / static_cast<double>(fftSize);
+    const auto windowPower = windowSum_ * windowSum_;
+
+    result.binWidthHz = binWidth;
+    result.binWidthValid = std::isfinite(binWidth) && binWidth > 0.0;
+
+    for (std::size_t bin = 0; bin < SpectrumResult::binCount; ++bin)
+    {
+        const auto magnitudeSquared = real_[bin] * real_[bin]
+            + imaginary_[bin] * imaginary_[bin];
+        const auto oneSidedScale = (bin == 0 || bin == fftSize / 2) ? 1.0 : 4.0;
+        const auto amplitudeSquared = oneSidedScale * magnitudeSquared / windowPower;
+
+        // Raw snapshot bins remain unsmoothed authoritative measurements.
+        // Any motion smoothing belongs to presentation geometry in the UI.
+        result.binValid[bin] = amplitudeSquared > 0.0 && std::isfinite(amplitudeSquared);
+        result.binDbfs[bin] = result.binValid[bin]
+            ? 10.0 * std::log10(amplitudeSquared)
+            : 0.0;
+    }
+}
+
 void SpectrumAnalyzer::calculateBands(SpectrumResult& result) noexcept
 {
     const auto binWidth = sampleRate_ / static_cast<double>(fftSize);
@@ -171,9 +205,9 @@ void SpectrumAnalyzer::calculateBands(SpectrumResult& result) noexcept
             smoothedMeanSquare_[band] = bandMeanSquare;
         }
 
-        result.valid[band] = smoothedMeanSquare_[band] > 0.0
+        result.bandValid[band] = smoothedMeanSquare_[band] > 0.0
             && std::isfinite(smoothedMeanSquare_[band]);
-        if (result.valid[band])
+        if (result.bandValid[band])
             result.bandDbfs[band] = 10.0 * std::log10(smoothedMeanSquare_[band]);
     }
 

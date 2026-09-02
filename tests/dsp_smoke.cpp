@@ -58,6 +58,91 @@ void feedSine(aifred::analysis::AnalysisCoordinator& coordinator,
     }
 }
 
+void feedMonoSine(aifred::analysis::AnalysisCoordinator& coordinator,
+                  const double frequency,
+                  const double amplitude,
+                  const double seconds)
+{
+    std::vector<float> mono(blockSize);
+    const float* channels[] { mono.data() };
+    const auto totalFrames = static_cast<std::uint64_t>(std::round(seconds * sampleRate));
+    std::uint64_t frameClock = 0;
+
+    while (frameClock < totalFrames)
+    {
+        const auto frames = static_cast<int>(
+            std::min<std::uint64_t>(blockSize, totalFrames - frameClock));
+        for (int frame = 0; frame < frames; ++frame)
+        {
+            const auto phase = 2.0 * pi * frequency
+                * static_cast<double>(frameClock + static_cast<std::uint64_t>(frame))
+                / sampleRate;
+            mono[static_cast<std::size_t>(frame)] = static_cast<float>(amplitude * std::sin(phase));
+        }
+        coordinator.process(channels, 1, frames);
+        frameClock += static_cast<std::uint64_t>(frames);
+    }
+}
+
+void feedStereoSine(aifred::analysis::AnalysisCoordinator& coordinator,
+                    const double frequency,
+                    const double leftAmplitude,
+                    const double rightAmplitude,
+                    const double seconds)
+{
+    std::vector<float> left(blockSize);
+    std::vector<float> right(blockSize);
+    const float* channels[] { left.data(), right.data() };
+    const auto totalFrames = static_cast<std::uint64_t>(std::round(seconds * sampleRate));
+    std::uint64_t frameClock = 0;
+
+    while (frameClock < totalFrames)
+    {
+        const auto frames = static_cast<int>(
+            std::min<std::uint64_t>(blockSize, totalFrames - frameClock));
+        for (int frame = 0; frame < frames; ++frame)
+        {
+            const auto phase = 2.0 * pi * frequency
+                * static_cast<double>(frameClock + static_cast<std::uint64_t>(frame))
+                / sampleRate;
+            const auto sine = std::sin(phase);
+            left[static_cast<std::size_t>(frame)] = static_cast<float>(leftAmplitude * sine);
+            right[static_cast<std::size_t>(frame)] = static_cast<float>(rightAmplitude * sine);
+        }
+        coordinator.process(channels, 2, frames);
+        frameClock += static_cast<std::uint64_t>(frames);
+    }
+}
+
+void feedTwoToneMix(aifred::analysis::AnalysisCoordinator& coordinator,
+                    const double lowAmplitude,
+                    const double highAmplitude,
+                    const double seconds)
+{
+    std::vector<float> left(blockSize);
+    std::vector<float> right(blockSize);
+    const float* channels[] { left.data(), right.data() };
+    const auto totalFrames = static_cast<std::uint64_t>(std::round(seconds * sampleRate));
+    std::uint64_t frameClock = 0;
+
+    while (frameClock < totalFrames)
+    {
+        const auto frames = static_cast<int>(
+            std::min<std::uint64_t>(blockSize, totalFrames - frameClock));
+        for (int frame = 0; frame < frames; ++frame)
+        {
+            const auto time = static_cast<double>(
+                frameClock + static_cast<std::uint64_t>(frame)) / sampleRate;
+            const auto sample = lowAmplitude * std::sin(2.0 * pi * 100.0 * time)
+                + highAmplitude * std::sin(2.0 * pi * 1000.0 * time);
+            left[static_cast<std::size_t>(frame)] = static_cast<float>(sample);
+            right[static_cast<std::size_t>(frame)] = static_cast<float>(sample);
+        }
+        coordinator.process(channels, 2, frames);
+        frameClock += static_cast<std::uint64_t>(frames);
+    }
+}
+
 void feedSilence(aifred::analysis::AnalysisCoordinator& coordinator, const double seconds)
 {
     std::vector<float> left(blockSize, 0.0F);
@@ -91,6 +176,57 @@ std::size_t strongestBand(const aifred::analysis::AnalysisSnapshot& snapshot)
         }
     }
     return strongest;
+}
+
+std::size_t strongestSpectrumBin(const aifred::analysis::AnalysisSnapshot& snapshot)
+{
+    std::size_t strongest = 0;
+    double strongestValue = -1000.0;
+    if (! snapshot.spectrumBinWidthHz.valid)
+        return strongest;
+
+    for (std::size_t bin = 1; bin < snapshot.spectrumBins.size(); ++bin)
+    {
+        const auto frequency = static_cast<double>(bin) * snapshot.spectrumBinWidthHz.value;
+        if (frequency < 20.0 || frequency > 20000.0)
+            continue;
+        if (snapshot.spectrumBins[bin].valid
+            && snapshot.spectrumBins[bin].value > strongestValue)
+        {
+            strongestValue = snapshot.spectrumBins[bin].value;
+            strongest = bin;
+        }
+    }
+    return strongest;
+}
+
+double spectrumValueNear(const aifred::analysis::AnalysisSnapshot& snapshot,
+                         const double frequency)
+{
+    if (! snapshot.spectrumBinWidthHz.valid || snapshot.spectrumBinWidthHz.value <= 0.0)
+        return 0.0;
+    const auto bin = static_cast<std::size_t>(std::llround(
+        frequency / snapshot.spectrumBinWidthHz.value));
+    if (bin >= snapshot.spectrumBins.size() || ! snapshot.spectrumBins[bin].valid)
+        return 0.0;
+    return snapshot.spectrumBins[bin].value;
+}
+
+void expectSpectrumPeakNear(SmokeTest& test,
+                            const aifred::analysis::AnalysisSnapshot& snapshot,
+                            const double expectedFrequency)
+{
+    test.expect(snapshot.spectrumBinWidthHz.valid,
+                "spectrum must publish valid bin-frequency metadata");
+    if (! snapshot.spectrumBinWidthHz.valid)
+        return;
+
+    const auto strongest = strongestSpectrumBin(snapshot);
+    const auto actualFrequency = static_cast<double>(strongest)
+        * snapshot.spectrumBinWidthHz.value;
+    test.expect(std::abs(actualFrequency - expectedFrequency)
+                    <= snapshot.spectrumBinWidthHz.value,
+                "full-resolution spectrum peak must land within one FFT bin of the sine");
 }
 } // namespace
 
@@ -157,6 +293,49 @@ int main()
     snapshot = coordinator.getSnapshot();
     test.expect(strongestBand(snapshot) == 6,
                 "10 kHz sine must dominate the highest displayed spectrum band");
+
+    for (const auto frequency : { 100.0, 1000.0, 10000.0 })
+    {
+        coordinator.reset();
+        feedSine(coordinator, frequency, 0.25, 0.6);
+        snapshot = coordinator.getSnapshot();
+        expectSpectrumPeakNear(test, snapshot, frequency);
+    }
+
+    coordinator.reset();
+    feedTwoToneMix(coordinator, 0.1, 0.1, 0.6);
+    const auto flatSpectrum = coordinator.getSnapshot();
+    coordinator.reset();
+    feedTwoToneMix(coordinator, 0.1, 0.1 * std::pow(10.0, 3.0 / 20.0), 0.6);
+    const auto boostedSpectrum = coordinator.getSnapshot();
+    test.expect(near(spectrumValueNear(boostedSpectrum, 1000.0)
+                         - spectrumValueNear(flatSpectrum, 1000.0),
+                     3.0, 0.15),
+                "+3 dB movement at 1 kHz must remain visible in raw spectrum bins");
+    test.expect(near(spectrumValueNear(boostedSpectrum, 100.0)
+                         - spectrumValueNear(flatSpectrum, 100.0),
+                     0.0, 0.15),
+                "a 1 kHz gain change must not normalize the unchanged 100 Hz spectrum bin");
+
+    coordinator.reset();
+    feedMonoSine(coordinator, 1000.0, 0.25, 0.6);
+    const auto monoSpectrum = coordinator.getSnapshot();
+    coordinator.reset();
+    feedStereoSine(coordinator, 1000.0, 0.25, 0.25, 0.6);
+    const auto identicalStereoSpectrum = coordinator.getSnapshot();
+    test.expect(near(spectrumValueNear(identicalStereoSpectrum, 1000.0)
+                         - spectrumValueNear(monoSpectrum, 1000.0),
+                     3.0103, 0.15),
+                "(L + R) / sqrt(2) must add identical stereo by about 3.01 dB");
+
+    coordinator.reset();
+    feedStereoSine(coordinator, 1000.0, 0.0, 0.25, 0.6);
+    const auto rightOnlySpectrum = coordinator.getSnapshot();
+    expectSpectrumPeakNear(test, rightOnlySpectrum, 1000.0);
+    test.expect(near(spectrumValueNear(rightOnlySpectrum, 1000.0)
+                         - spectrumValueNear(monoSpectrum, 1000.0),
+                     -3.0103, 0.15),
+                "right-only stereo must contribute through the documented mono spectrum signal");
 
     if (test.failures == 0)
     {
