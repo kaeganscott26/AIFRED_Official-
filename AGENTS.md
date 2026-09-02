@@ -37,6 +37,49 @@ The core rule:
 - Website presents the product.
 - AIFRED teaches the producer.
 
+## AIFRED 4.0 Audio Architecture
+
+The dependency order is permanent:
+
+```text
+DAW AUDIO
+-> DSP
+-> SNAPSHOT
+-> INTELLIGENCE
+-> UI
+-> CLOUD / MODEL SERVICES
+```
+
+Never reverse this dependency.
+
+**THE AUDIO ENGINE EARNS THE RIGHT TO HAVE A GUI.**
+
+**IF A METER MOVES, LIVE AUDIO MUST BE THE REASON IT MOVED.**
+
+Rules:
+
+- UI never invents DSP.
+- AI never invents DSP.
+- Normalized 0..1 UI coordinates are never authoritative measurements.
+- `processBlock` never performs network, filesystem, model, or expensive UI work.
+- No locks in `processBlock`.
+- No Cloudflare in `processBlock`.
+- No LLM in `processBlock`.
+- No DSP calculation is duplicated inside `PluginEditor`.
+- No meter may be labeled with a unit it does not actually measure.
+- No placeholder meter values are allowed in release builds.
+- Missing data uses explicit validity, never magic sentinels such as `-90`, `0`, or `99`.
+- Do not reset analysis every callback based on fragile DAW timeline assumptions.
+- Host transport behavior must tolerate FL Studio scheduling.
+- Stopping playback freezes useful values instead of erasing them.
+- Resuming playback resumes analysis.
+- Do not redesign DSP merely to make meters visually pleasing.
+- Avoid giant monolithic `AnalysisEngine` files.
+- Do not add features during bug fixes unless required.
+- No architecture creep.
+- No speculative abstractions.
+- Build the smallest correct thing first.
+
 ## Current Build Phase
 
 Until this repo contains the required documentation contracts and skeleton folders, agents must not create DSP, GUI, backend, installer, or production implementation code.
@@ -61,6 +104,13 @@ Forbidden before implementation:
 - creating GitHub Actions
 - creating Cloudflare deploy configs
 - migrating old code blindly
+
+The documented contracts and folder skeleton now exist. AIFRED 4.0 alpha.1
+implementation is explicitly authorized only for the bounded native JUCE signal
+path, DSP analyzers, authoritative snapshot, truthful metering GUI, smoke test,
+and Windows VST3 build described by the approved alpha.1 task. Cloud, model,
+installer, reference-mode, and unrelated product implementation remain out of
+scope.
 
 ## Source-of-Truth Rule
 
@@ -98,6 +148,12 @@ Do not silently refactor.
 ## Python Truth Layer Rules
 
 Python owns factual analysis only.
+
+For the native plugin's realtime meter path, portable C++ DSP is the factual
+source because DAW audio is delivered on the realtime audio thread. Python
+remains the factual layer for offline and extended analysis. Neither path may
+invent or relabel measurements, and the native GUI still reads only the
+authoritative native `AnalysisSnapshot`.
 
 Python may calculate:
 
