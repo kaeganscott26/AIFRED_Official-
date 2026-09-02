@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'">
+  <title>AIFRED Visualizer</title>
+  <link rel="stylesheet" href="visualizer.css">
+</head>
+<body>
+  <main id="visualizer" aria-label="Live AIFRED spectrum visualization">
+    <canvas id="three-scene" aria-hidden="true"></canvas>
+    <canvas id="spectrum" aria-label="Live 20 hertz to 20 kilohertz spectrum"></canvas>
+    <header>
+      <strong>LIVE SPECTRUM</strong>
+      <span>20 Hz - 20 kHz / PER-BIN dBFS / FIXED -96 TO 0 dB</span>
+    </header>
+    <div id="state-label">WAITING FOR LIVE AUDIO</div>
+  </main>
+  <script type="module" src="visualizer.js"></script>
+</body>
+</html>

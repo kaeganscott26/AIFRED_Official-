@@ -2,12 +2,17 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#if JUCE_WEB_BROWSER
+#include <juce_gui_extra/juce_gui_extra.h>
+#endif
 
 #include "PluginProcessor.h"
 #include "core/analysis/AnalysisSnapshot.h"
+#include "core/analysis/ComparisonEngine.h"
 
 #include <array>
 #include <cstdint>
+#include <memory>
 
 class AifredAudioProcessorEditor final : public juce::AudioProcessorEditor,
                                          private juce::Timer
@@ -15,64 +20,100 @@ class AifredAudioProcessorEditor final : public juce::AudioProcessorEditor,
 public:
     explicit AifredAudioProcessorEditor(AifredAudioProcessor&);
     ~AifredAudioProcessorEditor() override;
-
     void paint(juce::Graphics&) override;
     void resized() override;
 
 private:
+    enum class Mode { analyze, compare, reference, history };
+
     struct DisplayMetric
     {
         float current = 0.0f;
         float target = 0.0f;
         bool valid = false;
-
-        void setTarget(const aifred::analysis::MetricValue& value) noexcept;
+        void setTarget(const aifred::analysis::MetricValue&) noexcept;
         void clear() noexcept;
         bool advance(float amount) noexcept;
+    };
+
+    struct VisualizationState
+    {
+        float normalizedPeak = 0.0f;
+        float normalizedRms = 0.0f;
+        float normalizedCrest = 0.0f;
+        float normalizedLoudness = 0.0f;
+        float width = 0.0f;
+        float correlation = 0.0f;
+        bool signalActive = false;
+        double elapsedSeconds = 0.0;
+        double spectrumBinWidthHz = 0.0;
+        std::array<float, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumBins {};
+        std::array<bool, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumValid {};
     };
 
     void timerCallback() override;
     void acceptSnapshot(const aifred::analysis::AnalysisSnapshot&);
     void clearDisplay() noexcept;
+    void selectMode(Mode);
+    void updateModeButtons();
+    void updateCompareButtons();
 
     void drawHeader(juce::Graphics&, juce::Rectangle<float>) const;
-    void drawMeterWorkspace(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawModeNavigation(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawAnalyzeMode(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawCompareMode(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawUnavailableMode(juce::Graphics&, juce::Rectangle<float>,
+                             juce::StringRef title, juce::StringRef detail) const;
+    void drawSpectrumHero(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawSnapshotSpectrum(juce::Graphics&, juce::Rectangle<float>,
+                              const aifred::analysis::AnalysisSnapshot*,
+                              juce::StringRef label) const;
+    void drawSupportMeters(juce::Graphics&, juce::Rectangle<float>) const;
     void drawLevelCard(juce::Graphics&, juce::Rectangle<float>) const;
-    void drawSingleMeterCard(juce::Graphics&, juce::Rectangle<float>,
-                             juce::StringRef title, juce::StringRef caption,
-                             const DisplayMetric&, float minimum, float maximum,
-                             juce::StringRef unit, int decimals,
+    void drawSingleMeterCard(juce::Graphics&, juce::Rectangle<float>, juce::StringRef title,
+                             juce::StringRef caption, const DisplayMetric&, float minimum,
+                             float maximum, juce::StringRef unit, int decimals,
                              juce::Colour accent) const;
     void drawStereoCard(juce::Graphics&, juce::Rectangle<float>) const;
-    void drawSpectrum(juce::Graphics&, juce::Rectangle<float>) const;
-    void drawFindingPanel(juce::Graphics&, juce::Rectangle<float>) const;
-
-    void drawPanel(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawPanel(juce::Graphics&, juce::Rectangle<float>, float corner = 10.0f) const;
     void drawArc(juce::Graphics&, juce::Rectangle<float>, float normalized,
                  juce::Colour accent, float thickness) const;
-    void drawMetricValue(juce::Graphics&, juce::Rectangle<float>,
-                         const DisplayMetric&, juce::StringRef unit,
-                         int decimals, juce::Colour colour) const;
+    void drawMetricValue(juce::Graphics&, juce::Rectangle<float>, const DisplayMetric&,
+                         juce::StringRef unit, int decimals, juce::Colour colour) const;
 
-    [[nodiscard]] juce::String currentFinding() const;
+    [[nodiscard]] VisualizationState makeVisualizationState() const noexcept;
+    void publishVisualizationState();
+    void initialiseWebVisualizer();
+    void layoutWebVisualizer(juce::Rectangle<int> heroBounds);
     [[nodiscard]] static float normalized(float value, float minimum, float maximum) noexcept;
     [[nodiscard]] static juce::String formattedValue(const DisplayMetric&, juce::StringRef unit,
                                                      int decimals, bool showPlus = false);
 
     AifredAudioProcessor& processor;
+    Mode activeMode = Mode::analyze;
+    aifred::analysis::SnapshotCaptureModel captures;
+
+    juce::TextButton analyzeButton { "ANALYZE" };
+    juce::TextButton compareButton { "COMPARE" };
+    juce::TextButton referenceButton { "REFERENCE" };
+    juce::TextButton historyButton { "HISTORY" };
     juce::TextButton resetButton { "RESET" };
+    juce::TextButton captureAButton { "CAPTURE A" };
+    juce::TextButton captureBButton { "CAPTURE B" };
+    juce::TextButton resetAButton { "RESET A" };
+    juce::TextButton resetBButton { "RESET B" };
+    juce::TextButton swapButton { "SWAP A/B" };
 
     aifred::analysis::AnalysisSnapshot latestSnapshot {};
     std::uint64_t lastSequence = 0;
     bool hasReceivedSnapshot = false;
+    DisplayMetric peak, rms, crest, loudness, width, correlation, spectrumBinWidthHz;
+    std::array<DisplayMetric, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumBins;
 
-    DisplayMetric peak;
-    DisplayMetric rms;
-    DisplayMetric crest;
-    DisplayMetric loudness;
-    DisplayMetric width;
-    DisplayMetric correlation;
-    std::array<DisplayMetric, 7> spectrum;
+#if JUCE_WEB_BROWSER
+    std::unique_ptr<juce::WebBrowserComponent> webVisualizer;
+    bool webVisualizerReady = false;
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AifredAudioProcessorEditor)
 };
