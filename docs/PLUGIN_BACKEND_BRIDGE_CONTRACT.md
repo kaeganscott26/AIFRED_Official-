@@ -229,4 +229,6 @@ Future bridge implementation must include tests for:
 
 ## Phase Boundary
 
-This document is a contract only. It does not implement backend routes, local servers, plugin code, JUCE/VST code, GUI behavior, provider calls, Cloudflare routes, dependencies, secrets, or old-repo migration.
+The file/JSON Python bridge remains a contract-backed offline and extended-analysis path. It is not the native realtime VST provider route.
+
+The implemented native conversation route is `AnalysisSnapshot -> AnalysisContextSerializer -> AifredEngineClient -> loopback AifredEngine -> selected provider`. AifredEngine owns provider calls and settings; the VST owns neither provider secrets nor provider-specific calls. The production reference service remains a separate read-only input used only when Reference Mode is active.

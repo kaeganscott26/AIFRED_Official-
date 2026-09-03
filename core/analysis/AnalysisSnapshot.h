@@ -23,8 +23,11 @@ struct AnalysisSnapshot
     std::uint64_t audioSampleClock = 0;
     double elapsedSeconds = 0.0;
     bool hasSignal = false;
+    bool sampleClipActive = false; // Latched until an explicit analysis reset.
+    std::uint64_t sampleClipCount = 0; // Channel samples with |sample| >= 1.0.
 
     MetricValue samplePeakDbfs;
+    MetricValue maxSampleOverDb; // Maximum dB above full scale, sample peak only.
     MetricValue rmsDbfs;
     MetricValue crestDb;
     MetricValue shortTermLufs;

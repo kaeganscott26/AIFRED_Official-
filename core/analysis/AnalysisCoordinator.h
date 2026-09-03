@@ -44,8 +44,10 @@ private:
         std::atomic<std::uint64_t> audioSampleClock_ { 0 };
         std::atomic<std::uint64_t> elapsedSeconds_ { 0 };
         std::atomic<std::uint64_t> hasSignal_ { 0 };
-        std::array<std::atomic<std::uint64_t>, 6> metricValues_;
-        std::array<std::atomic<std::uint64_t>, 6> metricValidity_;
+        std::atomic<std::uint64_t> sampleClipActive_ { 0 };
+        std::atomic<std::uint64_t> sampleClipCount_ { 0 };
+        std::array<std::atomic<std::uint64_t>, 7> metricValues_;
+        std::array<std::atomic<std::uint64_t>, 7> metricValidity_;
         std::atomic<std::uint64_t> spectrumBinWidthValue_ { 0 };
         std::atomic<std::uint64_t> spectrumBinWidthValidity_ { 0 };
         std::array<std::atomic<std::uint64_t>, AnalysisSnapshot::spectrumBinCount> binValues_;
@@ -58,6 +60,9 @@ private:
     [[nodiscard]] bool bufferHasSignal(const float* const* channels,
                                        int numChannels,
                                        int numSamples) const noexcept;
+    void updateClipState(const float* const* channels,
+                         int numChannels,
+                         int numSamples) noexcept;
 
     static constexpr double signalFloorLinear = 0.000251188643150958; // -72 dBFS
     static constexpr double signalHoldSeconds = 0.5;

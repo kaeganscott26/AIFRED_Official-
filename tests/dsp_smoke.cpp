@@ -157,6 +157,17 @@ void feedSilence(aifred::analysis::AnalysisCoordinator& coordinator, const doubl
     }
 }
 
+void feedClipSamples(aifred::analysis::AnalysisCoordinator& coordinator)
+{
+    std::vector<float> left(blockSize, 0.0F);
+    std::vector<float> right(blockSize, 0.0F);
+    left[0] = 1.0F;
+    left[1] = -1.0F;
+    right[0] = 2.0F;
+    const float* channels[] { left.data(), right.data() };
+    coordinator.process(channels, 2, blockSize);
+}
+
 bool near(const double actual, const double expected, const double tolerance)
 {
     return std::abs(actual - expected) <= tolerance;
@@ -264,6 +275,27 @@ int main()
     const auto basePeak = snapshot.samplePeakDbfs.value;
     const auto baseRms = snapshot.rmsDbfs.value;
     const auto baseCrest = snapshot.crestDb.value;
+
+    coordinator.reset();
+    feedClipSamples(coordinator);
+    snapshot = coordinator.getSnapshot();
+    test.expect(snapshot.sampleClipActive,
+                "sample clip state must latch when magnitude reaches 0 dBFS");
+    test.expect(snapshot.sampleClipCount == 3,
+                "sample clip count must count actual clipped channel samples");
+    test.expect(snapshot.maxSampleOverDb.valid && near(snapshot.maxSampleOverDb.value, 6.0206, 0.01),
+                "maximum sample over must report dB above full scale");
+    feedSilence(coordinator, 0.6);
+    snapshot = coordinator.getSnapshot();
+    test.expect(snapshot.sampleClipActive && snapshot.sampleClipCount == 3,
+                "sample clip state must remain latched through silence");
+    coordinator.reset();
+    feedSilence(coordinator, 0.01);
+    snapshot = coordinator.getSnapshot();
+    test.expect(! snapshot.sampleClipActive && snapshot.sampleClipCount == 0
+                    && ! snapshot.maxSampleOverDb.valid,
+                "explicit analysis reset must clear the clip latch");
+
     coordinator.reset();
     feedSine(coordinator, 1000.0, 0.5, 1.0);
     snapshot = coordinator.getSnapshot();

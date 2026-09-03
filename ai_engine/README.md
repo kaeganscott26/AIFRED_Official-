@@ -10,9 +10,22 @@ The AI engine must consume verified Python Truth Layer interpretation packets an
 
 ## Current Status
 
-Phase 4A is contract phase only.
+The Python files under `ai_engine/` remain contract and validation scaffolding.
+They are not a second provider runtime.
 
-No AI implementation exists yet.
+The native plugin runtime now has one provider route:
+
+```text
+Plugin AnalysisSnapshot
+-> AnalysisContextSerializer
+-> AifredEngineClient
+-> AifredEngine on 127.0.0.1:8787
+-> Ollama or a configured OpenAI-compatible provider
+```
+
+The local companion implementation is under `tools/AifredEngine/`. Provider
+credentials live in the user's engine settings or environment, never in the
+plugin or source tree.
 
 ## Relationship To Python Truth Layer
 
@@ -39,16 +52,14 @@ The Python Truth Layer remains the source of truth for factual analysis. The AI 
 - canned responses presented as product behavior
 - copied old prompts without review
 
-## Not Implemented Yet
+## Runtime Boundary
 
-- No OpenAI calls.
-- No Ollama calls.
-- No LM Studio calls.
-- No local model loading.
-- No NoAIAdapter behavior.
-- No adapter router behavior.
-- No generated final AI responses in code.
-- No canned response logic.
+- `ai_engine/adapters/` remains non-runtime compatibility scaffolding.
+- The plugin does not import or invoke these Python adapters.
+- `bridge/` remains available for offline/extended Python workflows and is not
+  part of the realtime VST conversation route.
+- AifredEngine performs provider routing and returns provider-generated text.
+- No deterministic threshold-to-sentence response path is used.
 
 ## Controlling Contract
 

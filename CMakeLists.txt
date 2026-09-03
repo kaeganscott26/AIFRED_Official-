@@ -4,6 +4,8 @@ project(AIFRED VERSION 4.0.0 LANGUAGES C CXX)
 
 set(AIFRED_VERSION_STRING "4.0.0-alpha.2" CACHE STRING "Visible AIFRED product version")
 set(AIFRED_UPDATE_CHANNEL "alpha" CACHE STRING "AIFRED update channel")
+set(AIFRED_ENGINE_URL "http://127.0.0.1:8787" CACHE STRING "Local AifredEngine origin")
+set(AIFRED_REFERENCE_API_URL "https://www.north3rnlight3r.com/api/v1/references" CACHE STRING "Production reference catalog URL")
 
 execute_process(
     COMMAND git rev-parse --short=7 HEAD
@@ -81,6 +83,12 @@ set(AIFRED_COMPARISON_SOURCES
     core/analysis/ComparisonEngine.cpp
 )
 
+set(AIFRED_INTEGRATION_SOURCES
+    plugin/src/AifredEngineClient.cpp
+    plugin/src/AnalysisContextSerializer.cpp
+    plugin/src/ReferenceClient.cpp
+)
+
 juce_add_plugin(Aifred
     COMPANY_NAME "AIFRED"
     BUNDLE_ID "com.aifred.audio.aifred"
@@ -108,6 +116,7 @@ target_sources(Aifred PRIVATE
     plugin/src/PluginEditor.cpp
     ${AIFRED_DSP_SOURCES}
     ${AIFRED_COMPARISON_SOURCES}
+    ${AIFRED_INTEGRATION_SOURCES}
 )
 
 target_include_directories(Aifred PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -123,6 +132,8 @@ target_compile_definitions(Aifred
         AIFRED_BUILD_CONFIGURATION="${AIFRED_BUILD_CONFIGURATION}"
         AIFRED_BUILD_PLATFORM="${AIFRED_BUILD_PLATFORM}"
         AIFRED_UPDATE_CHANNEL="${AIFRED_UPDATE_CHANNEL}"
+        AIFRED_ENGINE_URL="${AIFRED_ENGINE_URL}"
+        AIFRED_REFERENCE_API_URL="${AIFRED_REFERENCE_API_URL}"
 )
 
 target_link_libraries(Aifred
@@ -161,6 +172,26 @@ add_executable(aifred_comparison_tests
 target_include_directories(aifred_comparison_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(aifred_comparison_tests PRIVATE cxx_std_20)
 
+add_executable(aifred_integration_contract_tests
+    tests/integration_contract_tests.cpp
+    ${AIFRED_INTEGRATION_SOURCES}
+    ${AIFRED_COMPARISON_SOURCES}
+)
+target_include_directories(aifred_integration_contract_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(aifred_integration_contract_tests PRIVATE cxx_std_20)
+target_compile_definitions(aifred_integration_contract_tests PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    AIFRED_ENGINE_URL="${AIFRED_ENGINE_URL}"
+    AIFRED_REFERENCE_API_URL="${AIFRED_REFERENCE_API_URL}"
+)
+target_link_libraries(aifred_integration_contract_tests PRIVATE
+    juce::juce_core
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+)
+
 enable_testing()
 add_test(NAME aifred_dsp_smoke COMMAND aifred_dsp_smoke)
 add_test(NAME aifred_comparison_tests COMMAND aifred_comparison_tests)
+add_test(NAME aifred_integration_contract_tests COMMAND aifred_integration_contract_tests)

@@ -15,6 +15,7 @@ constexpr std::size_t crestIndex = 2;
 constexpr std::size_t loudnessIndex = 3;
 constexpr std::size_t widthIndex = 4;
 constexpr std::size_t correlationIndex = 5;
+constexpr std::size_t maxSampleOverIndex = 6;
 
 static_assert(sizeof(double) == sizeof(std::uint64_t));
 static_assert(std::atomic<std::uint64_t>::is_always_lock_free,
@@ -85,12 +86,15 @@ void AnalysisCoordinator::AtomicSnapshotStorage::publish(
     audioSampleClock_.store(snapshot.audioSampleClock, std::memory_order_relaxed);
     elapsedSeconds_.store(encodeDouble(snapshot.elapsedSeconds), std::memory_order_relaxed);
     hasSignal_.store(snapshot.hasSignal ? 1U : 0U, std::memory_order_relaxed);
+    sampleClipActive_.store(snapshot.sampleClipActive ? 1U : 0U, std::memory_order_relaxed);
+    sampleClipCount_.store(snapshot.sampleClipCount, std::memory_order_relaxed);
     storeMetric(metricValues_[peakIndex], metricValidity_[peakIndex], snapshot.samplePeakDbfs);
     storeMetric(metricValues_[rmsIndex], metricValidity_[rmsIndex], snapshot.rmsDbfs);
     storeMetric(metricValues_[crestIndex], metricValidity_[crestIndex], snapshot.crestDb);
     storeMetric(metricValues_[loudnessIndex], metricValidity_[loudnessIndex], snapshot.shortTermLufs);
     storeMetric(metricValues_[widthIndex], metricValidity_[widthIndex], snapshot.width);
     storeMetric(metricValues_[correlationIndex], metricValidity_[correlationIndex], snapshot.correlation);
+    storeMetric(metricValues_[maxSampleOverIndex], metricValidity_[maxSampleOverIndex], snapshot.maxSampleOverDb);
     storeMetric(spectrumBinWidthValue_, spectrumBinWidthValidity_, snapshot.spectrumBinWidthHz);
     for (std::size_t bin = 0; bin < snapshot.spectrumBins.size(); ++bin)
         storeMetric(binValues_[bin], binValidity_[bin], snapshot.spectrumBins[bin]);
@@ -113,12 +117,15 @@ AnalysisSnapshot AnalysisCoordinator::AtomicSnapshotStorage::load() const noexce
         snapshot.audioSampleClock = audioSampleClock_.load(std::memory_order_relaxed);
         snapshot.elapsedSeconds = decodeDouble(elapsedSeconds_.load(std::memory_order_relaxed));
         snapshot.hasSignal = hasSignal_.load(std::memory_order_relaxed) != 0U;
+        snapshot.sampleClipActive = sampleClipActive_.load(std::memory_order_relaxed) != 0U;
+        snapshot.sampleClipCount = sampleClipCount_.load(std::memory_order_relaxed);
         snapshot.samplePeakDbfs = loadMetric(metricValues_[peakIndex], metricValidity_[peakIndex]);
         snapshot.rmsDbfs = loadMetric(metricValues_[rmsIndex], metricValidity_[rmsIndex]);
         snapshot.crestDb = loadMetric(metricValues_[crestIndex], metricValidity_[crestIndex]);
         snapshot.shortTermLufs = loadMetric(metricValues_[loudnessIndex], metricValidity_[loudnessIndex]);
         snapshot.width = loadMetric(metricValues_[widthIndex], metricValidity_[widthIndex]);
         snapshot.correlation = loadMetric(metricValues_[correlationIndex], metricValidity_[correlationIndex]);
+        snapshot.maxSampleOverDb = loadMetric(metricValues_[maxSampleOverIndex], metricValidity_[maxSampleOverIndex]);
         snapshot.spectrumBinWidthHz = loadMetric(spectrumBinWidthValue_, spectrumBinWidthValidity_);
         for (std::size_t bin = 0; bin < snapshot.spectrumBins.size(); ++bin)
             snapshot.spectrumBins[bin] = loadMetric(binValues_[bin], binValidity_[bin]);
@@ -191,6 +198,40 @@ bool AnalysisCoordinator::bufferHasSignal(const float* const* channels,
     return false;
 }
 
+void AnalysisCoordinator::updateClipState(const float* const* channels,
+                                          const int numChannels,
+                                          const int numSamples) noexcept
+{
+    double maximumMagnitude = 0.0;
+    std::uint64_t clippedSamples = 0;
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        const auto* samples = channels[channel];
+        if (samples == nullptr)
+            continue;
+        for (int frame = 0; frame < numSamples; ++frame)
+        {
+            const auto magnitude = std::abs(static_cast<double>(samples[frame]));
+            if (std::isfinite(magnitude) && magnitude >= 1.0)
+            {
+                ++clippedSamples;
+                maximumMagnitude = std::max(maximumMagnitude, magnitude);
+            }
+        }
+    }
+
+    if (clippedSamples == 0)
+        return;
+
+    currentSnapshot_.sampleClipActive = true;
+    currentSnapshot_.sampleClipCount += clippedSamples;
+    const auto overDb = 20.0 * std::log10(maximumMagnitude);
+    if (std::isfinite(overDb)
+        && (! currentSnapshot_.maxSampleOverDb.valid
+            || overDb > currentSnapshot_.maxSampleOverDb.value))
+        currentSnapshot_.maxSampleOverDb = { overDb, true };
+}
+
 void AnalysisCoordinator::process(const float* const* channels,
                                   const int numChannels,
                                   const int numSamples) noexcept
@@ -202,6 +243,7 @@ void AnalysisCoordinator::process(const float* const* channels,
         resetOnAudioThread();
 
     const auto blockHasSignal = bufferHasSignal(channels, numChannels, numSamples);
+    updateClipState(channels, numChannels, numSamples);
     if (blockHasSignal)
     {
         signalHoldRemainingFrames_ = signalHoldFrames_;

@@ -109,8 +109,35 @@ AifredAudioProcessorEditor::AifredAudioProcessorEditor(AifredAudioProcessor& own
 
     for (auto* button : { &analyzeButton, &compareButton, &referenceButton, &historyButton,
                           &resetButton, &captureAButton, &captureBButton, &resetAButton,
-                          &resetBButton, &swapButton })
+                          &resetBButton, &swapButton, &refreshReferencesButton,
+                          &chatToggleButton, &sendButton, &retryButton })
         configure(*button);
+
+    referenceSelector.setTextWhenNothingSelected("SELECT REFERENCE");
+    referenceSelector.setTextWhenNoChoicesAvailable("NO REFERENCES AVAILABLE");
+    referenceSelector.setColour(juce::ComboBox::backgroundColourId, panelBottom);
+    referenceSelector.setColour(juce::ComboBox::outlineColourId, panelStroke);
+    referenceSelector.setColour(juce::ComboBox::textColourId, textPrimary);
+    addAndMakeVisible(referenceSelector);
+
+    chatHistory.setMultiLine(true);
+    chatHistory.setReadOnly(true);
+    chatHistory.setScrollbarsShown(true);
+    chatHistory.setColour(juce::TextEditor::backgroundColourId, backgroundBottom.withAlpha(0.86f));
+    chatHistory.setColour(juce::TextEditor::outlineColourId, panelStroke);
+    chatHistory.setColour(juce::TextEditor::textColourId, textPrimary);
+    chatHistory.setFont(makeFont(12.0f));
+    chatHistory.setText("AIFRED: Ask about the measured mix context. I will only receive the facts available in the active mode.\n");
+    addAndMakeVisible(chatHistory);
+
+    chatInput.setMultiLine(false);
+    chatInput.setTextToShowWhenEmpty("Ask about this mix...", textSecondary);
+    chatInput.setColour(juce::TextEditor::backgroundColourId, backgroundBottom);
+    chatInput.setColour(juce::TextEditor::outlineColourId, panelStroke);
+    chatInput.setColour(juce::TextEditor::focusedOutlineColourId, cyan);
+    chatInput.setColour(juce::TextEditor::textColourId, textPrimary);
+    chatInput.setFont(makeFont(12.0f));
+    addAndMakeVisible(chatInput);
 
     analyzeButton.onClick = [this] { selectMode(Mode::analyze); };
     compareButton.onClick = [this] { selectMode(Mode::compare); };
@@ -121,6 +148,29 @@ AifredAudioProcessorEditor::AifredAudioProcessorEditor(AifredAudioProcessor& own
     resetAButton.onClick = [this] { captures.resetA(); updateCompareButtons(); repaint(); };
     resetBButton.onClick = [this] { captures.resetB(); updateCompareButtons(); repaint(); };
     swapButton.onClick = [this] { captures.swap(); updateCompareButtons(); repaint(); };
+    refreshReferencesButton.onClick = [this]
+    {
+        aifred::services::ReferenceClient::instance().refreshAsync();
+        updateReferenceUi();
+    };
+    referenceSelector.onChange = [this] { repaint(); };
+    chatToggleButton.onClick = [this]
+    {
+        chatOpen = ! chatOpen;
+        chatToggleButton.setButtonText(chatOpen ? "CLOSE CHAT" : "ASK AIFRED");
+        resized();
+        repaint();
+    };
+    sendButton.onClick = [this] { sendChatQuestion(); };
+    retryButton.onClick = [this]
+    {
+        if (lastQuestion.isNotEmpty())
+        {
+            chatInput.setText(lastQuestion, false);
+            sendChatQuestion();
+        }
+    };
+    chatInput.onReturnKey = [this] { sendChatQuestion(); };
     resetButton.onClick = [this]
     {
         processor.resetAnalysis();
@@ -132,8 +182,11 @@ AifredAudioProcessorEditor::AifredAudioProcessorEditor(AifredAudioProcessor& own
 
     updateModeButtons();
     updateCompareButtons();
+    updateReferenceUi();
+    updateChatUi();
     initialiseWebVisualizer();
     acceptSnapshot(processor.getAnalysisSnapshot());
+    aifred::services::AifredEngineClient::instance().pingHealthAsync();
     startTimerHz(refreshHz);
 }
 
@@ -142,8 +195,11 @@ AifredAudioProcessorEditor::~AifredAudioProcessorEditor()
     stopTimer();
     for (auto* button : { &analyzeButton, &compareButton, &referenceButton, &historyButton,
                           &resetButton, &captureAButton, &captureBButton, &resetAButton,
-                          &resetBButton, &swapButton })
+                          &resetBButton, &swapButton, &refreshReferencesButton,
+                          &chatToggleButton, &sendButton, &retryButton })
         button->onClick = nullptr;
+    referenceSelector.onChange = nullptr;
+    chatInput.onReturnKey = nullptr;
 }
 
 void AifredAudioProcessorEditor::DisplayMetric::setTarget(
@@ -190,12 +246,19 @@ void AifredAudioProcessorEditor::paint(juce::Graphics& g)
     drawModeNavigation(g, bounds.removeFromTop(42.0f));
     bounds.removeFromTop(12.0f);
 
+    if (chatOpen)
+    {
+        auto chat = bounds.removeFromBottom(std::min(220.0f, bounds.getHeight() * 0.42f));
+        bounds.removeFromBottom(10.0f);
+        drawChatPanel(g, chat);
+    }
+
     if (activeMode == Mode::analyze)
         drawAnalyzeMode(g, bounds);
     else if (activeMode == Mode::compare)
         drawCompareMode(g, bounds);
     else if (activeMode == Mode::reference)
-        drawUnavailableMode(g, bounds, "REFERENCE", "Reference Mode is intentionally reserved for a later release.");
+        drawReferenceMode(g, bounds);
     else
         drawUnavailableMode(g, bounds, "HISTORY", "History is intentionally reserved for a later release.");
 }
@@ -205,6 +268,7 @@ void AifredAudioProcessorEditor::resized()
     auto bounds = getLocalBounds().reduced(juce::jlimit(12, 22, getWidth() / 62));
     auto header = bounds.removeFromTop(60);
     resetButton.setBounds(header.removeFromRight(88).withSizeKeepingCentre(82, 30));
+    chatToggleButton.setBounds(header.removeFromRight(116).withSizeKeepingCentre(108, 30));
 
     auto navigation = bounds.removeFromTop(42);
     navigation.removeFromLeft(2);
@@ -215,6 +279,26 @@ void AifredAudioProcessorEditor::resized()
     }
 
     bounds.removeFromTop(12);
+    if (chatOpen)
+    {
+        auto chat = bounds.removeFromBottom(std::min(220, juce::roundToInt(bounds.getHeight() * 0.42f)));
+        bounds.removeFromBottom(10);
+        auto chatContent = chat.reduced(12);
+        chatContent.removeFromTop(24);
+        auto inputRow = chatContent.removeFromBottom(34);
+        sendButton.setBounds(inputRow.removeFromRight(74));
+        inputRow.removeFromRight(6);
+        retryButton.setBounds(inputRow.removeFromRight(68));
+        inputRow.removeFromRight(8);
+        chatInput.setBounds(inputRow);
+        chatContent.removeFromBottom(8);
+        chatHistory.setBounds(chatContent);
+    }
+    chatHistory.setVisible(chatOpen);
+    chatInput.setVisible(chatOpen);
+    sendButton.setVisible(chatOpen);
+    retryButton.setVisible(chatOpen);
+
     const auto supportHeight = juce::jlimit(144, 184, static_cast<int>(bounds.getHeight() * 0.29f));
     auto compareControls = bounds.removeFromTop(activeMode == Mode::compare ? 38 : 0);
     if (activeMode == Mode::compare)
@@ -225,6 +309,17 @@ void AifredAudioProcessorEditor::resized()
             compareControls.removeFromLeft(4);
         }
     }
+    auto referenceControls = bounds.removeFromTop(activeMode == Mode::reference ? 42 : 0);
+    if (activeMode == Mode::reference)
+    {
+        referenceSelector.setBounds(referenceControls.removeFromLeft(
+            std::min(360, juce::roundToInt(referenceControls.getWidth() * 0.52f))).reduced(2, 4));
+        referenceControls.removeFromLeft(6);
+        refreshReferencesButton.setBounds(referenceControls.removeFromLeft(96).reduced(2, 4));
+    }
+    const auto referenceVisible = activeMode == Mode::reference;
+    referenceSelector.setVisible(referenceVisible);
+    refreshReferencesButton.setVisible(referenceVisible);
     bounds.removeFromBottom(supportHeight + 12);
     layoutWebVisualizer(bounds);
 }
@@ -243,6 +338,8 @@ void AifredAudioProcessorEditor::timerCallback()
         changed |= bin.advance(spectrumSmoothing);
 
     publishVisualizationState();
+    updateReferenceUi();
+    updateChatUi();
     if (changed)
         repaint();
 }
@@ -277,6 +374,10 @@ void AifredAudioProcessorEditor::clearDisplay() noexcept
 void AifredAudioProcessorEditor::selectMode(Mode mode)
 {
     activeMode = mode;
+    if (activeMode == Mode::reference
+        && aifred::services::ReferenceClient::instance().state().status
+               == aifred::services::ReferenceCatalogStatus::idle)
+        aifred::services::ReferenceClient::instance().refreshAsync();
     updateModeButtons();
     resized();
     repaint();
@@ -298,6 +399,120 @@ void AifredAudioProcessorEditor::updateCompareButtons()
     resetAButton.setEnabled(captures.hasA());
     resetBButton.setEnabled(captures.hasB());
     swapButton.setEnabled(captures.hasA() || captures.hasB());
+}
+
+void AifredAudioProcessorEditor::updateReferenceUi()
+{
+    auto next = aifred::services::ReferenceClient::instance().state();
+    if (next.revision == lastReferenceRevision)
+        return;
+
+    const auto previousId = selectedReference() != nullptr
+        ? selectedReference()->id : std::string {};
+    referenceCatalog = std::move(next);
+    lastReferenceRevision = referenceCatalog.revision;
+    referenceSelector.clear(juce::dontSendNotification);
+
+    int selectedItem = 0;
+    for (std::size_t index = 0; index < referenceCatalog.references.size(); ++index)
+    {
+        const auto itemId = static_cast<int>(index) + 1;
+        const auto& reference = referenceCatalog.references[index];
+        referenceSelector.addItem(juce::String(reference.name), itemId);
+        if (reference.id == previousId)
+            selectedItem = itemId;
+    }
+    if (selectedItem == 0 && ! referenceCatalog.references.empty())
+        selectedItem = 1;
+    referenceSelector.setSelectedId(selectedItem, juce::dontSendNotification);
+    repaint();
+}
+
+void AifredAudioProcessorEditor::updateChatUi()
+{
+    if (++healthRefreshCounter >= refreshHz * 5)
+    {
+        healthRefreshCounter = 0;
+        aifred::services::AifredEngineClient::instance().pingHealthAsync();
+    }
+
+    const auto health = aifred::services::AifredEngineClient::instance().health();
+    if (health.revision != lastHealthRevision)
+    {
+        lastHealthRevision = health.revision;
+        repaint();
+    }
+
+    const auto chat = aifred::services::AifredEngineClient::instance().lastChatResult();
+    if (chat.revision != 0 && chat.revision != lastChatRevision)
+    {
+        lastChatRevision = chat.revision;
+        appendConversationLine(chat.success ? "AIFRED" : "SYSTEM",
+                               juce::String(chat.success ? chat.response : chat.error));
+        repaint();
+    }
+
+    const auto sending = aifred::services::AifredEngineClient::instance().chatInFlight();
+    sendButton.setEnabled(! sending);
+    retryButton.setEnabled(! sending && lastQuestion.isNotEmpty());
+    chatInput.setReadOnly(sending);
+}
+
+void AifredAudioProcessorEditor::sendChatQuestion()
+{
+    const auto question = chatInput.getText().trim();
+    if (question.isEmpty())
+        return;
+
+    const auto context = aifred::services::serializeConversationContext(conversationContext());
+    if (! aifred::services::AifredEngineClient::instance().askAsync(question, context))
+        return;
+
+    lastQuestion = question;
+    appendConversationLine("YOU", question);
+    chatInput.clear();
+    updateChatUi();
+    repaint();
+}
+
+void AifredAudioProcessorEditor::appendConversationLine(juce::StringRef speaker,
+                                                         const juce::String& text)
+{
+    chatHistory.moveCaretToEnd();
+    chatHistory.insertTextAtCaret(juce::String(speaker) + ": " + text.trim() + "\n\n");
+    chatHistory.moveCaretToEnd();
+}
+
+const aifred::services::ReferenceProfile*
+AifredAudioProcessorEditor::selectedReference() const noexcept
+{
+    const auto index = referenceSelector.getSelectedItemIndex();
+    if (index < 0 || index >= static_cast<int>(referenceCatalog.references.size()))
+        return nullptr;
+    return &referenceCatalog.references[static_cast<std::size_t>(index)];
+}
+
+aifred::services::ConversationContextInput
+AifredAudioProcessorEditor::conversationContext() const noexcept
+{
+    aifred::services::ConversationContextInput input;
+    input.sampleRate = processor.getCurrentSampleRate();
+    input.current = hasReceivedSnapshot ? &latestSnapshot : nullptr;
+    if (activeMode == Mode::compare)
+    {
+        input.mode = aifred::services::ConversationMode::compare;
+        input.captures = &captures;
+    }
+    else if (activeMode == Mode::reference)
+    {
+        input.mode = aifred::services::ConversationMode::reference;
+        input.reference = selectedReference();
+    }
+    else
+    {
+        input.mode = aifred::services::ConversationMode::analyze;
+    }
+    return input;
 }
 
 void AifredAudioProcessorEditor::drawHeader(juce::Graphics& g, juce::Rectangle<float> bounds) const
@@ -400,6 +615,183 @@ void AifredAudioProcessorEditor::drawCompareMode(juce::Graphics& g,
         g.drawText(metricText(values[i], i >= 4 ? 2 : 1, unit, true), cell,
                    juce::Justification::centred);
     }
+}
+
+void AifredAudioProcessorEditor::drawReferenceMode(juce::Graphics& g,
+                                                    juce::Rectangle<float> bounds) const
+{
+    bounds.removeFromTop(42.0f);
+    auto deltaPanel = bounds.removeFromBottom(96.0f);
+    bounds.removeFromBottom(10.0f);
+    auto currentBounds = bounds.removeFromLeft((bounds.getWidth() - 10.0f) * 0.5f);
+    bounds.removeFromLeft(10.0f);
+    drawSnapshotSpectrum(g, currentBounds, hasReceivedSnapshot ? &latestSnapshot : nullptr,
+                         "CURRENT MIX");
+    const auto* reference = selectedReference();
+    drawReferenceMetrics(g, bounds, reference);
+
+    drawPanel(g, deltaPanel);
+    auto content = deltaPanel.reduced(14.0f);
+    g.setColour(textSecondary);
+    g.setFont(makeFont(9.0f, juce::Font::bold));
+    g.drawText("REFERENCE MINUS CURRENT  /  MATCHED DEFINITIONS ONLY",
+               content.removeFromTop(16.0f), juce::Justification::centredLeft);
+
+    aifred::analysis::SnapshotComparison comparison;
+    if (reference != nullptr && hasReceivedSnapshot)
+    {
+        const auto comparable = aifred::services::referenceAsComparableSnapshot(*reference);
+        comparison = aifred::analysis::ComparisonEngine::compare(latestSnapshot, comparable);
+    }
+    constexpr std::array<const char*, 6> labels { "PEAK", "RMS", "CREST", "SHORT LUFS", "WIDTH", "CORR" };
+    const std::array<aifred::analysis::MetricValue, 6> values {
+        comparison.samplePeakDbfs.delta, comparison.rmsDbfs.delta, comparison.crestDb.delta,
+        comparison.shortTermLufs.delta, comparison.width.delta, comparison.correlation.delta
+    };
+    const auto cellWidth = content.getWidth() / static_cast<float>(labels.size());
+    for (std::size_t i = 0; i < labels.size(); ++i)
+    {
+        auto cell = content.withX(content.getX() + cellWidth * static_cast<float>(i)).withWidth(cellWidth);
+        g.setColour(textSecondary);
+        g.setFont(makeFont(8.5f, juce::Font::bold));
+        g.drawText(labels[i], cell.removeFromTop(16.0f), juce::Justification::centred);
+        g.setColour(values[i].valid ? cyan : textSecondary);
+        g.setFont(makeFont(13.0f, juce::Font::bold));
+        const auto unit = i < 3 ? "dB" : i == 3 ? "LUFS" : "";
+        g.drawText(metricText(values[i], i >= 4 ? 2 : 1, unit, true), cell,
+                   juce::Justification::centred);
+    }
+}
+
+void AifredAudioProcessorEditor::drawReferenceMetrics(
+    juce::Graphics& g, juce::Rectangle<float> bounds,
+    const aifred::services::ReferenceProfile* reference) const
+{
+    drawPanel(g, bounds);
+    auto content = bounds.reduced(14.0f);
+    g.setColour(textPrimary);
+    g.setFont(makeFont(12.0f, juce::Font::bold));
+    g.drawText("SELECTED REFERENCE", content.removeFromTop(20.0f),
+               juce::Justification::centredLeft);
+
+    if (reference == nullptr)
+    {
+        g.setColour(textSecondary);
+        g.setFont(makeFont(12.0f, juce::Font::bold));
+        const auto message = referenceCatalog.message.empty()
+            ? juce::String("REFRESH TO LOAD PRODUCTION REFERENCES")
+            : juce::String(referenceCatalog.message);
+        g.drawFittedText(message, content.toNearestInt(), juce::Justification::centred, 3);
+        return;
+    }
+
+    g.setColour(aurora);
+    g.setFont(makeFont(11.0f, juce::Font::bold));
+    g.drawFittedText(juce::String(reference->name), content.removeFromTop(28.0f).toNearestInt(),
+                     juce::Justification::centredLeft, 2);
+    g.setColour(textSecondary);
+    g.setFont(makeFont(8.0f));
+    g.drawText(juce::String(reference->version), content.removeFromTop(14.0f),
+               juce::Justification::centredLeft);
+
+    auto legacySpectrum = content.removeFromTop(std::max(74.0f, content.getHeight() * 0.48f));
+    legacySpectrum.reduce(0.0f, 8.0f);
+    g.setColour(textSecondary);
+    g.setFont(makeFont(8.5f, juce::Font::bold));
+    g.drawText("STORED LEGACY SPECTRUM BANDS  /  NO HIGH-RES FFT FABRICATED",
+               legacySpectrum.removeFromTop(15.0f), juce::Justification::centredLeft);
+
+    bool hasSpectrum = false;
+    const auto bandWidth = legacySpectrum.getWidth()
+        / static_cast<float>(reference->metrics.legacySpectrumBandDbfs.size());
+    for (std::size_t i = 0; i < reference->metrics.legacySpectrumBandDbfs.size(); ++i)
+    {
+        const auto& metric = reference->metrics.legacySpectrumBandDbfs[i];
+        auto band = legacySpectrum.withX(legacySpectrum.getX() + bandWidth * static_cast<float>(i))
+                                  .withWidth(std::max(1.0f, bandWidth - 3.0f));
+        if (metric.valid && std::isfinite(metric.value))
+        {
+            hasSpectrum = true;
+            const auto height = band.getHeight() * normalized(static_cast<float>(metric.value),
+                                                               spectrumFloorDb, spectrumCeilingDb);
+            g.setColour(aurora.withAlpha(0.72f));
+            g.fillRoundedRectangle(band.withTop(band.getBottom() - height), 2.0f);
+        }
+    }
+    if (! hasSpectrum)
+    {
+        g.setColour(textSecondary);
+        g.setFont(makeFont(10.0f, juce::Font::bold));
+        g.drawText("SPECTRUM UNAVAILABLE IN THIS RECORD", legacySpectrum,
+                   juce::Justification::centred);
+    }
+
+    constexpr std::array<const char*, 8> labels {
+        "PEAK", "TRUE PEAK", "RMS", "CREST", "SHORT LUFS", "INTEGRATED", "WIDTH", "CORR"
+    };
+    const std::array<aifred::analysis::MetricValue, 8> metrics {
+        reference->metrics.samplePeakDbfs, reference->metrics.truePeakDbtp,
+        reference->metrics.rmsDbfs, reference->metrics.crestDb,
+        reference->metrics.shortTermLufs, reference->metrics.integratedLufs,
+        reference->metrics.stereoWidth, reference->metrics.correlation
+    };
+    const auto rowHeight = std::max(25.0f, content.getHeight() * 0.5f);
+    for (std::size_t i = 0; i < labels.size(); ++i)
+    {
+        const auto column = static_cast<int>(i % 4);
+        const auto row = static_cast<int>(i / 4);
+        auto cell = juce::Rectangle<float>(content.getX() + content.getWidth() * column / 4.0f,
+                                           content.getY() + rowHeight * row,
+                                           content.getWidth() / 4.0f, rowHeight);
+        g.setColour(textSecondary);
+        g.setFont(makeFont(7.5f, juce::Font::bold));
+        g.drawText(labels[i], cell.removeFromTop(12.0f), juce::Justification::centred);
+        g.setColour(metrics[i].valid ? textPrimary : textSecondary);
+        g.setFont(makeFont(10.5f, juce::Font::bold));
+        const auto unit = i == 1 ? "dBTP" : i == 4 || i == 5 ? "LUFS"
+                         : i == 6 || i == 7 ? "" : "dB";
+        g.drawText(metricText(metrics[i], i >= 6 ? 2 : 1, unit), cell,
+                   juce::Justification::centredTop);
+    }
+}
+
+void AifredAudioProcessorEditor::drawChatPanel(juce::Graphics& g,
+                                                juce::Rectangle<float> bounds) const
+{
+    drawPanel(g, bounds, 10.0f);
+    auto heading = bounds.reduced(12.0f).removeFromTop(20.0f);
+    g.setColour(textPrimary);
+    g.setFont(makeFont(10.0f, juce::Font::bold));
+    g.drawText("AIFRED CONVERSATION  /  SESSION ONLY", heading.removeFromLeft(260.0f),
+               juce::Justification::centredLeft);
+
+    const auto health = aifred::services::AifredEngineClient::instance().health();
+    const auto sending = aifred::services::AifredEngineClient::instance().chatInFlight();
+    juce::String status;
+    juce::Colour statusColour = textSecondary;
+    if (sending)
+    {
+        status = "WORKING";
+        statusColour = cyan;
+    }
+    else if (! health.backendAvailable)
+    {
+        status = "BACKEND UNAVAILABLE";
+        statusColour = danger;
+    }
+    else if (! health.providerAvailable)
+    {
+        status = "AI UNAVAILABLE";
+        statusColour = danger;
+    }
+    else
+    {
+        status = juce::String(health.provider) + " / " + juce::String(health.model);
+        statusColour = aurora;
+    }
+    g.setColour(statusColour);
+    g.setFont(makeFont(9.0f, juce::Font::bold));
+    g.drawText(status.toUpperCase(), heading, juce::Justification::centredRight);
 }
 
 void AifredAudioProcessorEditor::drawUnavailableMode(juce::Graphics& g,
@@ -635,7 +1027,16 @@ void AifredAudioProcessorEditor::drawLevelCard(juce::Graphics& g,
     auto content = bounds.reduced(13.0f);
     g.setColour(textSecondary);
     g.setFont(makeFont(10.0f, juce::Font::bold));
-    g.drawText("LEVEL", content.removeFromTop(17.0f), juce::Justification::centredLeft);
+    auto heading = content.removeFromTop(17.0f);
+    g.drawText("LEVEL", heading, juce::Justification::centredLeft);
+    if (latestSnapshot.sampleClipActive)
+    {
+        auto clip = heading.removeFromRight(48.0f);
+        g.setColour(danger.withAlpha(0.16f));
+        g.fillRoundedRectangle(clip, 4.0f);
+        g.setColour(danger);
+        g.drawText("CLIP", clip, juce::Justification::centred);
+    }
     auto values = content.removeFromBottom(42.0f);
     auto arcArea = content.reduced(3.0f, 0.0f);
     const auto diameter = std::min(arcArea.getWidth(), arcArea.getHeight() * 1.35f);

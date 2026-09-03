@@ -7,6 +7,9 @@
 #endif
 
 #include "PluginProcessor.h"
+#include "AifredEngineClient.h"
+#include "AnalysisContextSerializer.h"
+#include "ReferenceClient.h"
 #include "core/analysis/AnalysisSnapshot.h"
 #include "core/analysis/ComparisonEngine.h"
 
@@ -57,11 +60,21 @@ private:
     void selectMode(Mode);
     void updateModeButtons();
     void updateCompareButtons();
+    void updateReferenceUi();
+    void updateChatUi();
+    void sendChatQuestion();
+    void appendConversationLine(juce::StringRef speaker, const juce::String& text);
+    [[nodiscard]] const aifred::services::ReferenceProfile* selectedReference() const noexcept;
+    [[nodiscard]] aifred::services::ConversationContextInput conversationContext() const noexcept;
 
     void drawHeader(juce::Graphics&, juce::Rectangle<float>) const;
     void drawModeNavigation(juce::Graphics&, juce::Rectangle<float>) const;
     void drawAnalyzeMode(juce::Graphics&, juce::Rectangle<float>) const;
     void drawCompareMode(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawReferenceMode(juce::Graphics&, juce::Rectangle<float>) const;
+    void drawReferenceMetrics(juce::Graphics&, juce::Rectangle<float>,
+                              const aifred::services::ReferenceProfile*) const;
+    void drawChatPanel(juce::Graphics&, juce::Rectangle<float>) const;
     void drawUnavailableMode(juce::Graphics&, juce::Rectangle<float>,
                              juce::StringRef title, juce::StringRef detail) const;
     void drawSpectrumHero(juce::Graphics&, juce::Rectangle<float>) const;
@@ -103,12 +116,27 @@ private:
     juce::TextButton resetAButton { "RESET A" };
     juce::TextButton resetBButton { "RESET B" };
     juce::TextButton swapButton { "SWAP A/B" };
+    juce::TextButton refreshReferencesButton { "REFRESH" };
+    juce::ComboBox referenceSelector;
+    juce::TextButton chatToggleButton { "ASK AIFRED" };
+    juce::TextButton sendButton { "SEND" };
+    juce::TextButton retryButton { "RETRY" };
+    juce::TextEditor chatHistory;
+    juce::TextEditor chatInput;
 
     aifred::analysis::AnalysisSnapshot latestSnapshot {};
     std::uint64_t lastSequence = 0;
     bool hasReceivedSnapshot = false;
     DisplayMetric peak, rms, crest, loudness, width, correlation, spectrumBinWidthHz;
     std::array<DisplayMetric, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumBins;
+
+    aifred::services::ReferenceCatalog referenceCatalog;
+    std::uint64_t lastReferenceRevision = 0;
+    std::uint64_t lastHealthRevision = 0;
+    std::uint64_t lastChatRevision = 0;
+    int healthRefreshCounter = 0;
+    bool chatOpen = false;
+    juce::String lastQuestion;
 
 #if JUCE_WEB_BROWSER
     std::unique_ptr<juce::WebBrowserComponent> webVisualizer;

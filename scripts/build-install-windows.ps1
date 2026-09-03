@@ -61,10 +61,12 @@ Initialize-MsvcEnvironment
 
 & cmake --preset $Preset -S $repositoryRoot
 if ($LASTEXITCODE -ne 0) { throw 'CMake configure failed.' }
-& cmake --build --preset $Preset --target Aifred_VST3 aifred_dsp_smoke aifred_comparison_tests
+& cmake --build --preset $Preset --target Aifred_VST3 aifred_dsp_smoke aifred_comparison_tests aifred_integration_contract_tests
 if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
 & ctest --preset $Preset
 if ($LASTEXITCODE -ne 0) { throw 'Smoke tests failed.' }
+& dotnet run --project (Join-Path $repositoryRoot 'tools\AifredEngine.Tests\AifredEngine.ContractTests.csproj') -c Release
+if ($LASTEXITCODE -ne 0) { throw 'AifredEngine contract tests failed.' }
 
 $buildRoot = Join-Path $repositoryRoot "build\$Preset"
 $sourceBundle = Join-Path $buildRoot 'Aifred_artefacts\Release\VST3\Aifred.vst3'
@@ -74,12 +76,20 @@ if (-not (Test-Path -LiteralPath $sourceBundle -PathType Container)) {
 
 $distributionRoot = Join-Path $repositoryRoot "dist\AIFRED-$version-win64"
 $distributionBundle = Join-Path $distributionRoot 'Aifred.vst3'
+$distributionEngine = Join-Path $distributionRoot 'AifredEngine'
 Assert-ChildPath -Candidate $distributionBundle -Parent $repositoryRoot
 New-Item -ItemType Directory -Force -Path $distributionRoot | Out-Null
 if (Test-Path -LiteralPath $distributionBundle) {
     Remove-Item -Recurse -Force -LiteralPath $distributionBundle
 }
 Copy-Item -Recurse -Force -LiteralPath $sourceBundle -Destination $distributionBundle
+if (Test-Path -LiteralPath $distributionEngine) {
+    Assert-ChildPath -Candidate $distributionEngine -Parent $distributionRoot
+    Remove-Item -Recurse -Force -LiteralPath $distributionEngine
+}
+& dotnet publish (Join-Path $repositoryRoot 'tools\AifredEngine\AifredEngine.csproj') `
+    -c Release -r win-x64 --self-contained false -o $distributionEngine
+if ($LASTEXITCODE -ne 0) { throw 'AifredEngine publish failed.' }
 
 $sourceBinary = Get-ChildItem -LiteralPath $sourceBundle -Recurse -File |
     Where-Object Name -EQ 'Aifred.vst3' |
@@ -96,6 +106,7 @@ $distributionHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $distributionBi
 if ($sourceHash -ne $distributionHash) { throw 'Canonical copy hash mismatch.' }
 
 $installedBundle = Join-Path $env:COMMONPROGRAMFILES 'VST3\Aifred.vst3'
+$installedEngine = Join-Path $env:LOCALAPPDATA 'Aifred\bin'
 $installedHash = $null
 if ($Install) {
     $installParent = Split-Path -Parent $installedBundle
@@ -110,6 +121,14 @@ if ($Install) {
         Select-Object -First 1
     $installedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installedBinary.FullName).Hash
     if ($installedHash -ne $distributionHash) { throw 'Installed bundle hash mismatch.' }
+
+    $engineInstallParent = Split-Path -Parent $installedEngine
+    Assert-ChildPath -Candidate $installedEngine -Parent $engineInstallParent
+    New-Item -ItemType Directory -Force -Path $engineInstallParent | Out-Null
+    if (Test-Path -LiteralPath $installedEngine) {
+        Remove-Item -Recurse -Force -LiteralPath $installedEngine
+    }
+    Copy-Item -Recurse -Force -LiteralPath $distributionEngine -Destination $installedEngine
 }
 
 $buildInfo = [ordered]@{
@@ -120,6 +139,8 @@ $buildInfo = [ordered]@{
     sourceArtifact = $sourceBundle
     canonicalArtifact = $distributionBundle
     installedArtifact = if ($Install) { $installedBundle } else { $null }
+    engineArtifact = $distributionEngine
+    installedEngine = if ($Install) { $installedEngine } else { $null }
     sha256 = $distributionHash
 }
 $buildInfo | ConvertTo-Json | Set-Content -Encoding utf8 -LiteralPath (Join-Path $distributionRoot 'build-info.json')
@@ -130,4 +151,6 @@ Write-Host 'Build identity:      WIN64 / RELEASE'
 Write-Host "Source artifact:     $sourceBundle"
 Write-Host "Canonical artifact:  $distributionBundle"
 Write-Host "Installed artifact:  $(if ($Install) { $installedBundle } else { 'not installed (use -Install)' })"
+Write-Host "Engine artifact:     $distributionEngine"
+Write-Host "Installed engine:    $(if ($Install) { $installedEngine } else { 'not installed (use -Install)' })"
 Write-Host "SHA-256:             $distributionHash"
