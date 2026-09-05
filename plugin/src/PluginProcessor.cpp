@@ -15,18 +15,18 @@ AifredAudioProcessor::AifredAudioProcessor()
 void AifredAudioProcessor::prepareToPlay (double sampleRate, int maximumExpectedSamplesPerBlock)
 {
     const auto validSampleRate = sampleRate > 0.0 && std::isfinite (sampleRate);
-    const auto safeMaximumBlockSize = std::max (1, maximumExpectedSamplesPerBlock);
+    juce::ignoreUnused(maximumExpectedSamplesPerBlock);
     const auto channelCount = std::min (2, getTotalNumInputChannels());
 
     if (! validSampleRate || channelCount <= 0)
     {
         currentSampleRate.store (0.0, std::memory_order_release);
-        analysisCoordinator.reset();
+        pipeline_.reset();
         return;
     }
 
     currentSampleRate.store (sampleRate, std::memory_order_release);
-    analysisCoordinator.prepare (sampleRate, safeMaximumBlockSize, channelCount);
+    pipeline_.prepare (sampleRate, channelCount);
 }
 
 void AifredAudioProcessor::releaseResources()
@@ -81,7 +81,9 @@ void AifredAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 return;
     }
 
-    analysisCoordinator.process (channelData.data(), channelsToAnalyse, numSamples);
+    bool known=false,playing=false;std::int64_t position=-1;
+    if(auto* playhead=getPlayHead()) if(auto info=playhead->getPosition()) {known=true;playing=info->getIsPlaying();if(auto time=info->getTimeInSamples())position=*time;}
+    pipeline_.process(channelData.data(),channelsToAnalyse,numSamples,known,playing,position);
 }
 
 juce::AudioProcessorEditor* AifredAudioProcessor::createEditor()
@@ -147,17 +149,21 @@ void AifredAudioProcessor::changeProgramName (int index, const juce::String& new
 
 void AifredAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    destData.reset();
+    juce::XmlElement state("AIFRED_OFFICIAL_STATE");
+    state.setAttribute("version",1);
+    state.setAttribute("dsp_profile",juce::String(aifred::core::profile(pipeline_.selectedProfile()).name.data()));
+    copyXmlToBinary(state,destData);
 }
 
 void AifredAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    juce::ignoreUnused (data, sizeInBytes);
+    if(auto state=getXmlFromBinary(data,sizeInBytes))
+        if(state->hasTagName("AIFRED_OFFICIAL_STATE")) pipeline_.setProfile(aifred::core::profileFromName(state->getStringAttribute("dsp_profile").toStdString()));
 }
 
-aifred::analysis::AnalysisSnapshot AifredAudioProcessor::getAnalysisSnapshot() const noexcept
+aifred::analysis::ViewSnapshot AifredAudioProcessor::getViewSnapshot() const noexcept
 {
-    return analysisCoordinator.getSnapshot();
+    return aifred::analysis::makeView(pipeline_.live(),pipeline_.observation());
 }
 
 double AifredAudioProcessor::getCurrentSampleRate() const noexcept
@@ -167,7 +173,7 @@ double AifredAudioProcessor::getCurrentSampleRate() const noexcept
 
 void AifredAudioProcessor::resetAnalysis() noexcept
 {
-    analysisCoordinator.reset();
+    pipeline_.reset();
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

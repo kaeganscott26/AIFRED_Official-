@@ -7,11 +7,11 @@
 #endif
 
 #include "PluginProcessor.h"
-#include "AifredEngineClient.h"
-#include "AnalysisContextSerializer.h"
+
+
 #include "ReferenceClient.h"
-#include "core/analysis/AnalysisSnapshot.h"
-#include "core/analysis/ComparisonEngine.h"
+#include "ViewSnapshot.h"
+#include "CaptureComparison.h"
 
 #include <array>
 #include <cstdint>
@@ -50,12 +50,12 @@ private:
         bool signalActive = false;
         double elapsedSeconds = 0.0;
         double spectrumBinWidthHz = 0.0;
-        std::array<float, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumBins {};
-        std::array<bool, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumValid {};
+        std::array<float, aifred::analysis::ViewSnapshot::spectrumBinCount> spectrumBins {};
+        std::array<bool, aifred::analysis::ViewSnapshot::spectrumBinCount> spectrumValid {};
     };
 
     void timerCallback() override;
-    void acceptSnapshot(const aifred::analysis::AnalysisSnapshot&);
+    void acceptSnapshot(const aifred::analysis::ViewSnapshot&);
     void clearDisplay() noexcept;
     void selectMode(Mode);
     void updateModeButtons();
@@ -65,7 +65,7 @@ private:
     void sendChatQuestion();
     void appendConversationLine(juce::StringRef speaker, const juce::String& text);
     [[nodiscard]] const aifred::services::ReferenceProfile* selectedReference() const noexcept;
-    [[nodiscard]] aifred::services::ConversationContextInput conversationContext() const noexcept;
+
 
     void drawHeader(juce::Graphics&, juce::Rectangle<float>) const;
     void drawModeNavigation(juce::Graphics&, juce::Rectangle<float>) const;
@@ -79,7 +79,7 @@ private:
                              juce::StringRef title, juce::StringRef detail) const;
     void drawSpectrumHero(juce::Graphics&, juce::Rectangle<float>) const;
     void drawSnapshotSpectrum(juce::Graphics&, juce::Rectangle<float>,
-                              const aifred::analysis::AnalysisSnapshot*,
+                              const aifred::analysis::ViewSnapshot*,
                               juce::StringRef label) const;
     void drawSupportMeters(juce::Graphics&, juce::Rectangle<float>) const;
     void drawLevelCard(juce::Graphics&, juce::Rectangle<float>) const;
@@ -118,17 +118,18 @@ private:
     juce::TextButton swapButton { "SWAP A/B" };
     juce::TextButton refreshReferencesButton { "REFRESH" };
     juce::ComboBox referenceSelector;
+    juce::ComboBox profileSelector;
     juce::TextButton chatToggleButton { "ASK AIFRED" };
     juce::TextButton sendButton { "SEND" };
     juce::TextButton retryButton { "RETRY" };
     juce::TextEditor chatHistory;
     juce::TextEditor chatInput;
 
-    aifred::analysis::AnalysisSnapshot latestSnapshot {};
+    aifred::analysis::ViewSnapshot latestSnapshot {};
     std::uint64_t lastSequence = 0;
     bool hasReceivedSnapshot = false;
     DisplayMetric peak, rms, crest, loudness, width, correlation, spectrumBinWidthHz;
-    std::array<DisplayMetric, aifred::analysis::AnalysisSnapshot::spectrumBinCount> spectrumBins;
+    std::array<DisplayMetric, aifred::analysis::ViewSnapshot::spectrumBinCount> spectrumBins;
 
     aifred::services::ReferenceCatalog referenceCatalog;
     std::uint64_t lastReferenceRevision = 0;

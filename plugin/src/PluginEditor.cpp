@@ -12,7 +12,7 @@
 namespace
 {
 constexpr int refreshHz = 60;
-constexpr float meterSmoothing = 0.24f;
+
 constexpr float spectrumSmoothing = 0.34f;
 constexpr float spectrumFloorDb = -96.0f;
 constexpr float spectrumCeilingDb = 0.0f;
@@ -92,6 +92,10 @@ juce::WebBrowserComponent::Resource makeWebResource(const char* data, int size,
 AifredAudioProcessorEditor::AifredAudioProcessorEditor(AifredAudioProcessor& owner)
     : AudioProcessorEditor(&owner), processor(owner)
 {
+    addAndMakeVisible(profileSelector);
+    for(std::size_t i=0;i<aifred::core::profiles.size();++i) profileSelector.addItem(juce::String(aifred::core::profiles[i].name.data()),static_cast<int>(i)+1);
+    profileSelector.setSelectedId(static_cast<int>(processor.pipeline().selectedProfile())+1,juce::dontSendNotification);
+    profileSelector.onChange=[this]{processor.pipeline().setProfile(static_cast<aifred::core::ProfileId>(profileSelector.getSelectedId()-1));};
     setOpaque(true);
     setResizable(true, true);
     setResizeLimits(860, 600, 1760, 1180);
@@ -185,8 +189,8 @@ AifredAudioProcessorEditor::AifredAudioProcessorEditor(AifredAudioProcessor& own
     updateReferenceUi();
     updateChatUi();
     initialiseWebVisualizer();
-    acceptSnapshot(processor.getAnalysisSnapshot());
-    aifred::services::AifredEngineClient::instance().pingHealthAsync();
+    acceptSnapshot(processor.getViewSnapshot());
+    processor.intelligence().pingHealthAsync();
     startTimerHz(refreshHz);
 }
 
@@ -278,6 +282,7 @@ void AifredAudioProcessorEditor::resized()
         navigation.removeFromLeft(4);
     }
 
+    profileSelector.setBounds(navigation.removeFromRight(230).reduced(2,4));
     bounds.removeFromTop(12);
     if (chatOpen)
     {
@@ -326,13 +331,13 @@ void AifredAudioProcessorEditor::resized()
 
 void AifredAudioProcessorEditor::timerCallback()
 {
-    const auto snapshot = processor.getAnalysisSnapshot();
+    const auto snapshot = processor.getViewSnapshot();
     if (! hasReceivedSnapshot || snapshot.sequence != lastSequence)
         acceptSnapshot(snapshot);
 
     bool changed = false;
     for (auto* metric : { &peak, &rms, &crest, &loudness, &width, &correlation })
-        changed |= metric->advance(meterSmoothing);
+        changed |= metric->advance(1.0f);
     changed |= spectrumBinWidthHz.advance(spectrumSmoothing);
     for (auto& bin : spectrumBins)
         changed |= bin.advance(spectrumSmoothing);
@@ -344,7 +349,7 @@ void AifredAudioProcessorEditor::timerCallback()
         repaint();
 }
 
-void AifredAudioProcessorEditor::acceptSnapshot(const aifred::analysis::AnalysisSnapshot& snapshot)
+void AifredAudioProcessorEditor::acceptSnapshot(const aifred::analysis::ViewSnapshot& snapshot)
 {
     latestSnapshot = snapshot;
     lastSequence = snapshot.sequence;
@@ -433,26 +438,27 @@ void AifredAudioProcessorEditor::updateChatUi()
     if (++healthRefreshCounter >= refreshHz * 5)
     {
         healthRefreshCounter = 0;
-        aifred::services::AifredEngineClient::instance().pingHealthAsync();
+        processor.intelligence().pingHealthAsync();
     }
 
-    const auto health = aifred::services::AifredEngineClient::instance().health();
+    const auto health = processor.intelligence().health();
     if (health.revision != lastHealthRevision)
     {
         lastHealthRevision = health.revision;
         repaint();
     }
 
-    const auto chat = aifred::services::AifredEngineClient::instance().lastChatResult();
+    const auto chat = processor.intelligence().lastChatResult();
     if (chat.revision != 0 && chat.revision != lastChatRevision)
     {
         lastChatRevision = chat.revision;
+        processor.pipeline().recordResponse(juce::String(chat.success?chat.response:chat.error));
         appendConversationLine(chat.success ? "AIFRED" : "SYSTEM",
                                juce::String(chat.success ? chat.response : chat.error));
         repaint();
     }
 
-    const auto sending = aifred::services::AifredEngineClient::instance().chatInFlight();
+    const auto sending = processor.intelligence().chatInFlight();
     sendButton.setEnabled(! sending);
     retryButton.setEnabled(! sending && lastQuestion.isNotEmpty());
     chatInput.setReadOnly(sending);
@@ -464,8 +470,11 @@ void AifredAudioProcessorEditor::sendChatQuestion()
     if (question.isEmpty())
         return;
 
-    const auto context = aifred::services::serializeConversationContext(conversationContext());
-    if (! aifred::services::AifredEngineClient::instance().askAsync(question, context))
+    aifred::core::ReferenceDistribution reference;
+    if(const auto* selected=selectedReference()) reference.id=selected->id;
+    const auto mode=activeMode==Mode::compare ? "compare" : activeMode==Mode::reference ? "reference" : "analyze";
+    const auto context = processor.pipeline().contextForQuestion(question,selectedReference()?&reference:nullptr,mode,captures.b()?&captures.b()->observation:nullptr);
+    if (! processor.intelligence().askAsync(question, context))
         return;
 
     lastQuestion = question;
@@ -490,29 +499,6 @@ AifredAudioProcessorEditor::selectedReference() const noexcept
     if (index < 0 || index >= static_cast<int>(referenceCatalog.references.size()))
         return nullptr;
     return &referenceCatalog.references[static_cast<std::size_t>(index)];
-}
-
-aifred::services::ConversationContextInput
-AifredAudioProcessorEditor::conversationContext() const noexcept
-{
-    aifred::services::ConversationContextInput input;
-    input.sampleRate = processor.getCurrentSampleRate();
-    input.current = hasReceivedSnapshot ? &latestSnapshot : nullptr;
-    if (activeMode == Mode::compare)
-    {
-        input.mode = aifred::services::ConversationMode::compare;
-        input.captures = &captures;
-    }
-    else if (activeMode == Mode::reference)
-    {
-        input.mode = aifred::services::ConversationMode::reference;
-        input.reference = selectedReference();
-    }
-    else
-    {
-        input.mode = aifred::services::ConversationMode::analyze;
-    }
-    return input;
 }
 
 void AifredAudioProcessorEditor::drawHeader(juce::Graphics& g, juce::Rectangle<float> bounds) const
@@ -596,7 +582,7 @@ void AifredAudioProcessorEditor::drawCompareMode(juce::Graphics& g,
     g.setColour(textSecondary);
     g.setFont(makeFont(9.0f, juce::Font::bold));
     g.drawText("B MINUS A", content.removeFromTop(16.0f), juce::Justification::centredLeft);
-    const auto comparison = aifred::analysis::ComparisonEngine::compare(captures);
+    const auto comparison = aifred::analysis::CaptureComparison::compare(captures);
     constexpr std::array<const char*, 6> labels { "PEAK", "RMS", "CREST", "LUFS", "WIDTH", "CORR" };
     const std::array<aifred::analysis::MetricValue, 6> values {
         comparison.samplePeakDbfs.delta, comparison.rmsDbfs.delta, comparison.crestDb.delta,
@@ -641,7 +627,7 @@ void AifredAudioProcessorEditor::drawReferenceMode(juce::Graphics& g,
     if (reference != nullptr && hasReceivedSnapshot)
     {
         const auto comparable = aifred::services::referenceAsComparableSnapshot(*reference);
-        comparison = aifred::analysis::ComparisonEngine::compare(latestSnapshot, comparable);
+        comparison = aifred::analysis::CaptureComparison::compare(latestSnapshot, comparable);
     }
     constexpr std::array<const char*, 6> labels { "PEAK", "RMS", "CREST", "SHORT LUFS", "WIDTH", "CORR" };
     const std::array<aifred::analysis::MetricValue, 6> values {
@@ -765,8 +751,8 @@ void AifredAudioProcessorEditor::drawChatPanel(juce::Graphics& g,
     g.drawText("AIFRED CONVERSATION  /  SESSION ONLY", heading.removeFromLeft(260.0f),
                juce::Justification::centredLeft);
 
-    const auto health = aifred::services::AifredEngineClient::instance().health();
-    const auto sending = aifred::services::AifredEngineClient::instance().chatInFlight();
+    const auto health = processor.intelligence().health();
+    const auto sending = processor.intelligence().chatInFlight();
     juce::String status;
     juce::Colour statusColour = textSecondary;
     if (sending)
@@ -931,7 +917,7 @@ void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
 
 void AifredAudioProcessorEditor::drawSnapshotSpectrum(
     juce::Graphics& g, juce::Rectangle<float> bounds,
-    const aifred::analysis::AnalysisSnapshot* snapshot, juce::StringRef label) const
+    const aifred::analysis::ViewSnapshot* snapshot, juce::StringRef label) const
 {
     drawPanel(g, bounds);
     auto content = bounds.reduced(14.0f);

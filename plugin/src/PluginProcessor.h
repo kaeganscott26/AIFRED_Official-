@@ -1,10 +1,12 @@
 #pragma once
+#include "aifred/IntelligenceClient.h"
 
 #include <atomic>
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-#include "core/analysis/AnalysisCoordinator.h"
+#include "aifred/Pipeline.h"
+#include "ViewSnapshot.h"
 
 class AifredAudioProcessor final : public juce::AudioProcessor
 {
@@ -35,12 +37,16 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    [[nodiscard]] aifred::analysis::AnalysisSnapshot getAnalysisSnapshot() const noexcept;
+    [[nodiscard]] aifred::analysis::ViewSnapshot getViewSnapshot() const noexcept;
     [[nodiscard]] double getCurrentSampleRate() const noexcept;
     void resetAnalysis() noexcept;
+    aifred::core::Pipeline& pipeline() noexcept { return pipeline_; }
+
+    aifred::core::IntelligenceClient& intelligence() noexcept {return intelligence_;}
 
 private:
-    aifred::analysis::AnalysisCoordinator analysisCoordinator;
+    aifred::core::IntelligenceClient intelligence_ { "official" };
+    aifred::core::Pipeline pipeline_ { "official", "4.0.0-alpha.2" };
     std::atomic<double> currentSampleRate { 0.0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AifredAudioProcessor)

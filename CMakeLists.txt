@@ -71,23 +71,10 @@ juce_add_binary_data(AifredVisualizationAssets
         plugin/visualization/three.module.min.js
 )
 
-set(AIFRED_DSP_SOURCES
-    core/analysis/AnalysisCoordinator.cpp
-    core/dsp/LevelAnalyzer.cpp
-    core/dsp/LoudnessAnalyzer.cpp
-    core/dsp/SpectrumAnalyzer.cpp
-    core/dsp/StereoAnalyzer.cpp
-)
-
-set(AIFRED_COMPARISON_SOURCES
-    core/analysis/ComparisonEngine.cpp
-)
-
-set(AIFRED_INTEGRATION_SOURCES
-    plugin/src/AifredEngineClient.cpp
-    plugin/src/AnalysisContextSerializer.cpp
-    plugin/src/ReferenceClient.cpp
-)
+set(AIFRED_COMPARISON_SOURCES plugin/src/CaptureComparison.cpp)
+set(AIFRED_INTEGRATION_SOURCES plugin/src/ReferenceClient.cpp)
+enable_testing()
+add_subdirectory(shared-dsp)
 
 juce_add_plugin(Aifred
     COMPANY_NAME "AIFRED"
@@ -114,7 +101,6 @@ juce_generate_juce_header(Aifred)
 target_sources(Aifred PRIVATE
     plugin/src/PluginProcessor.cpp
     plugin/src/PluginEditor.cpp
-    ${AIFRED_DSP_SOURCES}
     ${AIFRED_COMPARISON_SOURCES}
     ${AIFRED_INTEGRATION_SOURCES}
 )
@@ -142,56 +128,11 @@ target_link_libraries(Aifred
         juce::juce_dsp
         juce::juce_gui_extra
         AifredVisualizationAssets
+        aifred_pipeline
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
 
-add_executable(aifred_dsp_smoke
-    tests/dsp_smoke.cpp
-    ${AIFRED_DSP_SOURCES}
-)
 
-target_include_directories(aifred_dsp_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_features(aifred_dsp_smoke PRIVATE cxx_std_20)
-target_compile_definitions(aifred_dsp_smoke PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-target_link_libraries(aifred_dsp_smoke
-    PRIVATE
-        juce::juce_audio_basics
-        juce::juce_core
-        juce::juce_dsp
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_warning_flags
-)
-
-add_executable(aifred_comparison_tests
-    tests/comparison_engine_tests.cpp
-    ${AIFRED_COMPARISON_SOURCES}
-)
-target_include_directories(aifred_comparison_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_features(aifred_comparison_tests PRIVATE cxx_std_20)
-
-add_executable(aifred_integration_contract_tests
-    tests/integration_contract_tests.cpp
-    ${AIFRED_INTEGRATION_SOURCES}
-    ${AIFRED_COMPARISON_SOURCES}
-)
-target_include_directories(aifred_integration_contract_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_features(aifred_integration_contract_tests PRIVATE cxx_std_20)
-target_compile_definitions(aifred_integration_contract_tests PRIVATE
-    JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
-    AIFRED_ENGINE_URL="${AIFRED_ENGINE_URL}"
-    AIFRED_REFERENCE_API_URL="${AIFRED_REFERENCE_API_URL}"
-)
-target_link_libraries(aifred_integration_contract_tests PRIVATE
-    juce::juce_core
-    juce::juce_recommended_config_flags
-    juce::juce_recommended_warning_flags
-)
-
-enable_testing()
-add_test(NAME aifred_dsp_smoke COMMAND aifred_dsp_smoke)
-add_test(NAME aifred_comparison_tests COMMAND aifred_comparison_tests)
-add_test(NAME aifred_integration_contract_tests COMMAND aifred_integration_contract_tests)

@@ -127,10 +127,10 @@ ReferenceCatalog parseReferenceCatalog(const juce::String& json)
     return result;
 }
 
-analysis::AnalysisSnapshot referenceAsComparableSnapshot(
+analysis::ViewSnapshot referenceAsComparableSnapshot(
     const ReferenceProfile& reference) noexcept
 {
-    analysis::AnalysisSnapshot snapshot;
+    analysis::ViewSnapshot snapshot;
     if (! reference.available)
         return snapshot;
 

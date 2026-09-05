@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-#include "core/analysis/AnalysisSnapshot.h"
+#include "ViewSnapshot.h"
 
 #include <array>
 #include <atomic>
@@ -64,7 +64,7 @@ struct ReferenceCatalog final
 };
 
 [[nodiscard]] ReferenceCatalog parseReferenceCatalog(const juce::String& json);
-[[nodiscard]] analysis::AnalysisSnapshot referenceAsComparableSnapshot(
+[[nodiscard]] analysis::ViewSnapshot referenceAsComparableSnapshot(
     const ReferenceProfile& reference) noexcept;
 
 class ReferenceClient final
