@@ -65,9 +65,9 @@ ReferenceProfile parseReference(const juce::var& value)
     if (const auto* values = spectrum.getArray())
     {
         const auto count = std::min<int>(values->size(),
-                                         static_cast<int>(result.metrics.legacySpectrumBandDbfs.size()));
+                                         static_cast<int>(result.metrics.catalogSpectrumBandDbfs.size()));
         for (int index = 0; index < count; ++index)
-            result.metrics.legacySpectrumBandDbfs[static_cast<std::size_t>(index)] =
+            result.metrics.catalogSpectrumBandDbfs[static_cast<std::size_t>(index)] =
                 parseMetricValue(values->getReference(index));
     }
 
@@ -134,15 +134,8 @@ analysis::ViewSnapshot referenceAsComparableSnapshot(
     if (! reference.available)
         return snapshot;
 
-    // Only definitions shared exactly with the live 4.0 snapshot are mapped.
-    // Integrated loudness and the legacy nine-band spectrum are deliberately
-    // left out rather than relabelled as short-term LUFS or full FFT bins.
-    snapshot.samplePeakDbfs = reference.metrics.samplePeakDbfs;
-    snapshot.rmsDbfs = reference.metrics.rmsDbfs;
-    snapshot.crestDb = reference.metrics.crestDb;
-    snapshot.shortTermLufs = reference.metrics.shortTermLufs;
-    snapshot.width = reference.metrics.stereoWidth;
-    snapshot.correlation = reference.metrics.correlation;
+    // Catalog records have no compatible DSP profile/version or integration
+    // definition. They remain visible metadata, but supply no comparison values.
     return snapshot;
 }
 

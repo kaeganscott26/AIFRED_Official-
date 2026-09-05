@@ -1,24 +1,17 @@
 {
-  "status": "PLANNED / NOT CONSUMED BY RUNTIME",
-  "product": "AIFRED 4",
-  "channel": "alpha",
+  "status": "IMPLEMENTED",
+  "runtimeChannel": "official",
+  "hostPort": 8788,
+  "contextSchema": "aifred.filtered-mix.v1",
   "preserveCurrentPluginIds": true,
   "requiredHandshakeFields": [
-    "product",
-    "channel",
-    "version",
-    "protocol",
-    "instanceId",
-    "sessionId"
-  ],
-  "requiredOwnedPaths": [
-    "plugin",
-    "engine",
-    "settings",
-    "logs",
-    "cache",
-    "reports",
-    "references"
+    "product_channel",
+    "product_version",
+    "plugin_instance_id",
+    "session_id",
+    "profile_id",
+    "profile_version",
+    "schema"
   ],
   "automaticChannelReplacement": false
 }

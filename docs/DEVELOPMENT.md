@@ -1,11 +1,7 @@
 # Development
 
-Inspect branch, HEAD, upstream, working changes, remotes and source ownership before editing. Keep both repositories independently buildable. Do not copy dependencies or runtime implementation from an absolute sibling path. Separate construction work from DSP/GUI/model changes.
+Read [architecture](ARCHITECTURE.md), [shared algorithms](../shared-dsp/README.md), [build](BUILD.md) and [testing](TESTING.md). Preserve frontends and audio/state IDs. Measurements belong only to aifred_engine, observation to BufferHunter, semantics to aifred_filter. Network/model/file operations never reach processBlock.
 
-Use [architecture](ARCHITECTURE.md), [build](BUILD.md), [testing](TESTING.md), [installation](INSTALLATION.md), [distribution](DISTRIBUTION.md) and [channel ownership](COEXISTENCE.md). New documents need a clear owner; update these documents instead of adding phase logs. Git history holds superseded plans. Keep generated reports under out/<platform>/build/reports and outside canonical instructions.
+Both repos vendor identical core/host source and checksum lock. Review/version both copies together; optional --peer checks explicit clones. Git/external recovery bundles are archives; retain no dead alternative analyzer or serializer.
 
-CURRENT means source implements the feature; it does not certify a release. EXPERIMENTAL means code/tests exist outside the supported native runtime. PLANNED describes a design contract. UNIMPLEMENTED means no executable feature exists. Record skipped tests and untested platforms explicitly.
-
-Preserve user settings, reference data, website assets, model files, deployment config and credentials. Examples should name configuration variables without values. System installation destinations differ from machine-specific checkout paths. User-profile editor settings and synthetic privacy-test paths are not product build configuration.
-
-Run `python -B scripts/common/check_repository.py` for read-only canonical-path and Markdown-link checks. Generated developer reports belong below out/<platform>/build/reports.
+Before work inspect clean main, local/tracking/live remote HEAD and ahead/behind. Update using git switch main and git pull --ff-only origin main. Before push review complete diff, run canonical tests/release, fetch and reconcile unexpected advancement. No force push, output or secrets. Distinguish Windows automation from installed/DAW validation and unvalidated platforms.

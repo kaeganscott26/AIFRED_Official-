@@ -18,6 +18,8 @@ ComparisonAvailability snapshotAvailability(
         return ComparisonAvailability::missingSnapshotA;
     if (! b)
         return ComparisonAvailability::missingSnapshotB;
+    if(a->observation.profileId!=b->observation.profileId || a->observation.profileVersion!=b->observation.profileVersion || a->observation.sampleRate!=b->observation.sampleRate)
+        return ComparisonAvailability::incompatibleProfile;
     return ComparisonAvailability::available;
 }
 
@@ -37,11 +39,11 @@ MetricComparison compareMetric(const MetricValue* a,
         return comparison;
     }
 
-    if (! a->valid && ! b->valid)
+    if ((! a->valid || !std::isfinite(a->value)) && (! b->valid || !std::isfinite(b->value)))
         comparison.availability = ComparisonAvailability::bothValuesInvalid;
-    else if (! a->valid)
+    else if (! a->valid || !std::isfinite(a->value))
         comparison.availability = ComparisonAvailability::valueAInvalid;
-    else if (! b->valid)
+    else if (! b->valid || !std::isfinite(b->value))
         comparison.availability = ComparisonAvailability::valueBInvalid;
     else
     {

@@ -16,8 +16,8 @@ namespace aifred::services
 {
 struct ReferenceMetrics final
 {
-    static constexpr std::size_t legacySpectrumBandCount = 9;
-    static constexpr std::array<double, legacySpectrumBandCount> legacySpectrumCentresHz {
+    static constexpr std::size_t catalogSpectrumBandCount = 9;
+    static constexpr std::array<double, catalogSpectrumBandCount> catalogSpectrumCentresHz {
         40.0, 80.0, 160.0, 315.0, 630.0, 1250.0, 2500.0, 5000.0, 8000.0
     };
 
@@ -33,7 +33,7 @@ struct ReferenceMetrics final
     analysis::MetricValue correlation;
     analysis::MetricValue punchDb;
     analysis::MetricValue spectralTiltDbPerOctave;
-    std::array<analysis::MetricValue, legacySpectrumBandCount> legacySpectrumBandDbfs {};
+    std::array<analysis::MetricValue, catalogSpectrumBandCount> catalogSpectrumBandDbfs {};
 };
 
 struct ReferenceProfile final

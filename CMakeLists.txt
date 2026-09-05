@@ -4,7 +4,6 @@ project(AIFRED VERSION 4.0.0 LANGUAGES C CXX)
 
 set(AIFRED_VERSION_STRING "4.0.0-alpha.2" CACHE STRING "Visible AIFRED product version")
 set(AIFRED_UPDATE_CHANNEL "alpha" CACHE STRING "AIFRED update channel")
-set(AIFRED_ENGINE_URL "http://127.0.0.1:8787" CACHE STRING "Local AifredEngine origin")
 set(AIFRED_REFERENCE_API_URL "https://www.north3rnlight3r.com/api/v1/references" CACHE STRING "Production reference catalog URL")
 
 execute_process(
@@ -118,7 +117,6 @@ target_compile_definitions(Aifred
         AIFRED_BUILD_CONFIGURATION="${AIFRED_BUILD_CONFIGURATION}"
         AIFRED_BUILD_PLATFORM="${AIFRED_BUILD_PLATFORM}"
         AIFRED_UPDATE_CHANNEL="${AIFRED_UPDATE_CHANNEL}"
-        AIFRED_ENGINE_URL="${AIFRED_ENGINE_URL}"
         AIFRED_REFERENCE_API_URL="${AIFRED_REFERENCE_API_URL}"
 )
 
@@ -136,3 +134,14 @@ target_link_libraries(Aifred
 )
 
 
+
+add_executable(aifred_frontend_contract_tests tests/frontend_contract_tests.cpp)
+target_include_directories(aifred_frontend_contract_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(aifred_frontend_contract_tests PRIVATE aifred_pipeline)
+add_test(NAME aifred_frontend_contract_tests COMMAND aifred_frontend_contract_tests)
+
+add_executable(aifred_state_contract_tests tests/state_contract_tests.cpp)
+target_include_directories(aifred_state_contract_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR}/_deps/juce-src/modules)
+target_compile_definitions(aifred_state_contract_tests PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1)
+target_link_libraries(aifred_state_contract_tests PRIVATE Aifred aifred_pipeline)
+add_test(NAME aifred_state_contract_tests COMMAND aifred_state_contract_tests)

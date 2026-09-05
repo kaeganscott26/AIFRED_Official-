@@ -45,8 +45,9 @@ public:
     aifred::core::IntelligenceClient& intelligence() noexcept {return intelligence_;}
 
 private:
-    aifred::core::IntelligenceClient intelligence_ { "official" };
     aifred::core::Pipeline pipeline_ { "official", "4.0.0-alpha.2" };
+    // Destruction joins the client before destroying its context owner.
+    aifred::core::IntelligenceClient intelligence_ { "official", [this](juce::String response){pipeline_.recordResponse(response);} };
     std::atomic<double> currentSampleRate { 0.0 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AifredAudioProcessor)

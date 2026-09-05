@@ -1,15 +1,9 @@
-# Installation and user data
+# Official installation
 
-CURRENT Windows artifacts come from out/windows-x64/current after release validation. Build/test/stage/release never install. Close the DAW before replacing a loaded bundle. Verify the manifest before use.
+Use [README commands](../README.md). Install/uninstall needs elevation for CommonProgramFiles, closed DAW, PowerShell 7 and Python. Host needs .NET 10 runtime. Verified current files are copied/hash-checked before replacement. Retained .candidate/.previous directories block updates for inspection. Successful replacement recycles old binaries.
 
-Run scripts/windows/install.ps1 -ReplaceSharedSlot only after deliberately choosing Official for the shared installation. It copies the verified VST3 and companion. The existing scripts/build-install-windows.ps1 remains a compatibility wrapper and requires the same explicit replacement flag with -Install.
+Owned VST3: CommonProgramFiles/VST3/AIFRED Official/Aifred.vst3. Host: %LOCALAPPDATA%/Aifred/official/IntelligenceHost. HKCU Run: AIFRED Official Intelligence Host. Settings: %APPDATA%/Aifred/official/IntelligenceHost/settings.json. Explicit startup script writes channel logs under LocalAppData/Aifred/official/logs, overwritten each launch.
 
-Both products currently install Aifred.vst3 into %CommonProgramFiles%/VST3. Official installs its engine under %LOCALAPPDATA%/Aifred/bin and its settings/logs under %APPDATA%/Aifred/Engine. This pass preserves current IDs and runtime settings formats. Consult [channel collisions](COEXISTENCE.md); shared-slot replacement is not side-by-side support.
+Uninstall removes only channel binaries/startup; settings, references, other channels and provider data remain. Public settings hide credentials. Compatible prior provider settings are read without deleting originals. Configure provider through existing settings UI; no model is implicitly downloaded.
 
-Uninstall/update/rollback wrappers document their boundary and refuse automatic mutation until channel ownership is established. Official currently has no channel-safe uninstaller; do not recursively remove the shared Aifred user-data root. User references, settings, models, reports and other-channel files must survive by default. Build cleanup never touches installed files or user data.
-
-Official has no complete macOS/Linux companion or installer. Platform command wrappers are SCAFFOLDED / NOT VALIDATED.
-
-The gateway is 127.0.0.1:8787; Ollama is a separate service normally at 127.0.0.1:11434. A healthy port alone does not identify the correct channel. Do not auto-start arbitrary provider processes during a build. Installation and model downloads require a deliberate runtime operation.
-
-Future lifecycle: a channel manifest records installed files and hashes; update validates product/channel and waits for host shutdown; uninstall removes only owned components; rollback restores a verified prior same-channel package. These are planned boundaries, not a new updater implementation.
+Read [coexistence migration](COEXISTENCE.md) for global-slot installs. Installed/DAW validation remains manual. lifecycle.ps1 -Action update releases then installs. Installed rollback is not automatic; inspect recovery paths before recovery.

@@ -5,10 +5,9 @@ description: Implement or debug AIFRED realtime audio analysis, snapshots, and t
 
 # AIFRED DSP
 
-Read [the construction guide](../../../docs/REPOSITORY_CONSTRUCTION.md) before implementation. It owns planned architecture; [current architecture](../../../docs/ARCHITECTURE.md) owns present behavior.
+Read [the construction guide](../../../docs/REPOSITORY_CONSTRUCTION.md) before implementation. It owns repository structure; [current architecture](../../../docs/ARCHITECTURE.md) owns present behavior.
 
-CURRENT: DAW buffer -> native DSP -> AnalysisSnapshot -> GUI/context serializer.
-PLANNED: aifred_engine -> BufferHunter -> stable engineering GUI and aifred_filter -> future intelligence. Intelligence is not a dependency of metering.
+CURRENT: DAW -> aifred_engine -> EngineSnapshot -> BufferHunter -> ObservationSnapshot -> aifred_filter -> FilteredMixContext -> AifredIntelligenceHost. Intelligence is not a dependency of metering.
 
 ## Realtime rules
 
@@ -36,7 +35,7 @@ PLANNED: aifred_engine -> BufferHunter -> stable engineering GUI and aifred_filt
 
 ## GUI rules
 
-- Every displayed value maps directly to `AnalysisSnapshot`.
+- Live spectrum/correlation/width use EngineSnapshot. Other engineering meters use unrounded ObservationSnapshot values. Float32 positions are independent of text/model rounding.
 - Labels and units must describe the actual measurement.
 - Meter orientation and range must match the metric semantics.
 - Define intentional silence, stopped, invalid, and live behavior.

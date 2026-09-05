@@ -18,6 +18,7 @@ enum class ComparisonAvailability
     bothValuesInvalid,
     valueAInvalid,
     valueBInvalid,
+    incompatibleProfile,
     incompatibleSpectrumGrid
 };
 

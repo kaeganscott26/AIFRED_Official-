@@ -22,13 +22,13 @@ inline ViewSnapshot makeView(const core::EngineSnapshot& live,const core::Observ
 {
     ViewSnapshot v;v.observation=observed;v.sequence=live.sequence;v.audioSampleClock=live.sampleEnd;
     v.elapsedSeconds=observed.durationSeconds;v.hasSignal=observed.signalActive;v.sampleClipActive=live.sampleClipActive;v.sampleClipCount=live.sampleClipCount;
-    const auto metric=[&](core::MetricId id){const auto& m=observed.get(id);return MetricValue{core::Filter::published(m.typical,core::metricDefinitions[core::index(id)].decimals),m.valid};};
+    const auto metric=[&](core::MetricId id){const auto& m=observed.get(id);return MetricValue{m.typical,m.valid};};
     v.samplePeakDbfs=metric(core::MetricId::samplePeak);v.rmsDbfs=metric(core::MetricId::rms);v.crestDb=metric(core::MetricId::crest);v.shortTermLufs=metric(core::MetricId::shortTerm);
-    v.width=metric(core::MetricId::width);v.width.value/=100;v.correlation=metric(core::MetricId::correlation);
+    v.width=live.get(core::MetricId::width);v.width.value/=100;v.correlation=live.get(core::MetricId::correlation);
     v.maxSampleOverDb={std::max(0.0,live.get(core::MetricId::samplePeak).value),live.get(core::MetricId::samplePeak).valid};
     v.spectrumBinWidthHz={live.binWidthHz,live.binCount>0};
     for(std::size_t i=0;i<live.binCount;++i)v.spectrumBins[i]=core::powerDb(live.averagePower[i]);
-    for(std::size_t i=0;i<30;++i)v.spectrumBands[i]={core::Filter::published(observed.bands[i].typical,0),observed.bands[i].valid};
+    for(std::size_t i=0;i<30;++i)v.spectrumBands[i]={observed.bands[i].typical,observed.bands[i].valid};
     return v;
 }
 }

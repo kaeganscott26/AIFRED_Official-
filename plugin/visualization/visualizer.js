@@ -66,8 +66,8 @@ function drawSpectrum() {
   const plotHeight = Math.max(1, plot.bottom - plot.top);
   context.font = '9px Segoe UI, Arial';
   context.lineWidth = 1;
-  for (let db = -96; db <= 0; db += 12) {
-    const y = plot.bottom - ((db + 96) / 96) * plotHeight;
+  for (let db = -24; db <= 0; db += 6) {
+    const y = plot.bottom - ((db + 24) / 24) * plotHeight;
     context.strokeStyle = db % 24 === 0 ? 'rgba(58,82,103,.58)' : 'rgba(58,82,103,.28)';
     context.beginPath(); context.moveTo(plot.left, y); context.lineTo(plot.right, y); context.stroke();
     if (db % 24 === 0) {
@@ -94,7 +94,7 @@ function drawSpectrum() {
     if (value == null || frequency < 20 || frequency > 20000) continue;
     const x = xForFrequency(frequency, plot.left, plotWidth);
     if (started && x - lastX < .6) continue;
-    const y = plot.bottom - ((Math.max(-96, Math.min(0, value)) + 96) / 96) * plotHeight;
+    const y = plot.bottom - ((Math.max(-24, Math.min(0, value)) + 24) / 24) * plotHeight;
     if (!started) { context.moveTo(x, y); firstX = x; started = true; } else context.lineTo(x, y);
     lastX = x;
   }

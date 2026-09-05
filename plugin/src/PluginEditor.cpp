@@ -14,7 +14,7 @@ namespace
 constexpr int refreshHz = 60;
 
 constexpr float spectrumSmoothing = 0.34f;
-constexpr float spectrumFloorDb = -96.0f;
+constexpr float spectrumFloorDb = -24.0f;
 constexpr float spectrumCeilingDb = 0.0f;
 constexpr float minimumFrequencyHz = 20.0f;
 constexpr float maximumFrequencyHz = 20000.0f;
@@ -337,7 +337,7 @@ void AifredAudioProcessorEditor::timerCallback()
 
     bool changed = false;
     for (auto* metric : { &peak, &rms, &crest, &loudness, &width, &correlation })
-        changed |= metric->advance(1.0f);
+        changed |= metric->advance(0.24f);
     changed |= spectrumBinWidthHz.advance(spectrumSmoothing);
     for (auto& bin : spectrumBins)
         changed |= bin.advance(spectrumSmoothing);
@@ -452,7 +452,6 @@ void AifredAudioProcessorEditor::updateChatUi()
     if (chat.revision != 0 && chat.revision != lastChatRevision)
     {
         lastChatRevision = chat.revision;
-        processor.pipeline().recordResponse(juce::String(chat.success?chat.response:chat.error));
         appendConversationLine(chat.success ? "AIFRED" : "SYSTEM",
                                juce::String(chat.success ? chat.response : chat.error));
         repaint();
@@ -680,20 +679,20 @@ void AifredAudioProcessorEditor::drawReferenceMetrics(
     g.drawText(juce::String(reference->version), content.removeFromTop(14.0f),
                juce::Justification::centredLeft);
 
-    auto legacySpectrum = content.removeFromTop(std::max(74.0f, content.getHeight() * 0.48f));
-    legacySpectrum.reduce(0.0f, 8.0f);
+    auto catalogSpectrum = content.removeFromTop(std::max(74.0f, content.getHeight() * 0.48f));
+    catalogSpectrum.reduce(0.0f, 8.0f);
     g.setColour(textSecondary);
     g.setFont(makeFont(8.5f, juce::Font::bold));
-    g.drawText("STORED LEGACY SPECTRUM BANDS  /  NO HIGH-RES FFT FABRICATED",
-               legacySpectrum.removeFromTop(15.0f), juce::Justification::centredLeft);
+    g.drawText("STORED CATALOG SPECTRUM BANDS  /  NO HIGH-RES FFT FABRICATED",
+               catalogSpectrum.removeFromTop(15.0f), juce::Justification::centredLeft);
 
     bool hasSpectrum = false;
-    const auto bandWidth = legacySpectrum.getWidth()
-        / static_cast<float>(reference->metrics.legacySpectrumBandDbfs.size());
-    for (std::size_t i = 0; i < reference->metrics.legacySpectrumBandDbfs.size(); ++i)
+    const auto bandWidth = catalogSpectrum.getWidth()
+        / static_cast<float>(reference->metrics.catalogSpectrumBandDbfs.size());
+    for (std::size_t i = 0; i < reference->metrics.catalogSpectrumBandDbfs.size(); ++i)
     {
-        const auto& metric = reference->metrics.legacySpectrumBandDbfs[i];
-        auto band = legacySpectrum.withX(legacySpectrum.getX() + bandWidth * static_cast<float>(i))
+        const auto& metric = reference->metrics.catalogSpectrumBandDbfs[i];
+        auto band = catalogSpectrum.withX(catalogSpectrum.getX() + bandWidth * static_cast<float>(i))
                                   .withWidth(std::max(1.0f, bandWidth - 3.0f));
         if (metric.valid && std::isfinite(metric.value))
         {
@@ -708,7 +707,7 @@ void AifredAudioProcessorEditor::drawReferenceMetrics(
     {
         g.setColour(textSecondary);
         g.setFont(makeFont(10.0f, juce::Font::bold));
-        g.drawText("SPECTRUM UNAVAILABLE IN THIS RECORD", legacySpectrum,
+        g.drawText("SPECTRUM UNAVAILABLE IN THIS RECORD", catalogSpectrum,
                    juce::Justification::centred);
     }
 
@@ -809,7 +808,7 @@ void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
     g.drawText("LIVE SPECTRUM", heading.removeFromLeft(160.0f), juce::Justification::centredLeft);
     g.setColour(textSecondary);
     g.setFont(makeFont(10.0f));
-    g.drawText("20 Hz - 20 kHz  /  PER-BIN dBFS  /  FIXED -96 TO 0 dB",
+    g.drawText("20 Hz - 20 kHz  /  PER-BIN dBFS  /  DISPLAY -24 TO 0 dB",
                heading, juce::Justification::centredRight);
 
     auto axisLabels = content.removeFromBottom(22.0f);
@@ -817,7 +816,7 @@ void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
     content.removeFromLeft(6.0f);
     const auto plot = content.withTrimmedBottom(2.0f);
 
-    for (int db = -96; db <= 0; db += 12)
+    for (int db = -24; db <= 0; db += 6)
     {
         const auto y = juce::jmap(static_cast<float>(db), spectrumFloorDb, spectrumCeilingDb,
                                  plot.getBottom(), plot.getY());
