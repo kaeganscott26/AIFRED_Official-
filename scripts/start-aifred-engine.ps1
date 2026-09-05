@@ -22,11 +22,7 @@ if (-not $EnginePath) {
         $EnginePath = $installed
     } else {
         $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-        $cmakeText = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'CMakeLists.txt')
-        $versionMatch = [regex]::Match($cmakeText, 'set\(AIFRED_VERSION_STRING\s+"([^"]+)"')
-        if (-not $versionMatch.Success) { throw 'Unable to determine the AIFRED version.' }
-        $EnginePath = Join-Path $repositoryRoot `
-            "dist\AIFRED-$($versionMatch.Groups[1].Value)-win64\AifredEngine\AifredEngine.exe"
+        $EnginePath = Join-Path $repositoryRoot 'out/windows-x64/current/AifredEngine/AifredEngine.exe'
     }
 }
 

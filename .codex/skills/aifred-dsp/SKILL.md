@@ -5,11 +5,10 @@ description: Implement or debug AIFRED realtime audio analysis, snapshots, and t
 
 # AIFRED DSP
 
-Follow the permanent dependency order:
+Read [the construction guide](../../../docs/REPOSITORY_CONSTRUCTION.md) before implementation. It owns planned architecture; [current architecture](../../../docs/ARCHITECTURE.md) owns present behavior.
 
-```text
-DAW AUDIO -> DSP -> SNAPSHOT -> INTELLIGENCE -> UI -> CLOUD / MODEL SERVICES
-```
+CURRENT: DAW buffer -> native DSP -> AnalysisSnapshot -> GUI/context serializer.
+PLANNED: aifred_engine -> BufferHunter -> stable engineering GUI and aifred_filter -> future intelligence. Intelligence is not a dependency of metering.
 
 ## Realtime rules
 

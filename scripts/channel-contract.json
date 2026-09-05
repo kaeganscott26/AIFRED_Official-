@@ -1,0 +1,24 @@
+{
+  "status": "PLANNED / NOT CONSUMED BY RUNTIME",
+  "product": "AIFRED 4",
+  "channel": "alpha",
+  "preserveCurrentPluginIds": true,
+  "requiredHandshakeFields": [
+    "product",
+    "channel",
+    "version",
+    "protocol",
+    "instanceId",
+    "sessionId"
+  ],
+  "requiredOwnedPaths": [
+    "plugin",
+    "engine",
+    "settings",
+    "logs",
+    "cache",
+    "reports",
+    "references"
+  ],
+  "automaticChannelReplacement": false
+}

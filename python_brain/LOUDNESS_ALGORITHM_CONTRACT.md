@@ -1,3 +1,7 @@
+# Scope: offline experiment
+
+This retained contract is referenced by Python analysis docstrings. It documents experimental offline behavior, not production authority or permission to build a Python runtime. The native rewrite follows [the construction guide](../docs/REPOSITORY_CONSTRUCTION.md).
+
 # Loudness Algorithm Contract
 
 ## Purpose
