@@ -55,7 +55,12 @@ None. The pass did not change FFT normalization, window coefficients, power inte
 - Beta website/API suite: PASS (`35` tests); generated admin references and documentation links synchronized
 - shared-core 1.2.0 inventory and cross-channel parity: PASS (`27` pinned files)
 - independent FFmpeg 9.0 EBU R128 fixture: PASS; AIFRED/FFmpeg results were `-22.5897/-22.6 LUFS`, `-20.0000/-20.0 dBTP`, and `10/10 LU`
-- Windows clean committed release, current promotion, installed VST3 inventory, and installed host inventory: required final acceptance; exact commit and hashes are recorded by the canonical manifest and final task report
+- Official clean committed Windows release and current promotion: PASS (`9` hashed files)
+- Beta clean committed Windows release and current promotion: PASS (`15` hashed files)
+- Official installed VST3 inventory and companion-host inventory versus canonical current: exact match
+- Official host startup registration and `http://127.0.0.1:8788/health`: PASS
+
+The canonical current manifest records the exact final Git SHA and file hashes. The final task report records the VST3 binary hash and confirms repository HEAD, manifest, current artifact, and installed artifact equality.
 
 ## Remaining manual validation
 
