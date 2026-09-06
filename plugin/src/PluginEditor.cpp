@@ -13,8 +13,6 @@ namespace
 {
 constexpr int refreshHz = 60;
 
-constexpr float spectrumSmoothing = 0.34f;
-constexpr float spectrumFloorDb = -24.0f;
 constexpr float spectrumCeilingDb = 0.0f;
 constexpr float minimumFrequencyHz = 20.0f;
 constexpr float maximumFrequencyHz = 20000.0f;
@@ -93,9 +91,28 @@ AifredAudioProcessorEditor::AifredAudioProcessorEditor(AifredAudioProcessor& own
     : AudioProcessorEditor(&owner), processor(owner)
 {
     addAndMakeVisible(profileSelector);
-    for(std::size_t i=0;i<aifred::core::profiles.size();++i) profileSelector.addItem(juce::String(aifred::core::profiles[i].name.data()),static_cast<int>(i)+1);
+    profileSelector.setTextWhenNothingSelected("DSP PROFILE");
+    profileSelector.setTooltip("DSP SETUP / PROFILE");
+    for(std::size_t i=0;i<aifred::core::profiles.size();++i)
+        profileSelector.addItem(juce::String(aifred::core::profiles[i].name.data()).replaceCharacter('_',' '),static_cast<int>(i)+1);
     profileSelector.setSelectedId(static_cast<int>(processor.pipeline().selectedProfile())+1,juce::dontSendNotification);
-    profileSelector.onChange=[this]{processor.pipeline().setProfile(static_cast<aifred::core::ProfileId>(profileSelector.getSelectedId()-1));};
+    profileSelector.onChange=[this]
+    {
+        processor.pipeline().setProfile(static_cast<aifred::core::ProfileId>(profileSelector.getSelectedId()-1));
+        displayRangeSelector.setSelectedId(static_cast<int>(processor.pipeline().presentation().spectrumRange)+1,juce::dontSendNotification);
+    };
+    addAndMakeVisible(displayRangeSelector);
+    displayRangeSelector.setTooltip("Presentation-only spectrum viewport; authoritative FFT values are unchanged.");
+    displayRangeSelector.addItem("DISPLAY -120 TO 0 dB",1);
+    displayRangeSelector.addItem("DISPLAY -96 TO 0 dB",2);
+    displayRangeSelector.addItem("DISPLAY -72 TO 0 dB",3);
+    displayRangeSelector.addItem("DISPLAY -48 TO 0 dB",4);
+    displayRangeSelector.setSelectedId(static_cast<int>(processor.pipeline().presentation().spectrumRange)+1,juce::dontSendNotification);
+    displayRangeSelector.onChange=[this]
+    {
+        processor.pipeline().setSpectrumDisplayRange(static_cast<aifred::core::SpectrumDisplayRange>(displayRangeSelector.getSelectedId()-1));
+        repaint();
+    };
     setOpaque(true);
     setResizable(true, true);
     setResizeLimits(860, 600, 1760, 1180);
@@ -282,7 +299,9 @@ void AifredAudioProcessorEditor::resized()
         navigation.removeFromLeft(4);
     }
 
-    profileSelector.setBounds(navigation.removeFromRight(230).reduced(2,4));
+    displayRangeSelector.setBounds(navigation.removeFromRight(150).reduced(2,4));
+    navigation.removeFromRight(4);
+    profileSelector.setBounds(navigation.removeFromRight(180).reduced(2,4));
     bounds.removeFromTop(12);
     if (chatOpen)
     {
@@ -338,8 +357,11 @@ void AifredAudioProcessorEditor::timerCallback()
     bool changed = false;
     for (auto* metric : { &peak, &rms, &crest, &loudness, &width, &correlation })
         changed |= metric->advance(0.24f);
+    const auto spectrumSmoothing=latestSnapshot.presentation.spectrumSmoothing;
     changed |= spectrumBinWidthHz.advance(spectrumSmoothing);
     for (auto& bin : spectrumBins)
+        changed |= bin.advance(spectrumSmoothing);
+    for (auto& bin : peakSpectrumBins)
         changed |= bin.advance(spectrumSmoothing);
 
     publishVisualizationState();
@@ -362,7 +384,10 @@ void AifredAudioProcessorEditor::acceptSnapshot(const aifred::analysis::ViewSnap
     correlation.setTarget(snapshot.correlation);
     spectrumBinWidthHz.setTarget(snapshot.spectrumBinWidthHz);
     for (std::size_t i = 0; i < spectrumBins.size(); ++i)
+    {
         spectrumBins[i].setTarget(snapshot.spectrumBins[i]);
+        peakSpectrumBins[i].setTarget(snapshot.peakSpectrumBins[i]);
+    }
     repaint();
 }
 
@@ -373,6 +398,8 @@ void AifredAudioProcessorEditor::clearDisplay() noexcept
                           &spectrumBinWidthHz })
         metric->clear();
     for (auto& bin : spectrumBins)
+        bin.clear();
+    for (auto& bin : peakSpectrumBins)
         bin.clear();
 }
 
@@ -652,6 +679,7 @@ void AifredAudioProcessorEditor::drawReferenceMetrics(
     juce::Graphics& g, juce::Rectangle<float> bounds,
     const aifred::services::ReferenceProfile* reference) const
 {
+    const auto spectrumFloorDb=static_cast<float>(aifred::core::spectrumFloorDb(latestSnapshot.presentation.spectrumRange));
     drawPanel(g, bounds);
     auto content = bounds.reduced(14.0f);
     g.setColour(textPrimary);
@@ -800,6 +828,7 @@ void AifredAudioProcessorEditor::drawUnavailableMode(juce::Graphics& g,
 void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
                                                    juce::Rectangle<float> bounds) const
 {
+    const auto spectrumFloorDb=static_cast<float>(aifred::core::spectrumFloorDb(latestSnapshot.presentation.spectrumRange));
     drawPanel(g, bounds, 12.0f);
     auto content = bounds.reduced(18.0f);
     auto heading = content.removeFromTop(26.0f);
@@ -808,7 +837,7 @@ void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
     g.drawText("LIVE SPECTRUM", heading.removeFromLeft(160.0f), juce::Justification::centredLeft);
     g.setColour(textSecondary);
     g.setFont(makeFont(10.0f));
-    g.drawText("20 Hz - 20 kHz  /  PER-BIN dBFS  /  DISPLAY -24 TO 0 dB",
+    g.drawText("20 Hz - 20 kHz  /  PER-BIN dBFS  /  DISPLAY " + juce::String(juce::roundToInt(spectrumFloorDb)) + " TO 0 dB",
                heading, juce::Justification::centredRight);
 
     auto axisLabels = content.removeFromBottom(22.0f);
@@ -816,19 +845,18 @@ void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
     content.removeFromLeft(6.0f);
     const auto plot = content.withTrimmedBottom(2.0f);
 
-    for (int db = -24; db <= 0; db += 6)
+    const auto gridStep=-spectrumFloorDb/4.0f;
+    for (int lineIndex=0;lineIndex<=4;++lineIndex)
     {
+        const auto db=spectrumFloorDb+gridStep*static_cast<float>(lineIndex);
         const auto y = juce::jmap(static_cast<float>(db), spectrumFloorDb, spectrumCeilingDb,
                                  plot.getBottom(), plot.getY());
-        g.setColour(panelStroke.withAlpha(db % 24 == 0 ? 0.58f : 0.28f));
+        g.setColour(panelStroke.withAlpha(lineIndex==0||lineIndex==4 ? 0.58f : 0.28f));
         g.drawHorizontalLine(juce::roundToInt(y), plot.getX(), plot.getRight());
-        if (db % 24 == 0)
-        {
-            g.setColour(textSecondary.withAlpha(0.85f));
-            g.setFont(makeFont(9.0f));
-            g.drawText(juce::String(db), dbLabels.withY(y - 8.0f).withHeight(16.0f),
-                       juce::Justification::centredRight);
-        }
+        g.setColour(textSecondary.withAlpha(0.85f));
+        g.setFont(makeFont(9.0f));
+        g.drawText(juce::String(juce::roundToInt(db)), dbLabels.withY(y - 8.0f).withHeight(16.0f),
+                   juce::Justification::centredRight);
     }
 
     const auto binWidth = spectrumBinWidthHz.valid ? spectrumBinWidthHz.current : 0.0f;
@@ -885,20 +913,36 @@ void AifredAudioProcessorEditor::drawSpectrumHero(juce::Graphics& g,
 
     if (started)
     {
-        auto fill = line;
-        fill.lineTo(lastX, plot.getBottom());
-        fill.lineTo(firstX, plot.getBottom());
-        fill.closeSubPath();
-        juce::ColourGradient energy(cyan.withAlpha(0.34f), plot.getX(), plot.getY(),
-                                    aurora.withAlpha(0.02f), plot.getX(), plot.getBottom(), false);
-        g.setGradientFill(energy);
-        g.fillPath(fill);
+        if(latestSnapshot.presentation.spectrumDrawing==aifred::core::SpectrumDrawing::lineAndFill)
+        {
+            auto fill = line;
+            fill.lineTo(lastX, plot.getBottom());
+            fill.lineTo(firstX, plot.getBottom());
+            fill.closeSubPath();
+            juce::ColourGradient energy(cyan.withAlpha(0.34f), plot.getX(), plot.getY(),
+                                        aurora.withAlpha(0.02f), plot.getX(), plot.getBottom(), false);
+            g.setGradientFill(energy);
+            g.fillPath(fill);
+        }
         g.setColour(cyan.withAlpha(0.17f));
         g.strokePath(line, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved,
                                                juce::PathStrokeType::rounded));
         g.setColour(cyan);
         g.strokePath(line, juce::PathStrokeType(1.7f, juce::PathStrokeType::curved,
                                                juce::PathStrokeType::rounded));
+        if(latestSnapshot.presentation.showPeakTrace)
+        {
+            juce::Path peakLine;bool peakStarted=false;
+            for(std::size_t index=1;index<peakSpectrumBins.size();++index)
+            {
+                const auto frequency=static_cast<float>(index)*binWidth;
+                if(frequency<minimumFrequencyHz||frequency>availableMaximumHz||!peakSpectrumBins[index].valid)continue;
+                const auto x=frequencyToX(frequency,plot);
+                const auto y=juce::jmap(juce::jlimit(spectrumFloorDb,spectrumCeilingDb,peakSpectrumBins[index].current),spectrumFloorDb,spectrumCeilingDb,plot.getBottom(),plot.getY());
+                if(!peakStarted){peakLine.startNewSubPath(x,y);peakStarted=true;}else peakLine.lineTo(x,y);
+            }
+            if(peakStarted){g.setColour(aurora.withAlpha(.7f));g.strokePath(peakLine,juce::PathStrokeType(1.0f));}
+        }
     }
     else
     {
@@ -918,6 +962,7 @@ void AifredAudioProcessorEditor::drawSnapshotSpectrum(
     juce::Graphics& g, juce::Rectangle<float> bounds,
     const aifred::analysis::ViewSnapshot* snapshot, juce::StringRef label) const
 {
+    const auto spectrumFloorDb=static_cast<float>(aifred::core::spectrumFloorDb(latestSnapshot.presentation.spectrumRange));
     drawPanel(g, bounds);
     auto content = bounds.reduced(14.0f);
     g.setColour(textPrimary);
@@ -1156,10 +1201,16 @@ AifredAudioProcessorEditor::makeVisualizationState() const noexcept
     state.signalActive = latestSnapshot.hasSignal;
     state.elapsedSeconds = latestSnapshot.elapsedSeconds;
     state.spectrumBinWidthHz = spectrumBinWidthHz.valid ? spectrumBinWidthHz.current : 0.0;
+    state.spectrumFloorDb=static_cast<float>(aifred::core::spectrumFloorDb(latestSnapshot.presentation.spectrumRange));
+    state.spectrumCeilingDb=0.0f;
+    state.fillSpectrum=latestSnapshot.presentation.spectrumDrawing==aifred::core::SpectrumDrawing::lineAndFill;
+    state.showPeakTrace=latestSnapshot.presentation.showPeakTrace;
     for (std::size_t i = 0; i < spectrumBins.size(); ++i)
     {
         state.spectrumBins[i] = spectrumBins[i].current;
         state.spectrumValid[i] = spectrumBins[i].valid;
+        state.peakSpectrumBins[i] = peakSpectrumBins[i].current;
+        state.peakSpectrumValid[i] = peakSpectrumBins[i].valid;
     }
     return state;
 }
@@ -1181,11 +1232,20 @@ void AifredAudioProcessorEditor::publishVisualizationState()
     object->setProperty("signalActive", state.signalActive);
     object->setProperty("elapsedSeconds", state.elapsedSeconds);
     object->setProperty("spectrumBinWidthHz", state.spectrumBinWidthHz);
-    juce::Array<juce::var> bins;
+    object->setProperty("spectrumFloorDb",state.spectrumFloorDb);
+    object->setProperty("spectrumCeilingDb",state.spectrumCeilingDb);
+    object->setProperty("fillSpectrum",state.fillSpectrum);
+    object->setProperty("showPeakTrace",state.showPeakTrace);
+    juce::Array<juce::var> bins,peakBins;
     bins.ensureStorageAllocated(static_cast<int>(state.spectrumBins.size()));
+    peakBins.ensureStorageAllocated(static_cast<int>(state.peakSpectrumBins.size()));
     for (std::size_t i = 0; i < state.spectrumBins.size(); ++i)
+    {
         bins.add(state.spectrumValid[i] ? juce::var(state.spectrumBins[i]) : juce::var());
+        peakBins.add(state.peakSpectrumValid[i] ? juce::var(state.peakSpectrumBins[i]) : juce::var());
+    }
     object->setProperty("spectrumBins", bins);
+    object->setProperty("peakSpectrumBins",peakBins);
     webVisualizer->emitEventIfBrowserIsVisible("aifredVisualizationState", juce::var(object.release()));
 #endif
 }

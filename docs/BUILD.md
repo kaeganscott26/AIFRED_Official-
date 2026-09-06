@@ -1,9 +1,28 @@
-# Official build
+# Build
 
-Use [README commands/prerequisites](../README.md). Canonical entry: `pwsh -NoProfile -File scripts/windows/build.ps1 -Action release`. Actions configure/build/test/stage/package/release share incremental out/windows-x64/build. Stage/package assemble and verify without promotion; release promotes after validation.
+## Windows prerequisites
 
-Exact compiler VST3: `out/windows-x64/build/Aifred_artefacts/Release/VST3/Aifred.vst3`. Exact current: `out/windows-x64/current/Aifred.vst3`. Never select a recursive first-match artifact.
+Install Visual Studio 2022 C++ x64 with the Windows SDK, CMake, Ninja, PowerShell 7, Python 3, and the .NET 10 SDK. [windows.ps1](../scripts/common/windows.ps1) imports the x64 MSVC environment through `VsDevCmd.bat`; do not use an uninitialized shell compiler by accident.
 
-.NET outputs use Directory.Build.props under the canonical platform build root. Host publish includes executable, DLL, runtime configuration and channel.json. Building does not install or launch a plugin.
+## Commands
 
-macOS arm64/Linux x64 presets and configure/build scripts are SCAFFOLDED / NOT VALIDATED. Their distribution/install/promotion workflows are unvalidated.
+```powershell
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action configure
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action build
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action test
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action stage
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action release
+```
+
+The script uses `out/windows-x64/build` for incremental compiler output. The exact compiler VST3 is `out/windows-x64/build/Aifred_artefacts/Release/VST3/Aifred.vst3`; its binary is `Contents/x86_64-win/Aifred.vst3`. `COPY_PLUGIN_AFTER_BUILD` remains false.
+
+Targets include the VST3, shared engine, pipeline, fixture meter, core tests, frontend contracts, and plugin state contracts. .NET outputs follow [Directory.Build.props](../Directory.Build.props).
+
+macOS arm64 and Linux x64 presets exist as unvalidated build scaffolds. They do not provide a validated distribution, install, update, or runtime workflow.
+
+## Related
+
+- [Distribution](DISTRIBUTION.md)
+- [Installation](INSTALLATION.md)
+- [Testing](TESTING.md)
+- [Repository Construction](REPOSITORY_CONSTRUCTION.md)

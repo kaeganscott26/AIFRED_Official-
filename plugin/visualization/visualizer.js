@@ -3,6 +3,7 @@ import * as THREE from './three.module.min.js';
 const sceneCanvas = document.querySelector('#three-scene');
 const spectrumCanvas = document.querySelector('#spectrum');
 const stateLabel = document.querySelector('#state-label');
+const rangeLabel = document.querySelector('#range-label');
 const renderer = new THREE.WebGLRenderer({ canvas: sceneCanvas, alpha: true, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setClearColor(0x000000, 0);
@@ -36,7 +37,8 @@ scene.add(light);
 let state = {
   normalizedPeak: 0, normalizedRms: 0, normalizedCrest: 0, normalizedLoudness: 0,
   width: 0, correlation: 0, signalActive: false, elapsedSeconds: 0,
-  spectrumBinWidthHz: 0, spectrumBins: []
+  spectrumBinWidthHz: 0, spectrumFloorDb: -96, spectrumCeilingDb: 0,
+  fillSpectrum: true, showPeakTrace: false, spectrumBins: [], peakSpectrumBins: []
 };
 
 const landmarks = [20, 40, 80, 160, 315, 630, 1000, 2000, 4000, 8000, 16000, 20000];
@@ -66,14 +68,16 @@ function drawSpectrum() {
   const plotHeight = Math.max(1, plot.bottom - plot.top);
   context.font = '9px Segoe UI, Arial';
   context.lineWidth = 1;
-  for (let db = -24; db <= 0; db += 6) {
-    const y = plot.bottom - ((db + 24) / 24) * plotHeight;
-    context.strokeStyle = db % 24 === 0 ? 'rgba(58,82,103,.58)' : 'rgba(58,82,103,.28)';
+  const floor = Number.isFinite(state.spectrumFloorDb) ? state.spectrumFloorDb : -96;
+  const ceiling = Number.isFinite(state.spectrumCeilingDb) ? state.spectrumCeilingDb : 0;
+  rangeLabel.textContent = `20 Hz - 20 kHz / PER-BIN dBFS / DISPLAY ${Math.round(floor)} TO ${Math.round(ceiling)} dB`;
+  for (let line = 0; line <= 4; line += 1) {
+    const db = floor + (ceiling - floor) * line / 4;
+    const y = plot.bottom - ((db - floor) / (ceiling - floor)) * plotHeight;
+    context.strokeStyle = line === 0 || line === 4 ? 'rgba(58,82,103,.58)' : 'rgba(58,82,103,.28)';
     context.beginPath(); context.moveTo(plot.left, y); context.lineTo(plot.right, y); context.stroke();
-    if (db % 24 === 0) {
-      context.fillStyle = 'rgba(141,165,181,.85)'; context.textAlign = 'right';
-      context.fillText(`${db}`, plot.left - 8, y + 3);
-    }
+    context.fillStyle = 'rgba(141,165,181,.85)'; context.textAlign = 'right';
+    context.fillText(`${Math.round(db)}`, plot.left - 8, y + 3);
   }
   for (const frequency of landmarks) {
     const x = xForFrequency(frequency, plot.left, plotWidth);
@@ -94,16 +98,29 @@ function drawSpectrum() {
     if (value == null || frequency < 20 || frequency > 20000) continue;
     const x = xForFrequency(frequency, plot.left, plotWidth);
     if (started && x - lastX < .6) continue;
-    const y = plot.bottom - ((Math.max(-24, Math.min(0, value)) + 24) / 24) * plotHeight;
+    const y = plot.bottom - ((Math.max(floor, Math.min(ceiling, value)) - floor) / (ceiling - floor)) * plotHeight;
     if (!started) { context.moveTo(x, y); firstX = x; started = true; } else context.lineTo(x, y);
     lastX = x;
   }
   if (!started) return false;
-  context.lineTo(lastX, plot.bottom); context.lineTo(firstX, plot.bottom); context.closePath();
-  const gradient = context.createLinearGradient(0, plot.top, 0, plot.bottom);
-  gradient.addColorStop(0, 'rgba(75,220,242,.34)'); gradient.addColorStop(1, 'rgba(96,239,179,.02)');
-  context.fillStyle = gradient; context.fill();
   context.strokeStyle = '#4bdcf2'; context.lineWidth = 1.7; context.stroke();
+  if (state.fillSpectrum) {
+    context.lineTo(lastX, plot.bottom); context.lineTo(firstX, plot.bottom); context.closePath();
+    const gradient = context.createLinearGradient(0, plot.top, 0, plot.bottom);
+    gradient.addColorStop(0, 'rgba(75,220,242,.34)'); gradient.addColorStop(1, 'rgba(96,239,179,.02)');
+    context.fillStyle = gradient; context.fill();
+  }
+  if (state.showPeakTrace && state.peakSpectrumBins?.length) {
+    context.beginPath(); let peakStarted = false; let peakLastX = plot.left;
+    for (let index = 1; index < state.peakSpectrumBins.length; index += 1) {
+      const value = state.peakSpectrumBins[index]; const frequency = index * state.spectrumBinWidthHz;
+      if (value == null || frequency < 20 || frequency > 20000) continue;
+      const x = xForFrequency(frequency, plot.left, plotWidth); if (peakStarted && x - peakLastX < .6) continue;
+      const y = plot.bottom - ((Math.max(floor, Math.min(ceiling, value)) - floor) / (ceiling - floor)) * plotHeight;
+      if (!peakStarted) { context.moveTo(x, y); peakStarted = true; } else context.lineTo(x, y); peakLastX = x;
+    }
+    if (peakStarted) { context.strokeStyle = 'rgba(96,239,179,.78)'; context.lineWidth = 1; context.stroke(); }
+  }
   return true;
 }
 

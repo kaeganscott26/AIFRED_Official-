@@ -1,50 +1,37 @@
 # AIFRED Official 4.0.0-alpha.2
 
-Independently buildable Windows x64 VST3, using **aifred_engine → EngineSnapshot → BufferHunter → ObservationSnapshot → aifred_filter → FilteredMixContext → AifredIntelligenceHost → LLM**. Shared core 1.1.0 is vendored and checksum-verified. DSP works without a provider.
+AIFRED Official is a transparent Windows x64 VST3 analyzer. The current source implements the measurement, observation, and deterministic filtering machine:
 
-The existing frontend exposes MIX_BALANCED, SPECTRUM_SURGICAL, MASTERING_PRECISION and STEREO_PHASE_DIAGNOSTIC, persisted in plugin state. Full-resolution FFT remains authoritative; telemetry includes 850 Hz. Live correlation/width use continuous engine values. Other engineering meters use unrounded observation values; text/model rounding is separate. Spectrum display range is -24..0 dB only at rendering.
-
-## Build and test
-
-Prerequisites: VS 2022 C++ x64/Windows SDK, CMake, Ninja, PowerShell 7, Python 3, .NET 10 SDK. Beta website checks also require Node/npm. Configure downloads pinned JUCE dependencies.
-
-```powershell
-pwsh -NoProfile -File scripts/windows/build.ps1 -Action configure
-pwsh -NoProfile -File scripts/windows/build.ps1 -Action test
-pwsh -NoProfile -File scripts/windows/build.ps1 -Action release
+```text
+DAW audio -> aifred_engine -> EngineSnapshot -> BufferHunter
+          -> ObservationSnapshot -> aifred_filter -> FilteredMixContext
 ```
 
-Compiler output is incremental `out/windows-x64/build`. Release builds/tests, assembles `stage`, verifies exact hashes and promotes **out/windows-x64/current**. Failed candidates retain previous current. Successful promotion recycles superseded current; versioned junk folders are not normal output.
+The existing `AifredIntelligenceHost` transports filtered context on the Official channel. This phase does not implement a new intelligence layer or the Babylon GUI.
 
-Exact current VST3: `out/windows-x64/current/Aifred.vst3`; binary inside: `Contents/x86_64-win/Aifred.vst3`. Host: `out/windows-x64/current/AifredIntelligenceHost`. manifest.json records source identity, version, DSP/profile schemas and inventory.
+The plugin exposes four validated DSP profiles: MIX BALANCED, SPECTRUM SURGICAL, MASTERING PRECISION, and STEREO / PHASE DIAGNOSTIC. Profiles select one shared algorithm library. The default spectrum viewport is `-96..0 dBFS`; `-120`, `-72`, and `-48 dBFS` floors are presentation-only choices. Full-resolution FFT power remains unclipped.
 
-## Install, uninstall and update
+## Normal Windows workflow
 
-Close the DAW and use elevated PowerShell 7 for installation ownership:
+Prerequisites: Visual Studio 2022 C++ x64 and Windows SDK, CMake, Ninja, PowerShell 7, Python 3, and the .NET 10 SDK/runtime.
+
+Close the DAW, open an elevated PowerShell 7 prompt, and run:
 
 ```powershell
-pwsh -NoProfile -File scripts/windows/install.ps1
-pwsh -NoProfile -File scripts/windows/start-host.ps1
-pwsh -NoProfile -File scripts/windows/uninstall.ps1
 pwsh -NoProfile -File scripts/windows/lifecycle.ps1 -Action update
 ```
 
-Update rebuilds/tests/promotes then installs current. Install verifies copied hashes and registers the channel host at login. Uninstall removes only channel binaries/startup, retaining settings. Host requires .NET 10 runtime and a configured available Ollama/OpenAI-compatible provider; model weights are not bundled. Port: **8788**. Settings: `%APPDATA%/Aifred/official/IntelligenceHost`. Binaries/logs: `%LOCALAPPDATA%/Aifred/official`. VST3: `CommonProgramFiles/VST3/AIFRED Official/Aifred.vst3`.
+That command builds, tests, stages, manifests, verifies, promotes `current`, installs the Official VST3 and host, starts the host, and verifies copied files. Reload or rescan the plugin in the DAW afterward.
 
-Safe Git update, starting clean:
+The owned install locations are:
 
-```powershell
-git switch main
-git pull --ff-only origin main
-pwsh -NoProfile -File scripts/windows/build.ps1 -Action release
-```
+- VST3: `CommonProgramFiles/VST3/AIFRED Official/Aifred.vst3`
+- host: `%LOCALAPPDATA%/Aifred/official/IntelligenceHost`
+- settings: `%APPDATA%/Aifred/official/IntelligenceHost/settings.json`
+- host port: `8788`
 
-Install new current separately when ready. Never overwrite dirty work or force-update history.
+Generated build and release output belongs under `out/windows-x64`. Do not commit it.
 
-## Validation and limitations
+## Documentation
 
-Native/module-load, DSP/context, runtime and release checks are automated. Manual FL Studio/Waves/SPAN/FabFilter/Ozone comparisons remain required. Compilation is not DAW validation; full ITU/EBU conformance material has not been validated. macOS/Linux are **SCAFFOLDED / NOT VALIDATED**.
-
-Existing global-slot installations need explicit migration: [coexistence](docs/COEXISTENCE.md). Compatibility IDs are preserved; old global files/settings are not silently deleted. Official catalog records without matching DSP definitions remain metadata, with comparison unavailable. Beta local references are measured by the same core. Future profiles, personality files and DAW/MCP/long-term-memory tooling are unimplemented.
-
-[Architecture](docs/ARCHITECTURE.md) · [DSP contracts](shared-dsp/README.md) · [Build](docs/BUILD.md) · [Testing](docs/TESTING.md) · [Install](docs/INSTALLATION.md) · [Distribution](docs/DISTRIBUTION.md) · [Development](docs/DEVELOPMENT.md)
+Start with the [documentation hub](docs/README.md). The main references are [Architecture](docs/ARCHITECTURE.md), [DSP Configuration](docs/DSP_CONFIGURATION.md), [Shared DSP](shared-dsp/README.md), [Testing](docs/TESTING.md), [Installation](docs/INSTALLATION.md), and [Implementation Status](docs/IMPLEMENTATION_STATUS.md).

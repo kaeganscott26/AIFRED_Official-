@@ -150,20 +150,30 @@ void AifredAudioProcessor::changeProgramName (int index, const juce::String& new
 void AifredAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     juce::XmlElement state("AIFRED_OFFICIAL_STATE");
-    state.setAttribute("version",1);
+    state.setAttribute("version",2);
     state.setAttribute("dsp_profile",juce::String(aifred::core::profile(pipeline_.selectedProfile()).name.data()));
+    state.setAttribute("spectrum_display_range",juce::String(aifred::core::spectrumRangeName(pipeline_.presentation().spectrumRange).data()));
+    state.setAttribute("presentation_customized",pipeline_.presentationCustomized());
     copyXmlToBinary(state,destData);
 }
 
 void AifredAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if(auto state=getXmlFromBinary(data,sizeInBytes))
-        if(state->hasTagName("AIFRED_OFFICIAL_STATE")) pipeline_.setProfile(aifred::core::profileFromName(state->getStringAttribute("dsp_profile").toStdString()));
+        if(state->hasTagName("AIFRED_OFFICIAL_STATE"))
+        {
+            pipeline_.setProfile(aifred::core::profileFromName(state->getStringAttribute("dsp_profile").toStdString()));
+            if(state->hasAttribute("spectrum_display_range"))
+                pipeline_.restorePresentation(aifred::core::spectrumRangeFromName(state->getStringAttribute("spectrum_display_range").toStdString()),
+                                              state->getBoolAttribute("presentation_customized",false));
+            else
+                pipeline_.restorePresentation(aifred::core::profile(pipeline_.selectedProfile()).presentation.spectrumRange,false);
+        }
 }
 
 aifred::analysis::ViewSnapshot AifredAudioProcessor::getViewSnapshot() const noexcept
 {
-    return aifred::analysis::makeView(pipeline_.live(),pipeline_.observation());
+    return aifred::analysis::makeView(pipeline_.live(),pipeline_.observation(),pipeline_.presentation());
 }
 
 double AifredAudioProcessor::getCurrentSampleRate() const noexcept

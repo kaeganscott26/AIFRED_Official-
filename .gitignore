@@ -74,3 +74,6 @@ release-artifacts/
 scratch/
 agent-test/
 local-model-test/
+
+# FORGE local metadata
+.forge/metadata.sqlite*

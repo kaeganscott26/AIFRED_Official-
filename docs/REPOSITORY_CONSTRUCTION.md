@@ -1,7 +1,31 @@
-# Repository construction contract
+# Repository construction
 
-The shared analyzer is implemented. [Architecture](ARCHITECTURE.md) and [DSP contract](../shared-dsp/README.md) describe current ownership. Source lives in shared-dsp/include and shared-dsp/src, frontend adapters in plugin/src, provider host in tools/AifredIntelligenceHost. Python owns release checks only.
+## Authoritative locations
 
-Clones build independently. Shared core/host are versioned and checksum-locked in both repositories. No sibling dependency or remote was added. Canonical platform roots are out/windows-x64, out/macos-arm64 and out/linux-x64. Build, stage, current and install have distinct ownership. Windows promotion is implemented; other-platform distribution remains unvalidated scaffolding.
+| Responsibility | Location |
+|---|---|
+| DSP and contracts | [`shared-dsp/include/aifred`](../shared-dsp/include/aifred), [`shared-dsp/src`](../shared-dsp/src) |
+| Shared tests | [`shared-dsp/tests`](../shared-dsp/tests) |
+| Official plugin adapter/frontend | [`plugin/src`](../plugin/src) |
+| Intelligence transport | [`tools/AifredIntelligenceHost`](../tools/AifredIntelligenceHost) |
+| Release/install automation | [`scripts`](../scripts) |
+| Canonical documentation | [`docs`](README.md) and [shared DSP README](../shared-dsp/README.md) |
 
-Four initial profiles are implemented. Workspace discussion of tracking/reference-long/compliance/K-System and personality/memory/MCP tooling remains future architecture. Preserve plugin IDs; report manual migration/coexistence limits accurately.
+No alternate analyzer, serializer, Python runtime, `.NET AifredEngine`, empty adapter shell, admin/backend/website scaffold, or mock updater contract belongs in the Official source tree. Git retains removed history.
+
+## Independent reproduction
+
+Official and Beta vendor the same shared core and host source. [shared-core.lock.json](../shared-core.lock.json) pins its normalized inventory. Neither CMake nor project references may point at a sibling checkout or machine-specific project path.
+
+Canonical platform roots are `out/windows-x64`, `out/macos-arm64`, and `out/linux-x64`. Compiler output, release candidates, current artifacts, and installed files have separate owners. [Distribution](DISTRIBUTION.md) defines promotion; [Installation](INSTALLATION.md) defines deployment.
+
+## Phase boundary
+
+The completed construction target is `DAW -> EngineSnapshot -> ObservationSnapshot -> FilteredMixContext`. The next project may replace or extend intelligence behind that boundary. Babylon remains the final project phase.
+
+## Related
+
+- [Architecture](ARCHITECTURE.md)
+- [Development](DEVELOPMENT.md)
+- [Build](BUILD.md)
+- [Future](FUTURE.md)

@@ -50,8 +50,14 @@ private:
         bool signalActive = false;
         double elapsedSeconds = 0.0;
         double spectrumBinWidthHz = 0.0;
+        float spectrumFloorDb = -96.0f;
+        float spectrumCeilingDb = 0.0f;
+        bool fillSpectrum = true;
+        bool showPeakTrace = false;
         std::array<float, aifred::analysis::ViewSnapshot::spectrumBinCount> spectrumBins {};
         std::array<bool, aifred::analysis::ViewSnapshot::spectrumBinCount> spectrumValid {};
+        std::array<float, aifred::analysis::ViewSnapshot::spectrumBinCount> peakSpectrumBins {};
+        std::array<bool, aifred::analysis::ViewSnapshot::spectrumBinCount> peakSpectrumValid {};
     };
 
     void timerCallback() override;
@@ -119,6 +125,7 @@ private:
     juce::TextButton refreshReferencesButton { "REFRESH" };
     juce::ComboBox referenceSelector;
     juce::ComboBox profileSelector;
+    juce::ComboBox displayRangeSelector;
     juce::TextButton chatToggleButton { "ASK AIFRED" };
     juce::TextButton sendButton { "SEND" };
     juce::TextButton retryButton { "RETRY" };
@@ -130,6 +137,7 @@ private:
     bool hasReceivedSnapshot = false;
     DisplayMetric peak, rms, crest, loudness, width, correlation, spectrumBinWidthHz;
     std::array<DisplayMetric, aifred::analysis::ViewSnapshot::spectrumBinCount> spectrumBins;
+    std::array<DisplayMetric, aifred::analysis::ViewSnapshot::spectrumBinCount> peakSpectrumBins;
 
     aifred::services::ReferenceCatalog referenceCatalog;
     std::uint64_t lastReferenceRevision = 0;

@@ -1,32 +1,64 @@
 # Testing
 
-Run `pwsh -NoProfile -File scripts/windows/build.ps1 -Action test`. It builds the plugin/tests, runs CTest, Intelligence Host contracts, shared checksums, repository links and Python release-safety tests. Beta additionally runs API/archive Node suites and website checks. Python owns release validation only.
+## Canonical commands
+
+Official:
 
 ```powershell
-ctest --preset windows-release
-dotnet run --project tools/AifredIntelligenceHost.Tests/AifredIntelligenceHost.ContractTests.csproj -c Release
-python -B -m unittest discover -s scripts/tests
-python -B scripts/common/check_shared_core.py
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action test
+```
+
+Beta runs the same C++/.NET/Python checks plus its API/archive Node suites and website checks:
+
+```powershell
+pwsh -NoProfile -File scripts/windows/build.ps1 -Action test
+```
+
+Run the independent generated-fixture comparison when FFmpeg is available:
+
+```powershell
 python -B scripts/common/validate_meter_reference.py
 ```
 
-The last command requires FFmpeg and compares identical generated 48 kHz stereo audio against its ebur128 implementation. Exact values/version go to out/windows-x64/build/reports/meter-reference.json. Tolerances: 0.15 LU integrated, 0.3 dBTP peak, 1 LU LRA. This is independent implementation comparison, not proprietary-meter or full standards certification.
+## Automated coverage
 
-Executed independent result (FFmpeg 9.0, generated 40 s plateau fixture): AIFRED integrated -22.58966596 LUFS versus FFmpeg -22.6; true peak -19.99999987 dBTP versus -20.0; LRA 10 LU in both. Both channels produced identical results. This limited fixture passed the stated tolerances.
+| Area | Evidence |
+|---|---|
+| Peak, RMS, crest, silence, clipping | [core tests](../shared-dsp/tests/core_tests.cpp) |
+| BS.1770 K weighting, M/ST/I, gates, LRA | [core tests](../shared-dsp/tests/core_tests.cpp), [FFmpeg fixture](../scripts/common/validate_meter_reference.py) |
+| True-peak reconstruction | [core tests](../shared-dsp/tests/core_tests.cpp), FFmpeg fixture |
+| FFT mapping, Parseval, averaging configuration, 1025/4097 bins | [core tests](../shared-dsp/tests/core_tests.cpp) |
+| Exact 30 centres, 850 Hz, geometric power integration | [contracts](../shared-dsp/include/aifred/Contracts.h), [core tests](../shared-dsp/tests/core_tests.cpp) |
+| Correlation, M/S, balance, width, 100 ms diagnostic response | [core tests](../shared-dsp/tests/core_tests.cpp) |
+| BufferHunter capacity, windows, statistics, trends, freshness, epochs | [core tests](../shared-dsp/tests/core_tests.cpp) |
+| aifred_filter units, regions, states, reference compatibility | [core tests](../shared-dsp/tests/core_tests.cpp) |
+| SPSC ordering and overflow | [core tests](../shared-dsp/tests/core_tests.cpp) |
+| Frontend live/observed ownership and click-ready metadata | [frontend tests](../tests/frontend_contract_tests.cpp) |
+| Profile and presentation persistence, old-state fallback, pass-through | [state tests](../tests/state_contract_tests.cpp) |
+| Intelligence Host identity and provider routing | [host tests](../tools/AifredIntelligenceHost.Tests/Program.cs) |
+| Repository links/layout and shared parity | [repository check](../scripts/common/check_repository.py), [shared-core check](../scripts/common/check_shared_core.py) |
+| Release failure preservation and ownership | [release tests](../scripts/tests/test_release.py) |
+| Stage/current/install hashes | [release verifier](../scripts/common/release.py), [install ownership](../scripts/common/install-ownership.ps1) |
 
-C++ tests cover peak/RMS/crest, clipping/silence, timing/gating/reset, analytic intersample peak, FFT mapping/Parseval/850 Hz/high resolution, stereo phase/energy, profiles/sample rates, bounded observation statistics/freshness/epochs, filter units/frequency/reference facts, concurrent SPSC ordering, real plugin profile-state roundtrip/backward default and audio pass-through, fractional GUI projection and previous observation/action/response continuity. Host tests use strict FilteredMixContext and mocked providers; no paid request is required. Release tests exercise failure preservation, recovery and path ownership.
+The profile tests compare exact configuration and observable FFT/window/observation/stereo behavior. They do not accept profile names as proof.
 
-The LRA plateau fixture follows [EBU Tech 3342](https://tech.ebu.ch/docs/tech/tech3342.pdf). The full [EBU test set](https://tech.ebu.ch/publications/ebu_loudness_test_set) remains unvalidated.
+## Evidence limits
 
-## Manual host checklist — NOT PERFORMED
+CTest and JUCE module-info generation prove compiled contracts and VST3 factory enumeration. They do not prove DAW scanning, realtime CPU under host load, UI rendering in a host, or equivalence with proprietary analyzers.
 
-1. Load exact current bundles; record manifests. Test separately then simultaneously. Remove identified old global-slot duplicates from DAW scanning.
-2. Use identical audio, insert position, playback region and sample rate in AIFRED and available Waves, SPAN, FabFilter, Ozone or FL Studio meters. Record tool versions/configuration; disable processing between meters.
-3. Compare sample peak/clipping; RMS only with compatible 400 ms rectangular mean-channel/sine calibration; crest with matching operands. Never insert arbitrary offsets.
-4. Reset programmes together. Compare 400 ms momentary, 3 s short-term, integrated gates, true peak and LRA. Record integration boundaries, interpolation factor/filter and gate tolerance. Short-programme LRA is provisional.
-5. Compare tones/broadband frequency placement and relative energy. Match FFT/Hann/overlap, averaging/release/hold and bin-versus-band representation. -24..0 GUI range must not alter context below -24 dB.
-6. Test identical, inverted, unrelated and panned channels. Check correlation, balance, M/S and derived width. Diagnostic stereo is 100 ms; other profiles 400 ms. Verify continuous response to Stereo Shaper.
-7. Switch all four profiles; save/reload state; reset; stop/resume; seek/loop >1 s; close/reopen editor; play silence; disconnect provider. Check epochs/freshness and audio glitches.
-8. Confirm separate hosts/instance IDs and “I changed 6 kHz” → “how about now?” context. Test install/update/uninstall in disposable Windows environment.
+The generated FFmpeg fixture compares a 48 kHz stereo 1 kHz two-plateau programme. Its tolerances are `0.15 LU` integrated, `0.3 dB` true peak, and `1 LU` LRA. It is an independent implementation comparison, not complete ITU/EBU certification.
 
-JUCE moduleinfo generation enumerates a loaded VST3 factory. It does not establish DAW scan/rendering, realtime CPU, installed-product or professional-meter validation. macOS/Linux runtime/package status: SCAFFOLDED / NOT VALIDATED.
+## Manual validation still required
+
+- FL Studio scan, load, pass-through, state restore, profile switching, and simultaneous Beta/Official loading
+- Waves, Voxengo SPAN, FabFilter, and iZotope/Ozone comparisons with matched settings and source audio
+- full EBU loudness test set and true-peak edge cases
+- realtime CPU profiling for all four profiles
+- macOS and Linux build, package, install, and runtime validation
+
+## Related
+
+- [Architecture](ARCHITECTURE.md)
+- [DSP Configuration](DSP_CONFIGURATION.md)
+- [Debugging](DEBUGGING.md)
+- [Implementation Status](IMPLEMENTATION_STATUS.md)
