@@ -47,12 +47,14 @@ AIFRED may autonomously maintain its own context. It may not autonomously alter 
 - [`session/`](session/) — current-session lifecycle, events, anchors, and state reduction.
 - [`memory/`](memory/) — bounded ten-session retention and promotion/eviction rules.
 - [`maintenance/`](maintenance/) — autonomous freshness, compaction, pruning, rotation, deduplication, and repair.
+- [`storage/`](storage/) — downstream, schema-versioned persistence; never part of the realtime path.
 - [`tools/`](tools/) — typed read-only capabilities available to reasoning.
 - [`daw/`](daw/) — normalized read-only DAW/session adapters; no mix mutation.
 - [`policy/`](policy/) — evidence, uncertainty, safety, and recommendation rules.
 - [`personality/`](personality/) — conversational style only; never evidence or analysis policy.
 - [`providers/`](providers/) — OpenAI/Ollama-compatible model adapters behind one interface.
 - [`prompts/`](prompts/) — provider-neutral prompt assembly from policy + personality + context.
+- [`response/`](response/) — structured response planning and evidence validation before user-visible prose.
 - [`tests/`](tests/) — contract, evidence, memory, freshness, provider-parity, and no-mutation tests.
 - [`PHASES.md`](PHASES.md) — implementation order and hard completion gates.
 
