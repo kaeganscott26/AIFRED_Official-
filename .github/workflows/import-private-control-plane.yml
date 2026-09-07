@@ -42,6 +42,7 @@ jobs:
           cp -a "$BETA_DIR/apps/admin-android" apps/
           cp -a "$BETA_DIR/apps/admin-desktop" apps/
           cp -a "$BETA_DIR/infra/cloudflare" infra/
+          cp -a "$BETA_DIR/config" ./
           mkdir -p api/v1
           cp -a "$BETA_DIR/api/v1/registry" api/v1/
           cp -a "$BETA_DIR/ops/support" ops/
