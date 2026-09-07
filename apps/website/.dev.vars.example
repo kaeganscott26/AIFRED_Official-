@@ -1,18 +1,26 @@
+# Local Pages/Worker development only. Copy to `.dev.vars` and keep it untracked.
+# For the full operator name map, see the repository-root `.env.example`.
+
 AIFRED_CHAT_PROVIDER=ollama
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.6-luna
-AIFRED_API_BASE_URL=http://127.0.0.1:8787
+AIFRED_API_BASE_URL=http://127.0.0.1:8788
 OLLAMA_BASE_URL=http://127.0.0.1:11434
 OLLAMA_MODEL=aifred:latest
 OLLAMA_API_TOKEN=
 OLLAMA_ACCESS_CLIENT_ID=
 OLLAMA_ACCESS_CLIENT_SECRET=
+
 AIFRED_CONTACT_EMAIL=north3rnlight3rofficial@outlook.com
 AIFRED_EMAIL_FROM=sales@north3rnlight3r.com
-AIFRED_GITHUB_REPO=kaeganscott26/AIFRED
-AIFRED_PLUGIN_REPO=kaeganscott26/AIFRED
-AIFRED_PLUGIN_RELEASE_TAG=v0.3.6-installer-ai-alias
-AIFRED_RELEASE_VERSION=v0.3.6-installer-ai-alias
+
+AIFRED_GITHUB_REPO=kaeganscott26/AIFRED_Official-
+AIFRED_GITHUB_BRANCH=main
+AIFRED_PLUGIN_REPO=kaeganscott26/AIFRED_Official-
+AIFRED_PLUGIN_RELEASE_TAG=
+AIFRED_RELEASE_VERSION=
+GITHUB_TOKEN=
+
 AIFRED_ADMIN_USERNAME=
 AIFRED_ADMIN_PASSWORD_SHA256=
 AIFRED_ADMIN_SESSION_SECRET=
