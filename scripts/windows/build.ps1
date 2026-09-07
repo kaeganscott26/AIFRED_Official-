@@ -45,6 +45,10 @@ try {
     }
     if ($official) {
         '{"channel":"official"}' | Set-Content -Encoding utf8 (Join-Path $stageRoot 'AifredIntelligenceHost/channel.json')
+        $configurationRoot = Join-Path $stageRoot 'Configuration'
+        New-Item -ItemType Directory -Force -Path $configurationRoot | Out-Null
+        Copy-Item -LiteralPath (Join-Path $repositoryRoot 'config/distribution/aifred-settings.example.json') -Destination (Join-Path $configurationRoot 'aifred-settings.example.json')
+        Copy-Item -LiteralPath (Join-Path $repositoryRoot 'config/distribution/README.md') -Destination (Join-Path $configurationRoot 'README.md')
     }
     Invoke-Checked python @('-B','scripts/common/release.py','manifest','--platform','windows-x64')
     Invoke-Checked python @('-B','scripts/common/release.py','verify','--platform','windows-x64','--location','stage')
@@ -55,4 +59,3 @@ try {
     Pop-Location
     $buildLock.Dispose()
 }
-
