@@ -1,0 +1,128 @@
+name: Import private AIFRED control plane
+
+on:
+  push:
+    branches:
+      - chore/intelligence-admin-migration-2026-09-07
+    paths:
+      - .github/workflows/import-private-control-plane.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Official migration branch
+        uses: actions/checkout@v4
+        with:
+          ref: chore/intelligence-admin-migration-2026-09-07
+          fetch-depth: 0
+
+      - name: Fetch pinned public Beta source without catalog media
+        shell: bash
+        run: |
+          set -euo pipefail
+          BETA_SHA='e032e9831e8a49b187ed52d7232233d974929d90'
+          BETA_DIR="$RUNNER_TEMP/aifred-beta"
+          git clone --filter=blob:none --no-checkout https://github.com/kaeganscott26/AIFRED.git "$BETA_DIR"
+          git -C "$BETA_DIR" sparse-checkout init --cone
+          git -C "$BETA_DIR" sparse-checkout set \
+            apps/admin-android \
+            apps/admin-desktop \
+            infra/cloudflare \
+            config \
+            api/v1/registry \
+            ops/support \
+            tools/cloudflare
+          git -C "$BETA_DIR" checkout "$BETA_SHA"
+
+          mkdir -p apps infra api ops tools docs/operations
+          cp -a "$BETA_DIR/apps/admin-android" apps/
+          cp -a "$BETA_DIR/apps/admin-desktop" apps/
+          cp -a "$BETA_DIR/infra/cloudflare" infra/
+          mkdir -p api/v1
+          cp -a "$BETA_DIR/api/v1/registry" api/v1/
+          cp -a "$BETA_DIR/ops/support" ops/
+          mkdir -p tools
+          cp -a "$BETA_DIR/tools/cloudflare" tools/
+
+          copy_blob() {
+            local src="$1"
+            local dst="$2"
+            mkdir -p "$(dirname "$dst")"
+            git -C "$BETA_DIR" show "$BETA_SHA:$src" > "$dst"
+          }
+
+          copy_blob apps/package.json apps/package.json
+          copy_blob apps/package-lock.json apps/package-lock.json
+          copy_blob apps/website/.dev.vars.example apps/website/.dev.vars.example
+          copy_blob apps/website/_headers apps/website/_headers
+          copy_blob apps/website/_worker.js apps/website/_worker.js
+          copy_blob apps/website/ops.html apps/website/ops.html
+          copy_blob apps/website/ops.css apps/website/ops.css
+          copy_blob apps/website/ops.js apps/website/ops.js
+          copy_blob apps/website/wrangler.toml apps/website/wrangler.toml
+          copy_blob apps/website/lib/activity-log.js apps/website/lib/activity-log.js
+          copy_blob apps/website/lib/admin-command-registry.js apps/website/lib/admin-command-registry.js
+          copy_blob 'apps/website/functions/api/v1/[[path]].js' 'apps/website/functions/api/v1/[[path]].js'
+          copy_blob apps/website/assets/data/beat_catalog.json apps/website/assets/data/beat_catalog.json
+          copy_blob apps/website/assets/docs/aifred-release-notes.txt apps/website/assets/docs/aifred-release-notes.txt
+          copy_blob apps/website/assets/docs/aifred-installation.txt apps/website/assets/docs/aifred-installation.txt
+          copy_blob tools/generate-admin-command-reference.mjs tools/generate-admin-command-reference.mjs
+          copy_blob docs/ADMIN_GUIDE.md docs/ADMIN_GUIDE.md
+          copy_blob docs/ADMIN_COMMAND_REFERENCE.md docs/ADMIN_COMMAND_REFERENCE.md
+          copy_blob docs/OPS_GUIDE.md docs/OPS_GUIDE.md
+          copy_blob docs/CLOUDFLARE_PRODUCTION.md docs/CLOUDFLARE_PRODUCTION.md
+          copy_blob docs/operations/AIFRED_ACTIVITY_LOG.md docs/operations/AIFRED_ACTIVITY_LOG.md
+          copy_blob docs/FORGE_INTEGRATION.md docs/FORGE_INTEGRATION.md
+
+          # Official runtime identity differs from the Beta channel. Keep website/control-plane
+          # endpoints on the production domain, but do not document the Beta localhost host port.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('apps/admin-android/README.md')
+          text = p.read_text(encoding='utf-8')
+          text = text.replace('http://127.0.0.1:8787', 'http://127.0.0.1:8788')
+          text = text.replace('port 8787', 'port 8788')
+          p.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Record source provenance and commit import
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > apps/PRIVATE_CONTROL_PLANE_SOURCE.md <<'EOF'
+          # Private control-plane source snapshot
+
+          The private admin/control-plane tree was imported from public Beta commit
+          `e032e9831e8a49b187ed52d7232233d974929d90` on 2026-09-07.
+
+          Imported areas:
+          - `apps/admin-android/`
+          - `apps/admin-desktop/`
+          - private `/ops` website assets and their shared backend helpers
+          - Cloudflare operational infrastructure/configuration
+          - admin registry/support records and operational documentation
+
+          This snapshot contains no secret values. Deployment/provider credentials remain external
+          secrets/runtime configuration. The Official plugin local intelligence host is channel
+          `official` on port `8788`; website/admin endpoints remain the production custom domain.
+
+          Do not copy future private control-plane changes back into the public Beta repository.
+          EOF
+
+          git config user.name 'North3rnLight3r Automation'
+          git config user.email 'actions@users.noreply.github.com'
+          git add apps/admin-android apps/admin-desktop apps/website apps/package.json apps/package-lock.json \
+            infra/cloudflare config api/v1/registry ops/support tools/cloudflare \
+            tools/generate-admin-command-reference.mjs docs/ADMIN_GUIDE.md docs/ADMIN_COMMAND_REFERENCE.md \
+            docs/OPS_GUIDE.md docs/CLOUDFLARE_PRODUCTION.md docs/operations/AIFRED_ACTIVITY_LOG.md \
+            docs/FORGE_INTEGRATION.md apps/PRIVATE_CONTROL_PLANE_SOURCE.md
+          if git diff --cached --quiet; then
+            echo 'No import changes detected.'
+            exit 0
+          fi
+          git commit -m 'chore: migrate private admin and ops control plane from beta [skip ci]'
+          git push origin HEAD:chore/intelligence-admin-migration-2026-09-07
