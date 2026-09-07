@@ -5,6 +5,7 @@
 - [Product and operator overview](../README.md)
 - [Current implementation status](IMPLEMENTATION_STATUS.md)
 - [Architecture and ownership](ARCHITECTURE.md)
+- [Intelligence architecture map](../intelligence/README.md)
 
 ## What is AIFRED?
 
@@ -24,6 +25,13 @@ AIFRED is a transparent plugin that measures DAW audio, observes measurements ov
 
 - [aifred_filter](AIFRED_FILTER.md): deterministic states, reference compatibility, and `FilteredMixContext`
 
+## Intelligence
+
+- [Intelligence layer](../intelligence/README.md): authoritative post-`FilteredMixContext` ownership map
+- [Intelligence phases](../intelligence/PHASES.md): implementation order and completion gates
+- [Ecosystem configuration](ECOSYSTEM_CONFIGURATION.md): local `.env`, Cloudflare, GitHub, admin and provider ownership
+- [Production API](API_REFERENCE.md): public/reference/admin route contracts
+
 ## Runtime
 
 - [Installation](INSTALLATION.md): VST3 and Intelligence Host ownership
@@ -34,8 +42,16 @@ AIFRED is a transparent plugin that measures DAW audio, observes measurements ov
 
 - [Build](BUILD.md): compiler prerequisites, targets, and canonical output
 - [Distribution](DISTRIBUTION.md): stage, manifest, verification, promotion, and recovery
+- [End-user configuration template](../config/distribution/README.md): provider setup without bundled secrets
 - [Development](DEVELOPMENT.md): source and Git discipline
 - [Repository construction](REPOSITORY_CONSTRUCTION.md): authoritative locations and prohibited dependencies
+
+## Operations
+
+- [Cloudflare production](CLOUDFLARE_PRODUCTION.md): Pages, KV, R2, bindings and deployment ownership
+- [Admin guide](ADMIN_GUIDE.md): private operational clients
+- [Ops guide](OPS_GUIDE.md): production operations surface
+- [Administrator command reference](ADMIN_COMMAND_REFERENCE.md): generated allowlisted command map
 
 ## Debugging
 
