@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -827,6 +828,7 @@ fun AIFREDAdminApp() {
     val chatMessages = remember { mutableStateListOf<ChatMessage>() }
     val chatSessionId = remember { "android-admin-${UUID.randomUUID()}" }
     var chatInput by remember { mutableStateOf("") }
+    var chatRequestInFlight by remember { mutableStateOf(false) }
     var chatModels by remember {
         mutableStateOf(
             listOf(
@@ -862,7 +864,7 @@ fun AIFREDAdminApp() {
         mutableStateOf("apps/website/assets/artwork/gallery/new-gallery-image.jpg")
     }
 
-    var commandInput by remember { mutableStateOf("curl -s https://www.north3rnlight3r.com/api/v1/health") }
+    var commandInput by remember { mutableStateOf("curl -s https://north3rnlight3r.com/api/health") }
     var commandOutput by remember { mutableStateOf("") }
     var websiteFilePath by remember { mutableStateOf("apps/website/index.html") }
     var websiteFileContent by remember { mutableStateOf("") }
@@ -927,14 +929,6 @@ fun AIFREDAdminApp() {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        val chatSettingsResult = withContext(Dispatchers.IO) { client.getChatSettings() }
-        if (chatSettingsResult.ok) {
-            chatSettings = chatSettingsResult.settings
-            chatWebsocketUrl = chatSettingsResult.websocketUrl
-            chatSettingsPersistence = chatSettingsResult.persistence
-        } else if (chatSettingsResult.message.isNotBlank()) {
-            status = chatSettingsResult.message
-        }
         registeredActions = withContext(Dispatchers.IO) { client.listActions() }
         catalogTracks = withContext(Dispatchers.IO) { client.listCatalogTracks() }
         if (selectedTrack == null && catalogTracks.isNotEmpty()) {
@@ -965,29 +959,8 @@ fun AIFREDAdminApp() {
                 ?: catalog.activeModel.takeIf { it.isNotBlank() }
                 ?: catalog.models.first()
         }
-        chatClient.connectChat(
-            sessionId = chatSessionId,
-            onReady = { provider ->
-                chatMessages.appendSessionChatMessage(ChatMessage("system", "connected: $provider"))
-                postAdminNotification(context, "AIFRED Admin", "Chat provider: $provider")
-            },
-            onToken = { token ->
-                chatMessages.appendAssistantToken(token)
-            },
-            onIssue = { issue ->
-                chatMessages.appendSessionChatMessage(ChatMessage("system", "issue: $issue"))
-            },
-            onError = { error ->
-                chatMessages.appendSessionChatMessage(ChatMessage("system", "error: $error"))
-                postAdminNotification(context, "AIFRED Admin Error", error)
-            }
-        )
-    }
-
-    DisposableEffect(chatClient) {
-        onDispose {
-            chatClient.closeChat(chatSessionId)
-        }
+        chatSettings = chatSettings.copy(transportMode = "http")
+        chatSettingsPersistence = "request-driven"
     }
 
     DisposableEffect(Unit) {
@@ -1022,22 +995,25 @@ fun AIFREDAdminApp() {
             lastActivityEventId = ""
             return@LaunchedEffect
         }
+        val lifecycle = (context as ComponentActivity).lifecycle
         while (adminSessionToken.isNotBlank()) {
-            val raw = withContext(Dispatchers.IO) { client.adminDashboardState(adminSessionToken) }
-            siteDashboardSummary = renderDashboardSummary(raw)
-            val latestEvents = parseActivityEvents(raw)
-            if (latestEvents.isNotEmpty()) {
-                if (lastActivityEventId.isNotBlank()) {
-                    val freshEvents = latestEvents.takeWhile { it.id != lastActivityEventId }
-                    freshEvents.asReversed().forEach { event ->
-                        if (isImportantActivity(event.eventType)) {
-                            postAdminNotification(context, "AIFRED Activity", activityNotificationText(event))
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                val raw = withContext(Dispatchers.IO) { client.adminDashboardState(adminSessionToken) }
+                siteDashboardSummary = renderDashboardSummary(raw)
+                val latestEvents = parseActivityEvents(raw)
+                if (latestEvents.isNotEmpty()) {
+                    if (lastActivityEventId.isNotBlank()) {
+                        val freshEvents = latestEvents.takeWhile { it.id != lastActivityEventId }
+                        freshEvents.asReversed().forEach { event ->
+                            if (isImportantActivity(event.eventType)) {
+                                postAdminNotification(context, "AIFRED Activity", activityNotificationText(event))
+                            }
                         }
                     }
+                    lastActivityEventId = latestEvents.first().id
                 }
-                lastActivityEventId = latestEvents.first().id
             }
-            kotlinx.coroutines.delay(8000)
+            kotlinx.coroutines.delay(60_000)
         }
     }
 
@@ -1132,12 +1108,6 @@ fun AIFREDAdminApp() {
                         selected = activeTab == AdminTab.CHAT,
                         modifier = Modifier.weight(1f),
                         onClick = { activeTab = AdminTab.CHAT }
-                    )
-                    TabButton(
-                        label = "Upload",
-                        selected = activeTab == AdminTab.UPLOAD,
-                        modifier = Modifier.weight(1f),
-                        onClick = { activeTab = AdminTab.UPLOAD }
                     )
                     TabButton(
                         label = "Command",
@@ -1405,17 +1375,18 @@ fun AIFREDAdminApp() {
                             onInput = { chatInput = it },
                             onSend = {
                                 val prompt = chatInput.trim()
-                                if (prompt.isNotEmpty()) {
+                                if (prompt.isNotEmpty() && !chatRequestInFlight) {
+                                    chatRequestInFlight = true
                                     chatMessages.appendSessionChatMessage(ChatMessage("user", prompt))
                                     chatInput = ""
-                                    val shouldUseWebSocket = chatSettings.transportMode == "websocket"
-                                    val sent = shouldUseWebSocket && chatClient.sendChat(prompt, chatSessionId, selectedChatModel)
-                                    if (!sent) {
-                                        scope.launch {
+                                    scope.launch {
+                                        try {
                                             val directReply = withContext(Dispatchers.IO) {
-                                                chatClient.askChat(prompt, chatSessionId, selectedChatModel)
+                                                chatClient.askChat(prompt, chatSessionId, selectedChatModel, adminSessionToken)
                                             }
                                             chatMessages.appendSessionChatMessage(ChatMessage("assistant", directReply))
+                                        } finally {
+                                            chatRequestInFlight = false
                                         }
                                     }
                                 }
@@ -2082,24 +2053,9 @@ fun ChatScreen(
             Button(onClick = onTestApiConfiguration, modifier = Modifier.weight(1f)) { Text("Test API") }
             Button(onClick = onApplyApiConfiguration, modifier = Modifier.weight(1f)) { Text("Apply + Save") }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onTestWebsiteApiConfiguration,
-                enabled = adminSessionActive,
-                modifier = Modifier.weight(1f)
-            ) { Text("Test Website Route") }
-            Button(
-                onClick = onSaveWebsiteApiConfiguration,
-                enabled = adminSessionActive,
-                modifier = Modifier.weight(1f)
-            ) { Text("Save Website Route") }
-        }
         Text(text = apiConfigurationStatus, color = Color(0xFF8DB0C8))
         Text(
-            text = "Apply + Save updates this phone. Authenticated Website Route controls update/test Cloudflare KV. Cloudflare Ollama requires a reachable HTTPS endpoint; direct phone-to-Ollama may use loopback or a trusted private LAN address.",
+            text = "Apply + Save updates this phone only. Production provider configuration is source-controlled and deployed with Worker secrets. Cloudflare Ollama requires the authenticated HTTPS tunnel; direct phone-to-Ollama may use loopback or a trusted private LAN address.",
             color = Color(0xFF8DB0C8)
         )
 
@@ -2140,16 +2096,8 @@ fun ChatScreen(
             Text("Send")
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(onClick = onToggleSettings, modifier = Modifier.weight(1f)) {
-                Text(if (settingsExpanded) "Hide Chat Settings" else "Show Chat Settings")
-            }
-            Button(onClick = onSaveSettings, modifier = Modifier.weight(1f)) {
-                Text("Save Settings")
-            }
+        Button(onClick = onToggleSettings, modifier = Modifier.fillMaxWidth()) {
+            Text(if (settingsExpanded) "Hide Local Chat Settings" else "Show Local Chat Settings")
         }
 
         if (settingsExpanded) {
@@ -2704,66 +2652,19 @@ fun CommandScreen(
         )
 
         Text(
-            text = if (adminSessionToken.isBlank()) "Admin login required for website control." else "Website admin session active.",
+            text = if (adminSessionToken.isBlank()) "Admin login required for operational data." else "Production admin session active.",
             color = if (adminSessionToken.isBlank()) Color(0xFFEAA4A4) else Color(0xFF8FE0C9)
         )
-
-        Text(text = "Website File Control", color = Color(0xFF8DB0C8))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            WebsiteTextPresets.take(3).forEach { preset ->
-                Button(onClick = { onUsePreset(preset.path) }, modifier = Modifier.weight(1f)) {
-                    Text(preset.label)
-                }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            WebsiteTextPresets.drop(3).forEach { preset ->
-                Button(onClick = { onUsePreset(preset.path) }, modifier = Modifier.weight(1f)) {
-                    Text(preset.label)
-                }
-            }
-        }
-
-        OutlinedTextField(
-            value = websiteFilePath,
-            onValueChange = onWebsiteFilePath,
-            label = { Text("File Path / Track Key") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = onLoadFile, modifier = Modifier.weight(1f)) { Text("Load File") }
-            Button(onClick = onSaveFile, modifier = Modifier.weight(1f)) { Text("Save File") }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = onListDir, modifier = Modifier.weight(1f)) { Text("List Dir") }
-            Button(onClick = onDeletePath, modifier = Modifier.weight(1f)) { Text("Delete Path") }
-        }
-        OutlinedTextField(
-            value = websiteFileContent,
-            onValueChange = onWebsiteFileContent,
-            label = { Text("File Content") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-        )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = onLoadCatalog, modifier = Modifier.weight(1f)) { Text("List Tracks") }
-            Button(onClick = onRemoveTrackByKey, modifier = Modifier.weight(1f)) { Text("Remove Track Key") }
-        }
-
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(onClick = onLoadInquiries, modifier = Modifier.weight(1f)) { Text("Inquiries") }
             Button(onClick = onLoadLogs, modifier = Modifier.weight(1f)) { Text("ADMINLOG") }
-            Button(onClick = onLoadSales, modifier = Modifier.weight(1f)) { Text("Historical Sales") }
         }
         Button(onClick = onLoadReferences, modifier = Modifier.fillMaxWidth()) {
             Text("Reference Pool Log")
         }
 
         Text(
-            text = websiteOutput.ifBlank { "Website admin results will appear here." },
+            text = websiteOutput.ifBlank { "Read-only production admin results will appear here. Website and release changes deploy from the Official repository." },
             color = Color(0xFF9CD0EF),
             modifier = Modifier
                 .fillMaxWidth()
@@ -2789,7 +2690,9 @@ class ApiClient(
     private var ws: WebSocket? = null
 
     private fun endpoint(path: String): String {
-        return "${baseUrl.trimEnd('/')}$path"
+        val root = baseUrl.trimEnd('/')
+        val normalizedPath = if (root.endsWith("/api") && path.startsWith("/api/")) path.removePrefix("/api") else path
+        return "$root$normalizedPath"
     }
 
     private fun v1Endpoint(path: String): String {
@@ -2892,7 +2795,7 @@ class ApiClient(
         return ws?.send(payload.toString()) == true
     }
 
-    fun askChat(prompt: String, sessionId: String, model: String = ""): String {
+    fun askChat(prompt: String, sessionId: String, model: String = "", authorizationToken: String = ""): String {
         if (isDirectOllama()) {
             return askOllamaDirect(prompt, model)
         }
@@ -2910,9 +2813,15 @@ class ApiClient(
             val request = Request.Builder()
                 .url(v1Endpoint("/chat/completions"))
                 .addHeader("Content-Type", "application/json")
+                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
+                .addHeader("X-AIFRED-Client", sessionId)
+                .addHeader("X-AIFRED-Product", "android-admin")
+                .addHeader("X-AIFRED-Platform", "android")
+                .addHeader("X-AIFRED-Purpose", "user-chat")
                 .apply {
-                    if (token.isNotBlank()) {
-                        addHeader("Authorization", "Bearer $token")
+                    val selectedToken = authorizationToken.ifBlank { token }
+                    if (selectedToken.isNotBlank()) {
+                        addHeader("Authorization", "Bearer $selectedToken")
                     }
                 }
                 .post(body.toRequestBody("application/json".toMediaType()))
@@ -3349,34 +3258,7 @@ class ApiClient(
     }
 
     fun listActions(): List<RegisteredAction> {
-        val remoteActions = try {
-            val request = Request.Builder()
-                .url(endpoint("/api/v1/registry/actions"))
-                .build()
-            client.newCall(request).execute().use { response ->
-                val raw = response.body?.string().orEmpty()
-                val payload = JSONObject(raw.ifEmpty { "{}" })
-                val items = payload.optJSONArray("actions")
-                if (!response.isSuccessful || items == null) {
-                    emptyList()
-                } else {
-                    buildList {
-                        for (index in 0 until items.length()) {
-                            val item = items.optJSONObject(index) ?: continue
-                            val id = item.optString("id").trim()
-                            val description = item.optString("description").trim()
-                            val command = item.optString("command", id).trim().ifBlank { id }
-                            if (id.isNotEmpty()) {
-                                add(RegisteredAction(id, description, command))
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (_error: Exception) {
-            emptyList()
-        }
-        return (remoteActions + LocalShellActions).distinctBy { it.id }
+        return LocalShellActions.distinctBy { it.id }
     }
 
     fun runCommand(adminSessionToken: String, command: String): String {

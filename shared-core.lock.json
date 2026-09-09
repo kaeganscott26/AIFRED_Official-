@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "normalization": "CRLF to LF",
   "files": {
     "shared-dsp/CMakeLists.txt": "b984c722be38446c981e501b6c9eee44431756ad716a022d6ca40d7977f7223c",
@@ -28,6 +28,6 @@
     "tools/AifredIntelligenceHost/ContextContract.cs": "789e4001cdc6cc6432bff055fde4b380134f227e58e34df88e4bd868447dafa2",
     "tools/AifredIntelligenceHost/HostSettings.cs": "7ca8f73416e71c322a47ef437bedafc6bdf05087e2a989840764081357c282ce",
     "tools/AifredIntelligenceHost/Program.cs": "4ac0f659cc7b8c23dde516ec47bdfc072254ee40615dec2be56c722a9ff36d6e",
-    "tools/AifredIntelligenceHost/ProviderRouter.cs": "77250168d23013d09796068bb64b443e764d790599b1f6fd7a7853f000c2e927"
+    "tools/AifredIntelligenceHost/ProviderRouter.cs": "70df2ab6add08103bdc17c253f29621c8d4f62213d093fecf5ca406aa1777673"
   }
 }

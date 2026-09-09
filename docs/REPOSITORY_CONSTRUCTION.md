@@ -15,7 +15,7 @@ No alternate analyzer, serializer, Python runtime, `.NET AifredEngine`, empty ad
 
 ## Independent reproduction
 
-Official and Beta vendor the same shared core and host source. [shared-core.lock.json](../shared-core.lock.json) pins its normalized inventory. Neither CMake nor project references may point at a sibling checkout or machine-specific project path.
+AIFRED Official vendors its shared core and host source directly. [shared-core.lock.json](../shared-core.lock.json) pins that normalized inventory so this repository remains independently reproducible. Neither CMake nor project references may point at a sibling checkout or machine-specific project path.
 
 Canonical platform roots are `out/windows-x64`, `out/macos-arm64`, and `out/linux-x64`. Compiler output, release candidates, current artifacts, and installed files have separate owners. [Distribution](DISTRIBUTION.md) defines promotion; [Installation](INSTALLATION.md) defines deployment.
 

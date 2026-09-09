@@ -52,8 +52,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.documentView = output; scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 220).isActive = true; scroll.widthAnchor.constraint(equalToConstant: 250).isActive = true; stack.addArrangedSubview(scroll)
         sidebar.addSubview(stack); split.addArrangedSubview(sidebar); split.addArrangedSubview(web); split.setPosition(290, ofDividerAt: 0)
         window.contentView?.addSubview(split); window.makeKeyAndOrderFront(nil)
-        let base = ProcessInfo.processInfo.environment["AIFRED_API_BASE_URL"] ?? "https://www.north3rnlight3r.com"
-        web.load(URLRequest(url: URL(string: "\(base)/ops")!, cachePolicy: .reloadIgnoringLocalCacheData))
+        let base = ProcessInfo.processInfo.environment["AIFRED_API_BASE_URL"] ?? "https://north3rnlight3r.com/api"
+        let publicOrigin = base.hasSuffix("/api") ? String(base.dropLast(4)) : base
+        web.load(URLRequest(url: URL(string: "\(publicOrigin)/ops")!, cachePolicy: .reloadIgnoringLocalCacheData))
         NSApp.activate(ignoringOtherApps: true)
     }
 

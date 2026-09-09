@@ -16,5 +16,5 @@ internal val LocalShellActions = listOf(
     RegisteredAction("android:version", "Local — Show the Android OS version", "getprop ro.build.version.release", true),
     RegisteredAction("android:packages", "Local — List third-party Android packages visible to the app", "pm list packages -3", true),
     RegisteredAction("android:logs", "Local — Show recent logs accessible to the app", "logcat -d -t 100", true),
-    RegisteredAction("site:health", "Local — Check production API health from the device", "curl -fsS https://www.north3rnlight3r.com/api/v1/health", true)
+    RegisteredAction("site:health", "Local — Check production API health from the device", "curl -fsS https://north3rnlight3r.com/api/health", true)
 )

@@ -6,7 +6,11 @@ function Invoke-Checked {
     if ($LASTEXITCODE -ne 0) { throw "$Program failed with exit code $LASTEXITCODE" }
 }
 function Initialize-AifredMsvc {
-    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+    $programFilesX86 = ${env:ProgramFiles(x86)}
+    if (!$programFilesX86) { $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86') }
+    if (!$programFilesX86) { $programFilesX86 = 'C:\Program Files (x86)' }
+    if (!${env:ProgramFiles(x86)}) { [Environment]::SetEnvironmentVariable('ProgramFiles(x86)', $programFilesX86, 'Process') }
+    $vswhere = Join-Path $programFilesX86 'Microsoft Visual Studio/Installer/vswhere.exe'
     if (!(Test-Path -LiteralPath $vswhere)) { throw 'Install Visual Studio C++ Build Tools and Windows SDK.' }
     $installation = (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath).Trim()
     if (!$installation) { throw 'Visual Studio x64 C++ tools are unavailable.' }

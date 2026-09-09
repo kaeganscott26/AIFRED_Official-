@@ -35,6 +35,9 @@ node_modules/
 .vercel/
 .wrangler/
 wrangler.toml.local
+.dev.vars
+.secrets.local.json
+aifred.env
 
 # CMake / C++ / plugin builds
 CMakeFiles/
@@ -77,3 +80,4 @@ local-model-test/
 
 # FORGE local metadata
 .forge/metadata.sqlite*
+.forge/

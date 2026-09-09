@@ -4,7 +4,7 @@ project(AIFRED VERSION 4.0.0 LANGUAGES C CXX)
 
 set(AIFRED_VERSION_STRING "4.0.0-alpha.2" CACHE STRING "Visible AIFRED product version")
 set(AIFRED_UPDATE_CHANNEL "alpha" CACHE STRING "AIFRED update channel")
-set(AIFRED_REFERENCE_API_URL "https://www.north3rnlight3r.com/api/v1/references" CACHE STRING "Production reference catalog URL")
+set(AIFRED_REFERENCE_API_URL "https://north3rnlight3r.com/api/v1/references" CACHE STRING "Production reference catalog URL")
 
 execute_process(
     COMMAND git rev-parse --short=7 HEAD

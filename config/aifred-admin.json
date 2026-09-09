@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "productionApiBase": "https://www.north3rnlight3r.com",
+  "productionApiBase": "https://north3rnlight3r.com/api",
   "developmentApiBase": "http://127.0.0.1:8787",
   "archive": {
     "root": "runtime/aifred-archive",

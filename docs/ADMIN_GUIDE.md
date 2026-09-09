@@ -1,12 +1,12 @@
 # AIFRED Administration Guide
 
-All live admin surfaces use `https://www.north3rnlight3r.com` and the protected `/api/v1/admin/*` API. Credentials and provider secrets are not embedded in `/ops` or desktop clients.
+All live admin surfaces use `https://north3rnlight3r.com/api` and the protected `/api/v1/admin/*` API. Credentials and provider secrets are not embedded in `/ops` or desktop clients.
 
 | Capability | Android | `/ops` | Windows | macOS |
 | --- | --- | --- | --- | --- |
 | Authenticated live status | Yes | Yes | Yes | Yes, through `/ops` WebKit |
 | Analytics/downloads/logs/inquiries | Yes | Yes | Yes | Yes, through `/ops` |
-| Catalog/reference/track analysis | Yes | Yes | Yes | Yes, through `/ops` |
+| Catalog/reference/track analysis | Read-only | Yes | Yes | Yes, through `/ops` |
 | Site and track exports | Yes | Yes | Yes | Yes, through `/ops` |
 | User-entered admin commands | Yes | No | No | No |
 | Local diagnostic registry | Android only | No | No | No |
@@ -15,7 +15,7 @@ All live admin surfaces use `https://www.north3rnlight3r.com` and the protected 
 
 ## Android Admin
 
-The Compose app has Chat, Upload and Command tabs. It supports provider configuration, chat settings, catalog playback/uploads, reference and website asset uploads, file controls, operational summaries, exports and registered commands. UTC values are converted only for device presentation. Online login uses the backend signed session; saved offline owner credentials grant local-device features only.
+The Compose app has Chat and Command tabs. It supports user-triggered chat, local provider profiles, catalog playback, read-only operational summaries, exports, and local diagnostic commands. Production provider settings, releases, website source, and artifacts are changed through the source-controlled deployment workflow—not through the app. UTC values are converted only for device presentation. Online login uses the backend signed session; saved offline owner credentials grant local-device features only.
 
 ## `/ops`
 

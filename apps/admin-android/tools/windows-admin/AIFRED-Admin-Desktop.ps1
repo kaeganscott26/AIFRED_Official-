@@ -1,12 +1,14 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 $ErrorActionPreference = "Stop"
-$script:BaseUrl = if ($env:AIFRED_API_BASE_URL) { $env:AIFRED_API_BASE_URL.TrimEnd('/') } else { "https://www.north3rnlight3r.com" }
+$script:BaseUrl = if ($env:AIFRED_API_BASE_URL) { $env:AIFRED_API_BASE_URL.TrimEnd('/') } else { "https://north3rnlight3r.com/api" }
+$script:PublicOrigin = $script:BaseUrl -replace '/api$', ''
 $script:SessionToken = ""
 $script:RepoRoot = if ($env:AIFRED_REPO_ROOT) { $env:AIFRED_REPO_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path }
 $script:ArchiveTool = Join-Path $script:RepoRoot "tools\aifred-archive.mjs"
 
 function Invoke-AifredApi([string]$Path, [string]$Method = "GET", [object]$Body = $null) {
+    if ($script:BaseUrl.EndsWith('/api') -and $Path.StartsWith('/api/')) { $Path = $Path.Substring(4) }
     $headers = @{ Accept = "application/json" }; if ($script:SessionToken) { $headers.Authorization = "Bearer $script:SessionToken" }
     $parameters = @{ Uri = "$script:BaseUrl$Path"; Method = $Method; Headers = $headers; TimeoutSec = 45 }
     if ($null -ne $Body) { $parameters.ContentType = "application/json"; $parameters.Body = $Body | ConvertTo-Json -Depth 10 }
@@ -21,7 +23,7 @@ function Save-AdminExport([string]$Kind) {
     if (-not $script:SessionToken) { throw "Online admin login is required." }
     $dialog = New-Object System.Windows.Forms.SaveFileDialog
     $dialog.Filter = "JSON files (*.json)|*.json"; $dialog.FileName = "aifred-$Kind-export-$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH-mm-ssZ')).json"
-    if ($dialog.ShowDialog() -eq "OK") { Invoke-WebRequest -Uri "$script:BaseUrl/api/v1/admin/export/$Kind" -Headers @{ Authorization = "Bearer $script:SessionToken" } -OutFile $dialog.FileName -UseBasicParsing; "Saved $($dialog.FileName)" }
+    if ($dialog.ShowDialog() -eq "OK") { Invoke-WebRequest -Uri "$script:BaseUrl/v1/admin/export/$Kind" -Headers @{ Authorization = "Bearer $script:SessionToken" } -OutFile $dialog.FileName -UseBasicParsing; "Saved $($dialog.FileName)" }
 }
 function Format-Result($Value) { if ($Value -is [string]) { $Value } else { $Value | ConvertTo-Json -Depth 15 } }
 function Run([scriptblock]$Action) { try { $output.Text = Format-Result (& $Action); $status.Text = "Operation completed at $((Get-Date).ToString('g'))." } catch { $output.Text = "ERROR: $($_.Exception.Message)"; $status.Text = "Operation failed." } }
@@ -33,7 +35,7 @@ $status = New-Object Windows.Forms.Label; $status.Text = "Live administration re
 $user = New-Object Windows.Forms.TextBox; $user.Text = "North3rnLight3r"; $user.SetBounds(22,78,210,27); $form.Controls.Add($user)
 $pass = New-Object Windows.Forms.TextBox; $pass.UseSystemPasswordChar = $true; $pass.SetBounds(242,78,220,27); $form.Controls.Add($pass)
 $login = New-Object Windows.Forms.Button; $login.Text = "Online Login"; $login.SetBounds(475,76,125,31); $login.Add_Click({ Run { $result = Invoke-AifredApi "/api/v1/admin/login" "POST" @{ username=$user.Text; password=$pass.Text }; $script:SessionToken=$result.session_token; $pass.Text=""; $status.Text="Production session active."; $result | Select-Object ok,username,expires_at } }); $form.Controls.Add($login)
-$openOps = New-Object Windows.Forms.Button; $openOps.Text = "Open /ops"; $openOps.SetBounds(610,76,110,31); $openOps.Add_Click({ Start-Process "$script:BaseUrl/ops" }); $form.Controls.Add($openOps)
+$openOps = New-Object Windows.Forms.Button; $openOps.Text = "Open /ops"; $openOps.SetBounds(610,76,110,31); $openOps.Add_Click({ Start-Process "$script:PublicOrigin/ops" }); $form.Controls.Add($openOps)
 
 $tabs = New-Object Windows.Forms.TabControl; $tabs.SetBounds(18,120,1065,455); $form.Controls.Add($tabs)
 $definitions = [ordered]@{

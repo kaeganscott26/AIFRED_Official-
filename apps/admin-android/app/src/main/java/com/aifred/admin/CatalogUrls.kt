@@ -17,5 +17,8 @@ internal fun resolveCatalogAssetUrl(baseUrl: String, candidate: String): String 
         val scheme = if (base.startsWith("http://", ignoreCase = true)) "http:" else "https:"
         return "$scheme$value"
     }
-    return "$base/${value.trimStart('/')}"
+    val relative = value.trimStart('/').let {
+        if (base.endsWith("/api") && it.startsWith("api/")) it.removePrefix("api/") else it
+    }
+    return "$base/$relative"
 }

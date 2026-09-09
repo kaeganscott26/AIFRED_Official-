@@ -1,0 +1,22 @@
+{
+  "name": "@aifred/cloudflare-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.js && node --check src/providers.js && node --test test/*.test.js && wrangler deploy --dry-run --env=",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "smoke:staging": "node scripts/smoke.mjs https://aifred-api-staging.aifred-site.workers.dev",
+    "smoke:production": "node scripts/smoke.mjs https://north3rnlight3r.com",
+    "secrets:staging": "wrangler secret bulk .secrets.local.json --env staging",
+    "secrets:production": "wrangler secret bulk .secrets.local.json",
+    "db:migrate:local": "wrangler d1 migrations apply aifred-ops --local",
+    "db:migrate:remote": "wrangler d1 migrations apply aifred-ops --remote",
+    "secrets:rotate": "node scripts/rotate-secrets.mjs",
+    "waf:apply": "node scripts/configure-edge-rate-limit.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.129.1"
+  }
+}
