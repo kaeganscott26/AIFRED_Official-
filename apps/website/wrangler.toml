@@ -11,10 +11,10 @@ redact_query_string = true
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
-persist = true
 invocation_logs = true
+persist = true
 
 [observability.traces]
-enabled = false
+enabled = true
+head_sampling_rate = 0.05
 persist = true
-head_sampling_rate = 1
