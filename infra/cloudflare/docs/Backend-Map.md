@@ -8,17 +8,17 @@ This file is retained as an operations entry point so old links under `infra/clo
 
 Current authority summary:
 
-- Repository: `kaeganscott26/AIFRED`
+- Intended production repository: `kaeganscott26/AIFRED_Official-`
 - Website/backend source: `apps/website/`
 - Worker router: `apps/website/_worker.js`
-- Static website and `/ops`: `apps/website/`
-- Dedicated API entry point: `infra/cloudflare/aifred-api/src/index.js`
-- API handlers: `infra/cloudflare/aifred-api/src/handlers.js`
-- Controlled mobile source edits: `infra/cloudflare/aifred-api/src/source-control.js`
+- Static website, `/ops`, and backend: `apps/website/`
+- Unified entry point: `apps/website/_worker.js`
+- API handlers: `apps/website/lib/backend/`
+- Controlled mobile source edits: `apps/website/lib/backend/source-control.js`
 - Pages project name used by deploy tooling: `aifred-site`
-- Worker name: `aifred-api`
+- Separate API Worker: none
 
-Production cutover remains pending. Beta retains the current Pages Functions backend until the dedicated Worker passes the migration checklist.
+Production promotion remains pending. Beta retains current Git source authority until the unified Official preview passes the migration checklist.
 - Production branch: `main`
 
 Cloudflare config roles:

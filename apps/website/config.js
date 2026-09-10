@@ -1,13 +1,26 @@
-const __base = String(window.AIFRED_API_BASE_URL || "https://north3rnlight3r.com/api").replace(/\/+$/, "");
-const __apiV1Base = __base.endsWith("/v1") ? __base : `${__base}/v1`;
+function __aifredOrigin(value) {
+  const fallback = "https://north3rnlight3r.com";
+  try {
+    const url = new URL(String(value || fallback), window.location.origin);
+    url.pathname = url.pathname.replace(/\/+$/, "").replace(/\/(?:api\/v1|api|v1)$/i, "") || "/";
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return fallback;
+  }
+}
+
+const __origin = __aifredOrigin(window.AIFRED_API_BASE_URL);
 window.AIFRED_CONFIG = {
-  apiBase: __base,
-  apiV1Base: __apiV1Base,
+  origin: __origin,
+  apiBase: __origin,
+  apiV1Base: `${__origin}/api/v1`,
+  providerV1Base: `${__origin}/v1`,
   contactEmail: "north3rnlight3rofficial@outlook.com",
   downloadUrls: {
-    windowsInstaller: `${__apiV1Base}/downloads/plugin?channel=beta&asset=setup`,
-    windowsZip: `${__apiV1Base}/downloads/plugin?channel=beta&asset=zip`,
-    macosZip: `${__apiV1Base}/downloads/plugin?channel=beta&asset=macos`,
+    windowsInstaller: `${__origin}/api/v1/downloads/plugin?channel=beta&asset=setup`,
+    windowsZip: `${__origin}/api/v1/downloads/plugin?channel=beta&asset=zip`,
     releaseNotes: "https://github.com/kaeganscott26/AIFRED"
   },
   productPrice: "$149.99"

@@ -24,6 +24,18 @@ data class AdminExportResult(
 
 internal val ApiProviders = listOf("website", "ollama", "openai")
 
+internal fun normalizeWebsiteOrigin(value: String): String {
+    val endpoint = value.trim().trimEnd('/').ifBlank { "https://north3rnlight3r.com" }
+    val uri = runCatching { URI(endpoint) }.getOrNull() ?: return endpoint
+    if (uri.scheme == null || uri.host == null) return endpoint
+    val path = uri.path.orEmpty().trimEnd('/')
+    val normalizedPath = if (path.equals("/api", true) || path.equals("/api/v1", true) || path.equals("/v1", true)) "" else path
+    return runCatching {
+        URI(uri.scheme, uri.userInfo, uri.host, uri.port, normalizedPath.ifBlank { null }, null, null)
+            .toString().trimEnd('/')
+    }.getOrDefault(endpoint)
+}
+
 internal fun validateApiEndpoint(value: String): String? {
     val endpoint = value.trim()
     val uri = runCatching { URI(endpoint) }.getOrNull() ?: return "Endpoint must be a valid URL"
@@ -58,7 +70,7 @@ internal fun apiProviderDefaults(
         )
         else -> ApiConfiguration(
             provider = "website",
-            baseUrl = websiteBaseUrl.trimEnd('/'),
+            baseUrl = normalizeWebsiteOrigin(websiteBaseUrl),
             model = "aifred:latest"
         )
     }

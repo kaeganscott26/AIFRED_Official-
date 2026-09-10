@@ -8,13 +8,13 @@
 | Shared tests | [`shared-dsp/tests`](../shared-dsp/tests) |
 | Official plugin adapter/frontend | [`plugin/src`](../plugin/src) |
 | Intelligence transport | [`tools/AifredIntelligenceHost`](../tools/AifredIntelligenceHost) |
-| Pages website and `/ops` | [`apps/website`](../apps/website) |
+| Unified Pages website, backend, and `/ops` | [`apps/website`](../apps/website) |
 | Android and desktop administration | [`apps/admin-android`](../apps/admin-android), [`apps/admin-desktop`](../apps/admin-desktop) |
-| Dedicated `/api/*` Worker | [`infra/cloudflare/aifred-api`](../infra/cloudflare/aifred-api) |
+| Historical backend migration material | [`infra/cloudflare/aifred-api`](../infra/cloudflare/aifred-api) (not a deploy target) |
 | Release/install automation | [`scripts`](../scripts) |
 | Canonical documentation | [`docs`](README.md) and [shared DSP README](../shared-dsp/README.md) |
 
-No alternate analyzer, serializer, Python runtime, `.NET AifredEngine`, empty adapter shell, or mock updater contract belongs in the Official source tree. The website, administration clients, and production infrastructure are product source in Official; they must use the dedicated API Worker rather than add a second backend under Pages.
+No alternate analyzer, serializer, Python runtime, `.NET AifredEngine`, empty adapter shell, or mock updater contract belongs in the Official source tree. The website, administration clients, and backend are product source in Official and deploy together through one Pages Advanced Mode runtime. A second `/api/*` Worker is prohibited.
 
 ## Independent reproduction
 

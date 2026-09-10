@@ -1,94 +1,56 @@
 # Cloudflare production guide
 
-## Target topology
+## Architecture
 
 ```text
-north3rnlight3r.com/*      -> Cloudflare Pages project aifred-site
-north3rnlight3r.com/api/*  -> Cloudflare Worker aifred-api
+north3rnlight3r.com/* -> Cloudflare Pages project aifred-site
+                     -> apps/website/_worker.js
+                     -> dynamic routes or env.ASSETS.fetch(request)
 ```
 
-Pages owns HTML, CSS, JavaScript, assets, and the static `/ops` shell. The dedicated Worker owns public, provider, storage, analytics, and authenticated administration APIs. Do not add replacement API handlers under `apps/website/functions`.
+The site and backend are one Pages Advanced Mode deployment. `_worker.js` owns `/health`, `/v1/*`, `/api/*`, `/api/v1/*`, and `/ws/chat`; static requests fall through to `env.ASSETS`. A second Worker must not intercept `/api/*`.
 
-## Current migration status
+## Evidence boundary
 
-Official contains the implemented replacement Worker and website source. The dated pre-migration inventory found the production Pages project bound to public Beta and `/api/health` outside the replacement route. Staging passed a previous smoke run, including D1-backed references, but those observations do not prove current staging state or production cutover.
+The current live rollback baseline is deployment `b2b33ea0-e74e-46a0-a6b5-53fb5c5d4b4e`, documented in [the recovery baseline](cloudflare/2026-09-10-live-recovery-baseline.md). At capture time, Pages Git integration still named the public Beta repository. Official becomes production source authority only after an Official preview passes, the unified deployment is promoted, the Git source is changed, and production is observed successfully. Source implementation or a preview alone does not establish production state.
 
-Treat these statuses separately:
+## Authoritative paths
 
-| Layer | Status |
+| Responsibility | Path |
 | --- | --- |
-| Official Worker source | Implemented replacement backend |
-| Local Worker tests/dry run | Must pass in the current checkout |
-| Staging deployment | Previously observed; revalidate before promotion |
-| Production `/api/*` route | Pending production cutover; not verified |
-| Pages source authority | Beta remains the production fallback until moved and verified |
-
-## Source and configuration
-
-| Responsibility | Authoritative path |
-| --- | --- |
-| Pages website | `apps/website` |
+| unified site/backend | `apps/website` |
 | Pages configuration | `apps/website/wrangler.toml` |
-| API Worker | `infra/cloudflare/aifred-api` |
-| Worker configuration | `infra/cloudflare/aifred-api/wrangler.jsonc` |
-| D1 migrations | `infra/cloudflare/aifred-api/migrations` |
-| Traffic/rate-limit policy | `docs/cloudflare/TRAFFIC_POLICY.md` |
-| Recovery inventory | `docs/cloudflare/2026-09-08-pre-migration-inventory.md` |
+| backend handlers | `apps/website/lib/backend` |
+| release manifest | `apps/website/lib/release-manifest.js` |
+| preview D1 schema | `apps/website/migrations/0001_unified_runtime.sql` |
+| historical migration material | `infra/cloudflare/aifred-api` (not deployable authority) |
 
-The root and `infra/cloudflare` Wrangler files are historical/convenience mirrors. Do not deploy them as substitutes for the two authoritative configs.
-
-## Worker bindings
+## Bindings
 
 | Binding | Responsibility |
 | --- | --- |
-| D1 `AIFRED_OPS` | Releases, reference catalog, inquiries, sessions, idempotency, activity, and request rollups |
-| R2 `AIFRED_DOWNLOADS` | Release and public media objects |
-| R2 `AIFRED_REFERENCE_BUCKET` | Licensed reference assets |
-| KV `AIFRED_REFERENCE_POOL` | Historical reference compatibility; not listed on the request path |
-| KV `AIFRED_SALES_LOG` | Historical compatibility; not the new event firehose |
-| Queue `AIFRED_EVENTS_QUEUE` | Batched activity and request-rollup ingestion |
-| Analytics Engine `AIFRED_ANALYTICS` | Per-request operational metrics |
-| Rate Limit bindings | Route-specific request enforcement |
+| `AIFRED_OPS` | D1 operational state, sessions, idempotency, references, bounded activity, aggregates, request rollups |
+| `AIFRED_DOWNLOADS` | R2 immutable release objects |
+| `AIFRED_REFERENCE_BUCKET` | R2 licensed reference assets |
+| `AIFRED_REFERENCE_POOL` | historical/read-mostly KV compatibility |
+| `AIFRED_SALES_LOG` | historical/read-only KV compatibility; never the request-event firehose |
+| `AIFRED_ANALYTICS` | Analytics Engine request telemetry |
 
-## Secrets and external authority
+No Queue is required by the unified Pages path. D1 rate-limit rows provide the fallback where Pages cannot bind Workers Rate Limiting.
 
-Required secret names depend on enabled features. Admin auth requires `AIFRED_ADMIN_PASSWORD_SHA256` and `AIFRED_ADMIN_SESSION_SECRET`. Authenticated product requests use `AIFRED_API_TOKEN`; public browser analytics may use `AIFRED_ANALYTICS_API_TOKEN`. Provider routes use the configured OpenAI or protected Ollama credentials.
+## Secrets
 
-Android website-source administration requires `GITHUB_TOKEN` as a Worker secret with write access limited to `kaeganscott26/AIFRED_Official-`. The Worker accepts only its exact editable-file allowlist. The APK receives neither this token nor Cloudflare credentials.
+Admin authentication requires `AIFRED_ADMIN_USERNAME`, `AIFRED_ADMIN_PASSWORD_SHA256`, and `AIFRED_ADMIN_SESSION_SECRET`. Mobile source administration additionally requires `GITHUB_TOKEN`, held by the runtime and never the APK. Provider credentials depend on the selected provider. Record names only; never print or commit values.
 
-Never print or commit secret values. `wrangler secret put` changes deployed state; perform secret changes only in an authorized staging or production step.
-
-## Local validation
+## Validation and promotion
 
 ```powershell
-Set-Location infra/cloudflare/aifred-api
-npm ci
-npm run check
-
-Set-Location ../../../apps
-npm ci
-npm run website:check
+npm ci --prefix apps
+npm --prefix apps run website:check
 ```
 
-`npm run check` includes a Wrangler production dry run. It checks packaging and configuration syntax but does not validate remote resources, secrets, routes, or runtime behavior.
+Pages has no equivalent of a Worker production-route dry run; a non-production branch deployment is the packaging/runtime gate. Validate the complete route, storage, admin, download, client, and idle-traffic matrix on that preview before changing production. Apply production D1 migrations only immediately before a validated promotion. Capture the production deployment ID again, retain the rollback, promote the same verified architecture, then observe production for several minutes.
 
-## Staging and production
+## Admin source control
 
-Use the repository scripts after confirming their targets:
-
-```powershell
-npm run deploy:staging
-npm run smoke:staging
-```
-
-Do not run `npm run deploy`, `npm run smoke:production`, database migration commands with `--remote`, secret uploads, WAF changes, or route changes during source preparation. Follow the [migration checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md), capture rollback state, and obtain production authorization first.
-
-## Mobile website-source flow
-
-Android Admin uses authenticated `/api/v1/admin/source/*` routes to list approved files, load content and its Git blob SHA, validate a draft, commit with optimistic concurrency, and inspect source-control status. The Worker returns a commit SHA and marks deployment verification false. A commit can trigger Pages only after Cloudflare Pages points at Official; the operator must confirm the deployment and deployed content.
-
-Binary website assets do not use this Git text editor. Keep runtime media in an approved R2 flow once that upload contract and bucket ownership are configured.
-
-## Promotion checks
-
-Before production work, record the current repo SHA, deployed Worker/Pages identifiers, resource and binding inventory, secret names, previous and new routes, rollback commands, and smoke procedure. Confirm the external recovery bundle exists instead of relying on the dated note. Preserve Beta until the Official API and website pass production checks together.
+`/api/v1/admin/source/*` lists an exact allowlist, reads current text plus Git blob SHA, validates drafts, and updates an existing Official file with optimistic concurrency. It cannot create arbitrary paths, delete, or upload binaries. A returned commit SHA marks deployment verification false until the resulting Pages deployment is independently observed.

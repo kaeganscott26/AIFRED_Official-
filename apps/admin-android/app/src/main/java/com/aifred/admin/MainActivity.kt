@@ -2679,13 +2679,16 @@ class ApiClient(
     private var ws: WebSocket? = null
 
     private fun endpoint(path: String): String {
-        val root = baseUrl.trimEnd('/')
-        val normalizedPath = if (root.endsWith("/api") && path.startsWith("/api/")) path.removePrefix("/api") else path
-        return "$root$normalizedPath"
+        val root = if (isDirectOllama() || isDirectOpenAI()) baseUrl.trimEnd('/') else normalizeWebsiteOrigin(baseUrl)
+        return "$root${if (path.startsWith('/')) path else "/$path"}"
     }
 
     private fun v1Endpoint(path: String): String {
-        val root = baseUrl.trimEnd('/').let { if (it.endsWith("/v1")) it else "$it/v1" }
+        val root = if (isDirectOllama() || isDirectOpenAI()) {
+            baseUrl.trimEnd('/').let { if (it.endsWith("/v1")) it else "$it/v1" }
+        } else {
+            "${normalizeWebsiteOrigin(baseUrl)}/v1"
+        }
         return "$root${if (path.startsWith('/')) path else "/$path"}"
     }
 

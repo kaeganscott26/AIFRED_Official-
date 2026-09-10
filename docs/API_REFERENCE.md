@@ -2,7 +2,7 @@
 
 Production candidate base: `https://north3rnlight3r.com/api`.
 
-The dedicated `aifred-api` Worker implements this contract. The source exists in Official, but production routing remains unverified until the authorized cutover and smoke test complete. Staging `workers.dev` URLs may expose the same paths without the `/api` prefix for validation only.
+The unified Pages Advanced Mode runtime implements this contract from `apps/website`. Application routes use the same origin with `/api/v1`; OpenAI-compatible provider routes retain `/v1`. Production routing remains separate from source and preview evidence until promotion is verified.
 
 ## Public and product routes
 

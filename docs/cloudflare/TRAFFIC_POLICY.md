@@ -1,7 +1,7 @@
 # Production API traffic policy
 
 The production API is request-driven and should be quiet while clients are idle. The canonical
-base is `https://north3rnlight3r.com/api`; `workers.dev` is not a client endpoint.
+origin is `https://north3rnlight3r.com`; application APIs use `/api/v1` and provider-compatible routes use `/v1`.
 
 ## Caller audit (2026-09-08)
 
@@ -26,13 +26,13 @@ Android's 200 ms playback-position loop reads only the local `MediaPlayer` while
 2. One consolidated zone-level rate-limit rule for the five expensive POST paths. The zone is on
    the Free plan, which currently permits one rate-limiting rule, so route-specific enforcement is
    performed in the Worker.
-3. Worker Rate Limiting bindings keyed by authenticated client/session where possible:
+3. D1-backed atomic rate limits keyed by authenticated client/session in the Pages runtime:
    chat 15/minute, analysis 10/minute, analytics batches 20/minute, inquiry 5/minute,
    admin login 5/minute, reference submission 20/minute, authenticated admin reads 60/minute.
 4. Bounded body/schema/auth/idempotency checks before provider or storage work.
-5. Queue/Analytics Engine/D1/R2/Ollama only after the request passes the earlier layers.
+5. Analytics Engine/D1/R2/provider work only after the request passes the earlier layers.
 
-The source-controlled edge rule is `infra/cloudflare/aifred-api/scripts/configure-edge-rate-limit.mjs`.
+The archived edge-rule helper is `infra/cloudflare/aifred-api/scripts/configure-edge-rate-limit.mjs`.
 The current OAuth token can inventory rulesets but lacks zone WAF edit scope; applying this script
 requires a narrowly scoped token with `Zone WAF:Edit` for `north3rnlight3r.com`.
 
@@ -44,8 +44,8 @@ requires a narrowly scoped token with `Zone WAF:Edit` for `north3rnlight3r.com`.
 - `/api/v1/references`: five-minute public cache plus 15-minute stale window; the structured index is in D1 and does not list KV/R2.
 - Admin, chat, analysis, login/logout, inquiries, and analytics are `no-store`.
 - R2 requests resolve an allowlisted/known key and never list buckets.
-- Each API request writes one Analytics Engine point and queues a sanitized metric. The Queue
-  consumer groups identical dimensions into minute rollups before a D1 batch transaction.
+- Each API request writes one Analytics Engine point and atomically updates a minute D1 rollup.
+- Bounded business activity writes sanitized recent detail plus lifetime/daily D1 aggregates.
 - Analytics clients submit 1–50 events under one idempotent batch request. KV is not an event log.
 
 ## Idle acceptance test

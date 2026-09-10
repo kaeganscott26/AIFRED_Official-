@@ -4,12 +4,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CatalogUrlsTest {
-    private val production = "https://north3rnlight3r.com/api"
+    private val production = "https://north3rnlight3r.com"
 
     @Test
     fun resolvesWebsiteApiPathAgainstProductionBase() {
         assertEquals(
-            "$production/v1/assets/audio/catalog/Test%20Beat.mp3",
+            "$production/api/v1/assets/audio/catalog/Test%20Beat.mp3",
             resolveCatalogAssetUrl(production, "/api/v1/assets/audio/catalog/Test%20Beat.mp3")
         )
     }
@@ -22,7 +22,7 @@ class CatalogUrlsTest {
 
     @Test
     fun handlesRelativeAndProtocolRelativePaths() {
-        assertEquals("$production/v1/catalog.mp3", resolveCatalogAssetUrl("$production/", "api/v1/catalog.mp3"))
+        assertEquals("$production/api/v1/catalog.mp3", resolveCatalogAssetUrl("$production/api/", "api/v1/catalog.mp3"))
         assertEquals("https://cdn.example.test/catalog.mp3", resolveCatalogAssetUrl(production, "//cdn.example.test/catalog.mp3"))
     }
 }

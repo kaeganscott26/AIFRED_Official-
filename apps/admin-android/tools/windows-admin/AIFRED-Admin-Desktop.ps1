@@ -1,14 +1,17 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 $ErrorActionPreference = "Stop"
-$script:BaseUrl = if ($env:AIFRED_API_BASE_URL) { $env:AIFRED_API_BASE_URL.TrimEnd('/') } else { "https://north3rnlight3r.com/api" }
-$script:PublicOrigin = $script:BaseUrl -replace '/api$', ''
+function Normalize-AifredOrigin([string]$Value) {
+    $candidate = if ($Value) { $Value.TrimEnd('/') } else { "https://north3rnlight3r.com" }
+    return $candidate -replace '/(?:api/v1|api|v1)$', ''
+}
+$script:BaseUrl = Normalize-AifredOrigin $env:AIFRED_API_BASE_URL
+$script:PublicOrigin = $script:BaseUrl
 $script:SessionToken = ""
 $script:RepoRoot = if ($env:AIFRED_REPO_ROOT) { $env:AIFRED_REPO_ROOT } else { (Resolve-Path (Join-Path $PSScriptRoot "..\..\..\..")).Path }
 $script:ArchiveTool = Join-Path $script:RepoRoot "tools\aifred-archive.mjs"
 
 function Invoke-AifredApi([string]$Path, [string]$Method = "GET", [object]$Body = $null) {
-    if ($script:BaseUrl.EndsWith('/api') -and $Path.StartsWith('/api/')) { $Path = $Path.Substring(4) }
     $headers = @{ Accept = "application/json" }; if ($script:SessionToken) { $headers.Authorization = "Bearer $script:SessionToken" }
     $parameters = @{ Uri = "$script:BaseUrl$Path"; Method = $Method; Headers = $headers; TimeoutSec = 45 }
     if ($null -ne $Body) { $parameters.ContentType = "application/json"; $parameters.Body = $Body | ConvertTo-Json -Depth 10 }
@@ -23,7 +26,7 @@ function Save-AdminExport([string]$Kind) {
     if (-not $script:SessionToken) { throw "Online admin login is required." }
     $dialog = New-Object System.Windows.Forms.SaveFileDialog
     $dialog.Filter = "JSON files (*.json)|*.json"; $dialog.FileName = "aifred-$Kind-export-$((Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH-mm-ssZ')).json"
-    if ($dialog.ShowDialog() -eq "OK") { Invoke-WebRequest -Uri "$script:BaseUrl/v1/admin/export/$Kind" -Headers @{ Authorization = "Bearer $script:SessionToken" } -OutFile $dialog.FileName -UseBasicParsing; "Saved $($dialog.FileName)" }
+    if ($dialog.ShowDialog() -eq "OK") { Invoke-WebRequest -Uri "$script:BaseUrl/api/v1/admin/export/$Kind" -Headers @{ Authorization = "Bearer $script:SessionToken" } -OutFile $dialog.FileName -UseBasicParsing; "Saved $($dialog.FileName)" }
 }
 function Format-Result($Value) { if ($Value -is [string]) { $Value } else { $Value | ConvertTo-Json -Depth 15 } }
 function Run([scriptblock]$Action) { try { $output.Text = Format-Result (& $Action); $status.Text = "Operation completed at $((Get-Date).ToString('g'))." } catch { $output.Text = "ERROR: $($_.Exception.Message)"; $status.Text = "Operation failed." } }

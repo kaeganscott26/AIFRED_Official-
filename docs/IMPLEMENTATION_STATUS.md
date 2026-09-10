@@ -2,20 +2,20 @@
 
 ## Repository/backend migration supplement
 
-The Official repository now contains the replacement static Pages website, Android and desktop administration clients, `/ops`, and dedicated `aifred-api` Worker. Source ownership follows `Pages -> website assets` and `aifred-api -> /api/*`.
+The Official working tree contains one Pages Advanced Mode website/backend, Android and desktop administration clients, and `/ops`. `apps/website/_worker.js` owns static fallthrough and all backend routes; the abandoned `aifred-api` experiment is not the production architecture.
 
 Current evidence boundaries:
 
 | Capability | Status |
 | --- | --- |
-| Dedicated Worker source and bindings | IMPLEMENTED IN SOURCE |
-| Worker unit/syntax/dry-run checks | VALIDATED LOCALLY: 14 Node tests and production-config dry run passed on 2026-09-10 |
-| Android approved website-source editor | IMPLEMENTED IN SOURCE; device behavior requires build/install validation |
-| Staging Worker | VALIDATED IN STAGING except provider/chat: version `9f0ff56e-b233-40d5-b52e-d4d2bbe75688`; provider gate is blocked by missing Ollama DNS/protected Tunnel |
-| Latest Beta GitHub artifacts in R2 | VALIDATED IN STAGING: installer and ZIP hashes match release `v0.3.6-beta-stable` |
-| Production `/api/*` cutover | NOT YET VERIFIED |
+| Unified Pages website/backend source and bindings | IMPLEMENTED IN SOURCE; current-run preview evidence is recorded separately |
+| Source integrity, module graph, and backend contracts | VALIDATED LOCALLY in the current working tree |
+| Android approved website-source editor | IMPLEMENTED IN SOURCE; build/tests and device behavior are separate evidence |
+| Pages preview | NOT YET VERIFIED in this recovery run |
+| Latest Beta GitHub artifacts in R2 | VALIDATED by exact R2 key, size, and independently computed SHA-256 |
+| Unified production promotion | NOT YET VERIFIED; rollback baseline remains live |
 | Pages source move from Beta to Official | NOT YET VERIFIED |
-| Beta production retirement | NOT STARTED; Beta must remain intact |
+| Beta production retirement | NOT STARTED; Beta remains intact |
 
 The sections below record the earlier DSP/release pass. They do not claim current Cloudflare deployment state.
 

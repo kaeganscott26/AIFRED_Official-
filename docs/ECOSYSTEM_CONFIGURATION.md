@@ -85,7 +85,7 @@ For local Pages development, generate/use an ignored `.env` or `.dev.vars`; neve
 Native Cloudflare Pages Git integration and GitHub repository API access are separate concerns.
 
 - **Pages Git integration** authorizes Cloudflare's GitHub App to build/deploy a selected repository on push. No long-lived Cloudflare API token needs to be placed in GitHub for ordinary Git-triggered deployments.
-- **`GITHUB_TOKEN` in `aifred-api`** authorizes Android Admin to read and update the exact approved website text-file allowlist in `kaeganscott26/AIFRED_Official-`. Keep it as a Cloudflare secret with repository Contents write permission. The Worker requires the loaded blob SHA and does not support arbitrary paths, delete, create, or binary upload.
+- **`GITHUB_TOKEN` in the `aifred-site` runtime** authorizes Android Admin to read and update the exact approved website text-file allowlist in `kaeganscott26/AIFRED_Official-`. Keep it as a Cloudflare secret with repository Contents write permission. The backend requires the loaded blob SHA and does not support arbitrary paths, delete, create, or binary upload.
 
 ## Distribution configuration
 

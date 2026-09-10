@@ -1,16 +1,13 @@
-# AIFRED Pages website
+# AIFRED unified Pages website/backend
 
-This directory is the Cloudflare Pages source for project `aifred-site`. It serves HTML, CSS, JavaScript, public assets, and the static `/ops` shell. It does not implement the production API.
+This directory is the complete Cloudflare Pages Advanced Mode source for project `aifred-site`. `_worker.js` dispatches `/health`, `/v1/*`, `/api/*`, `/api/v1/*`, and `/ws/chat`; every remaining request falls through to `env.ASSETS.fetch(request)`.
 
-The dedicated [`aifred-api` Worker](../../infra/cloudflare/aifred-api/README.md) owns `north3rnlight3r.com/api/*`. Advanced-mode `_worker.js` redirects `www` and rejects API-shaped paths when the dedicated route does not intercept them; all other requests delegate to Pages assets.
+There is no separate production API Worker. The canonical origin is `https://north3rnlight3r.com`, application APIs use `/api/v1`, and OpenAI-compatible provider routes use `/v1`.
 
 ```sh
 npm ci --prefix apps
 npm --prefix apps run website:check
 npm --prefix apps run website:dev
-npm --prefix apps run website:deploy
 ```
 
-Never commit `.dev.vars`; use `.dev.vars.example` for names only. See [API Reference](../../docs/API_REFERENCE.md), [`/ops` Guide](../../docs/OPS_GUIDE.md), and [Cloudflare Production Guide](../../docs/CLOUDFLARE_PRODUCTION.md).
-
-Official is the intended source authority. The production Pages project was still tied to Beta in the pre-migration inventory, so a source commit here does not prove publication.
+Deploy preview branches before production. Never commit `.dev.vars`; use `.dev.vars.example` for names only. See [API Reference](../../docs/API_REFERENCE.md), [`/ops` Guide](../../docs/OPS_GUIDE.md), and [Cloudflare Production Guide](../../docs/CLOUDFLARE_PRODUCTION.md).

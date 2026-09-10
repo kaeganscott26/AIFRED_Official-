@@ -1,9 +1,9 @@
-# AIFRED production API Worker
+# Abandoned split-Worker migration archive
 
-This directory is the source of truth for `aifred-api`. Production is routed only at
-`https://north3rnlight3r.com/api/*`; normal site routes continue to the website deployment.
-The Worker normalizes the `/api` prefix and implements the public `/health` and `/v1/*`
-contract. `workers.dev` and preview URLs are disabled in production configuration.
+This directory preserves useful schema, tests, and bounded-telemetry work from the abandoned
+`aifred-api` experiment. It is not a deployment target or source of production routing truth.
+The supported implementation is the unified Pages Advanced Mode runtime under `apps/website`.
+Do not deploy this Worker or add an `/api/*` route for it.
 
 ## Traffic contract
 
@@ -33,7 +33,7 @@ contract. `workers.dev` and preview URLs are disabled in production configuratio
 | Analytics Engine `aifred_events` | Per-request operational dimensions and latency/counter metrics |
 | Queue `aifred-events` | Async activity ingestion and request-rollup batching |
 
-## Deployment
+## Historical validation only
 
 Local source validation:
 
@@ -45,16 +45,5 @@ npm run check
 The check runs syntax tests, Node contract tests, and a Wrangler dry run. It does not prove remote
 bindings, secret presence, staging health, production routing, or Pages publication.
 
-Authorized environment changes use the inspected scripts below:
-
-```powershell
-npm run db:migrate:remote
-npm run secrets:rotate
-npx wrangler secret bulk .secrets.local.json
-npm run deploy
-```
-
-The rotation script writes generated AIFRED/provider secret values only to ignored local files and
-prints variable names only. It does not create a GitHub credential. Configure `GITHUB_TOKEN`
-separately with minimum Official repository Contents access. Never add `.env`, `.dev.vars`, or
-`.secrets.local.json` to Git. Follow the migration checklist before a production command.
+Do not run this directory's deploy, route, secret, or remote migration commands. Port an approved
+change into `apps/website`, validate the unified preview, and follow the current migration checklist.

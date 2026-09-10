@@ -9,7 +9,7 @@ internal fun resolveCatalogAssetUrl(baseUrl: String, candidate: String): String 
         return value
     }
 
-    val base = baseUrl.trim().trimEnd('/')
+    val base = normalizeWebsiteOrigin(baseUrl)
     if (base.isBlank()) {
         return value
     }
@@ -17,8 +17,6 @@ internal fun resolveCatalogAssetUrl(baseUrl: String, candidate: String): String 
         val scheme = if (base.startsWith("http://", ignoreCase = true)) "http:" else "https:"
         return "$scheme$value"
     }
-    val relative = value.trimStart('/').let {
-        if (base.endsWith("/api") && it.startsWith("api/")) it.removePrefix("api/") else it
-    }
+    val relative = value.trimStart('/')
     return "$base/$relative"
 }

@@ -1,5 +1,5 @@
 const config = window.AIFRED_CONFIG || {};
-const API_BASE = String(config.apiBase || "https://north3rnlight3r.com/api").replace(/\/+$/, "");
+const API_BASE = String(config.origin || config.apiBase || "https://north3rnlight3r.com").replace(/\/+$/, "");
 const CONTACT_EMAIL = String(config.contactEmail || "north3rnlight3rofficial@outlook.com").trim();
 const DEFAULT_ART = "assets/showcase/album-art-02.jpg";
 const CATALOG_ART = ["assets/showcase/album-art-02.jpg", "assets/brand/aifred-mascot.jpg"];
@@ -106,8 +106,7 @@ async function flushActivity() {
 
 function apiUrl(path) {
   const safePath = path.startsWith("/") ? path : `/${path}`;
-  const normalizedPath = API_BASE.endsWith("/api") && safePath.startsWith("/api/") ? safePath.slice(4) : safePath;
-  return `${API_BASE}${normalizedPath}`;
+  return `${API_BASE}${safePath}`;
 }
 
 function localCatalogUrl(fileName = "") {
@@ -261,7 +260,7 @@ async function renderReleaseActions() {
 
   const payload = await getJson("/v1/releases/current?channel=beta", { release: null });
   const release = payload?.release;
-  if (!release?.artifact_published) {
+  if (!release?.published) {
     renderUnlockedDownloads({ releaseNotes });
     setDistributionStatus("The latest free Beta artifact is unavailable while release verification is incomplete.");
     return;
@@ -269,7 +268,6 @@ async function renderReleaseActions() {
   renderUnlockedDownloads({
     setup: release.artifacts?.setup?.download_url || DOWNLOAD_URLS.windowsInstaller,
     zip: release.artifacts?.zip?.download_url || DOWNLOAD_URLS.windowsZip,
-    macos: release.artifacts?.macos?.download_url || DOWNLOAD_URLS.macosZip,
     releaseNotes
   });
   setDistributionStatus(`AIFRED ${release.version} Beta artifacts are available free.`);

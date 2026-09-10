@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "website:check": "node --check website/app.js && node --check website/_worker.js && node --check website/config.js && node --check website/ops.js && node ../tools/generate-admin-command-reference.mjs --check",
+    "website:check": "node ../tools/check-source-integrity.mjs && node ../tools/check-website-modules.mjs && node --test ../tests/website-backend.test.mjs && node ../tools/generate-admin-command-reference.mjs --check && python ../scripts/common/check_repository.py",
     "website:dev": "wrangler pages dev . --cwd website",
     "website:deploy": "wrangler pages deploy . --cwd website --project-name=aifred-site --branch=main"
   },

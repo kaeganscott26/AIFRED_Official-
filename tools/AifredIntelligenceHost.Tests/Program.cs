@@ -24,6 +24,7 @@ sealed class IntelligenceHostContractTests
         await OpenAiCompatibleRouteIsSelectable();
         await MissingProviderIsCleanlyUnavailable();
         PublicSettingsHideSecrets();
+        LegacyWebsiteBasesNormalizeToProviderV1();
         var wrongUnit=Envelope(new JsonObject());wrongUnit["metrics"]![3]!["unit"]="dBFS";
         Expect(ContextContract.Validate(wrongUnit)!=null,"LUFS cannot be relabelled dBFS");
         var wrongBand=Envelope(new JsonObject());wrongBand["bands"]![16]!["centre_hz"]=300.0;
@@ -115,6 +116,35 @@ sealed class IntelligenceHostContractTests
         var json = settings.ToPublicJson().ToJsonString();
         Expect(!json.Contains("do-not-return") && !json.Contains("\"api_key\""),
             "public settings payload must not expose provider secrets");
+    }
+
+    void LegacyWebsiteBasesNormalizeToProviderV1()
+    {
+        foreach (var endpoint in new[]
+                 {
+                     "https://north3rnlight3r.com",
+                     "https://north3rnlight3r.com/api",
+                     "https://north3rnlight3r.com/api/v1",
+                     "https://north3rnlight3r.com/v1"
+                 })
+        {
+            var settings = HostSettings.FromJson(new JsonObject
+            {
+                ["provider"] = "openai-compatible",
+                ["endpoint"] = endpoint,
+                ["model"] = "aifred:latest"
+            });
+            Expect(settings.Endpoint == "https://north3rnlight3r.com/v1",
+                $"legacy website base {endpoint} must normalize to the provider v1 route");
+        }
+        var external = HostSettings.FromJson(new JsonObject
+        {
+            ["provider"] = "openai-compatible",
+            ["endpoint"] = "https://provider.invalid/custom/v1",
+            ["model"] = "mix-model"
+        });
+        Expect(external.Endpoint == "https://provider.invalid/custom/v1",
+            "non-AIFRED compatible providers must keep their configured endpoint");
     }
 
     void Expect(bool condition, string message)

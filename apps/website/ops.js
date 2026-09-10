@@ -69,7 +69,16 @@
   function note(message, error = false) { const element = $("#notice"); element.hidden = false; element.textContent = message; element.classList.toggle("error", error); }
   function busy(active, label) { $("#refresh").disabled = active; $("#connection").textContent = label || (auth() ? "Production connected" : "Signed out"); }
   function signOut() { sessionStorage.removeItem(key); $("#console").hidden = true; $("#login").hidden = false; $("#refresh").hidden = true; $("#logout").hidden = true; $("#connection").classList.remove("online"); $("#connection").textContent = "Signed out"; }
+  async function logout() {
+    try {
+      if (auth()) await request("/api/v1/admin/logout", { method: "POST" });
+    } catch (_) {
+      // Local sign-out still clears the browser token if the network is unavailable.
+    } finally {
+      signOut();
+    }
+  }
   function signedIn() { $("#login").hidden = true; $("#console").hidden = false; $("#refresh").hidden = false; $("#logout").hidden = false; $("#connection").classList.add("online"); if (!$("#tabs").children.length) names.forEach((name, index) => { const id = name.toLowerCase().replaceAll(" ", "-"), button = document.createElement("button"); button.textContent = name; button.classList.toggle("active", index === 0); button.onclick = () => { document.querySelectorAll(".tab-panel").forEach((panel) => { panel.hidden = panel.id !== id; }); document.querySelectorAll("#tabs button").forEach((item) => item.classList.toggle("active", item === button)); }; $("#tabs").append(button); }); refresh(); }
   $("#login-form").addEventListener("submit", async (event) => { event.preventDefault(); $("#login-error").textContent = ""; try { const r = await fetch("/api/v1/admin/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: $("#username").value, password: $("#password").value }) }), body = await r.json(); if (!r.ok) throw new Error(body.error || "Sign-in failed"); sessionStorage.setItem(key, body.session_token); $("#password").value = ""; signedIn(); } catch (error) { $("#login-error").textContent = error.message; } });
-  $("#refresh").addEventListener("click", refresh); $("#logout").addEventListener("click", signOut); if (auth()) signedIn();
+  $("#refresh").addEventListener("click", refresh); $("#logout").addEventListener("click", logout); if (auth()) signedIn();
 })();

@@ -13,14 +13,13 @@ The plugin exposes four validated DSP profiles: MIX BALANCED, SPECTRUM SURGICAL,
 
 ## Repository and backend migration
 
-Official contains the replacement website, Android Admin, desktop Admin, `/ops`, and dedicated Cloudflare API Worker. The target production topology is:
+Official contains the unified website/backend, Android Admin, desktop Admin, and `/ops`. The target production topology is:
 
 ```text
-north3rnlight3r.com/*      -> Cloudflare Pages website
-north3rnlight3r.com/api/*  -> aifred-api Worker
+north3rnlight3r.com/* -> Cloudflare Pages Advanced Mode -> backend routes or static assets
 ```
 
-The Worker remains a migration candidate until an authorized production cutover and smoke test prove the live route. The public Beta repository still carries the production fallback and must remain intact. See the [backend map](backend_map.md), [website map](website_map.md), [Cloudflare production guide](docs/CLOUDFLARE_PRODUCTION.md), and [migration checklist](docs/CLOUDFLARE_MIGRATION_CHECKLIST.md).
+The single Pages deployment remains a migration candidate until preview and production validation prove it. No second Worker may intercept `/api/*`. The public Beta repository remains intact as the current production-source fallback. See the [backend map](backend_map.md), [website map](website_map.md), [Cloudflare production guide](docs/CLOUDFLARE_PRODUCTION.md), and [migration checklist](docs/CLOUDFLARE_MIGRATION_CHECKLIST.md).
 
 ## Install dependencies and manage the plugin
 

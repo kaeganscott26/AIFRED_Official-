@@ -27,11 +27,11 @@ android {
 
         val configuredBaseUrl = (project.findProperty("AIFRED_BASE_URL") as String?)
             ?.trim()
-            ?.ifEmpty { "https://north3rnlight3r.com/api" }
+            ?.ifEmpty { "https://north3rnlight3r.com" }
             ?: localProps.getProperty("aifredBaseUrl")
                 ?.trim()
-                ?.ifEmpty { "https://north3rnlight3r.com/api" }
-            ?: "https://north3rnlight3r.com/api"
+                ?.ifEmpty { "https://north3rnlight3r.com" }
+            ?: "https://north3rnlight3r.com"
 
         val configuredToken = (project.findProperty("AIFRED_API_TOKEN") as String?)
             ?.trim()

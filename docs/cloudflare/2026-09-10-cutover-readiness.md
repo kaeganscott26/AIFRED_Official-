@@ -1,5 +1,7 @@
 # 2026-09-10 production cutover readiness
 
+> Superseded historical record: this file describes the abandoned split-Worker plan. Do not use it as current deployment instruction. Current authority is [Cloudflare production](../CLOUDFLARE_PRODUCTION.md) and the [live recovery baseline](2026-09-10-live-recovery-baseline.md).
+
 This record separates completed staging work from the blocked production cutover. It contains identifiers and secret names only, never secret values.
 
 ## Source and rollback baseline

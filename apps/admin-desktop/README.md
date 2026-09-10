@@ -4,7 +4,7 @@ Desktop Admin combines the authenticated production `/ops` control surface with 
 
 Windows uses `apps/admin-android/tools/windows-admin/AIFRED-Admin-Desktop.ps1`. macOS source is in `macos/`; build locally with `./apps/admin-desktop/macos/build.sh`. Generated application bundles stay under the ignored `apps/admin-desktop/build/` directory.
 
-Set `AIFRED_REPO_ROOT` when launching an installed desktop client from outside the repository. `AIFRED_API_BASE_URL` may select a development API; production defaults to `https://north3rnlight3r.com/api`.
+Set `AIFRED_REPO_ROOT` when launching an installed desktop client from outside the repository. `AIFRED_API_BASE_URL` may select a development origin; production defaults to `https://north3rnlight3r.com`. Stored legacy forms ending in `/api`, `/api/v1`, or `/v1` are normalized for compatibility.
 
 Both clients delegate archive operations to `node tools/aifred-archive.mjs`. Search and restore are bounded to 100 records and 1 MiB by default. Permanent archive pruning is deliberately not automated.
 
