@@ -16,6 +16,9 @@ contract. `workers.dev` and preview URLs are disabled in production configuratio
   request metrics into minute rollups before D1 writes.
 - Admin data is never cached. Dashboard data loads on demand; provider checks are a separate,
   authenticated route and never run as part of health/dashboard refresh.
+- Android Admin website edits use `/api/v1/admin/source/*`. The Worker exposes an exact text-file
+  allowlist, validates drafts, requires the loaded Git blob SHA, and commits through a server-side
+  `GITHUB_TOKEN`. It cannot delete/create files, traverse directories, or accept binary uploads.
 - R2 access resolves known keys. No request lists a bucket.
 
 ## Storage responsibilities
@@ -32,14 +35,26 @@ contract. `workers.dev` and preview URLs are disabled in production configuratio
 
 ## Deployment
 
+Local source validation:
+
 ```powershell
 npm ci
 npm run check
+```
+
+The check runs syntax tests, Node contract tests, and a Wrangler dry run. It does not prove remote
+bindings, secret presence, staging health, production routing, or Pages publication.
+
+Authorized environment changes use the inspected scripts below:
+
+```powershell
 npm run db:migrate:remote
 npm run secrets:rotate
 npx wrangler secret bulk .secrets.local.json
 npm run deploy
 ```
 
-The rotation script writes secret values only to ignored local files and prints variable names
-only. Never add `.env`, `.dev.vars`, or `.secrets.local.json` to Git.
+The rotation script writes generated AIFRED/provider secret values only to ignored local files and
+prints variable names only. It does not create a GitHub credential. Configure `GITHUB_TOKEN`
+separately with minimum Official repository Contents access. Never add `.env`, `.dev.vars`, or
+`.secrets.local.json` to Git. Follow the migration checklist before a production command.

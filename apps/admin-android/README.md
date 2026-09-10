@@ -2,7 +2,7 @@
 
 The AIFRED Android admin app is owner-only operational software for the North3rnLight3r website/backend and catalog.
 
-The production API authority is `https://www.north3rnlight3r.com`. The app constructs canonical AI routes as `/v1/*` and existing administration routes as `/api/v1/admin/*` from the single `BuildConfig.AIFRED_BASE_URL`. Override it only for development with Gradle property `AIFRED_BASE_URL` or untracked `local.properties` key `aifredBaseUrl`.
+The production API candidate is `https://north3rnlight3r.com/api`. The app builds `/v1/*` and `/v1/admin/*` routes from the single `BuildConfig.AIFRED_BASE_URL`. Override it only for development with Gradle property `AIFRED_BASE_URL` or untracked `local.properties` key `aifredBaseUrl`.
 
 The Commands screen exposes authenticated live analytics, downloads, inquiries, logs, references, API/deployment status, **Export Site Data**, and **Export Track Analysis**. Exports are fetched off the UI thread from `/api/v1/admin/export/site` or `/api/v1/admin/export/tracks`, written to the app-private `files/exports` directory, and reported with their exact filename/location.
 
@@ -20,14 +20,14 @@ apps/admin-android/
 - Website/backend chat and model selection.
 - Catalog audio and metadata uploads.
 - Licensed reference uploads.
-- Website/repository file operations through approved backend routes.
+- Approved Official website text reads, validation, and optimistic source commits through authenticated backend routes.
 - Registered backend commands plus a separate local-only registry of non-root Linux/Termux/Android diagnostics.
 - Historical sales, inquiries, activity, downloads, and upload visibility.
 - Free catalog-distribution metadata; commercial licensing remains inquiry-based.
 
 ## Current Technical State
 
-- Backend: `https://www.north3rnlight3r.com`
+- Backend candidate: `https://north3rnlight3r.com/api`; production cutover is not yet verified
 - App version: `2.3.0`
 - Version code: `243` (kept above 241 so Android accepts it as an upgrade)
 - `compileSdk = 35`
@@ -75,7 +75,9 @@ The exact generated inventory is [Administrator Command Reference](../../docs/AD
 
 Catalog playback resolves the website API's relative `/api/v1/assets/audio/catalog/...` paths against `AIFRED_BASE_URL` before passing them to Android `MediaPlayer`. This keeps mobile playback on the same controlled R2-backed streaming routes as the website.
 
-The Chat tab includes an API Configuration module with Website, Local Ollama, and OpenAI profiles. Operators can edit the endpoint and model, enter an API key when required, test discovery, and apply the profile without rebuilding the APK. Authenticated **Save Website Route** and **Test Website Route** controls provide the same Cloudflare runtime-routing capability as `/ops`; provider secrets remain Cloudflare-managed. The selected phone profile is stored in app-private storage with Android backup disabled, and API keys are never written to the repository.
+The Chat tab includes an API Configuration module with Website, Local Ollama, and OpenAI profiles. Operators can edit the endpoint and model, enter an API key when required, test discovery, and apply the profile without rebuilding the APK. The selected phone profile is stored in app-private storage with Android backup disabled, and API keys are never written to the repository.
+
+The Command tab restores phone-based website management through the dedicated Worker. The UI exposes eight approved text files under `apps/website`, requires a fresh Git blob SHA before each commit, and offers load, validate, commit, and source-status actions. The Worker uses a server-side `GITHUB_TOKEN` scoped to Official contents. It rejects arbitrary paths, delete/create operations, and binary uploads. A commit response does not prove Pages deployed it.
 
 Android cleartext transport is enabled because local Ollama commonly uses HTTP, but the app rejects public cleartext endpoints and accepts HTTP only for loopback/private-network hosts. `127.0.0.1` means the phone itself unless an ADB reverse mapping is active; otherwise use the workstation's reachable private LAN address. Cloudflare Pages cannot use a private/loopback URL and requires an authenticated, publicly reachable HTTPS tunnel or service endpoint.
 

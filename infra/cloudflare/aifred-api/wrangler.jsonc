@@ -25,6 +25,9 @@
   "vars": {
     "AIFRED_PUBLIC_ORIGIN": "https://north3rnlight3r.com",
     "AIFRED_API_BASE_URL": "https://north3rnlight3r.com/api",
+    "AIFRED_GITHUB_REPO": "kaeganscott26/AIFRED_Official-",
+    "AIFRED_GITHUB_BRANCH": "main",
+    "AIFRED_PAGES_PROJECT": "aifred-site",
     "AIFRED_ADMIN_USERNAME": "North3rnLight3r",
     "AIFRED_CHAT_PROVIDER": "ollama",
     "OLLAMA_BASE_URL": "https://ollama.north3rnlight3r.com",
@@ -127,6 +130,9 @@
       "vars": {
         "AIFRED_PUBLIC_ORIGIN": "https://north3rnlight3r.com",
         "AIFRED_API_BASE_URL": "https://north3rnlight3r.com/api",
+        "AIFRED_GITHUB_REPO": "kaeganscott26/AIFRED_Official-",
+        "AIFRED_GITHUB_BRANCH": "main",
+        "AIFRED_PAGES_PROJECT": "aifred-site",
         "AIFRED_ADMIN_USERNAME": "North3rnLight3r",
         "AIFRED_CHAT_PROVIDER": "ollama",
         "OLLAMA_BASE_URL": "https://ollama.north3rnlight3r.com",

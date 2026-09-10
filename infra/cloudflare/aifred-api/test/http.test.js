@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { corsHeaders, readJson, sha256Hex } from "../src/http.js";
-import { routeRequest } from "../src/handlers.js";
+import { requestedReleaseChannel, routeRequest } from "../src/handlers.js";
 
 test("public health is lightweight and does not require bindings", async () => {
   const request = new Request("https://north3rnlight3r.com/api/health");
@@ -24,4 +24,13 @@ test("CORS only reflects approved origins", () => {
 
 test("SHA-256 helper returns a lowercase verifier", async () => {
   assert.match(await sha256Hex("test"), /^[a-f0-9]{64}$/);
+});
+
+test("release channel selection is explicit and bounded", () => {
+  assert.equal(requestedReleaseChannel(new Request("https://example.test/api/v1/releases/current?channel=beta")), "beta");
+  assert.equal(requestedReleaseChannel(new Request("https://example.test/api/v1/downloads/plugin"), "beta"), "beta");
+  assert.throws(
+    () => requestedReleaseChannel(new Request("https://example.test/api/v1/releases/current?channel=private")),
+    /beta or flagship/
+  );
 });

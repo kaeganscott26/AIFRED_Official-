@@ -12,6 +12,7 @@ base is `https://north3rnlight3r.com/api`; `workers.dev` is not a client endpoin
 | Official VST chat | User action only | Adds stable client/channel/version/purpose headers and an idempotency key; no automatic retries |
 | Android Admin dashboard | Full production dashboard every eight seconds while signed in | Changed to immediate foreground load plus 60-second foreground-only refresh; hidden activities make no requests; manual refresh remains |
 | Android Admin chat | Opened a WebSocket and sent `Session start` during screen startup | Removed; model catalog loads once and chat is HTTP only after Send; concurrent Send actions are suppressed |
+| Android website source | Unsafe broad file routes were available | Load, validate, commit, and status are explicit user actions against eight approved Official text files; no polling |
 | Web Ops | Initial load and manual Refresh | Retained; no interval or hidden-tab polling exists |
 | Windows/macOS Desktop Admin | Button-driven calls or embedded Web Ops | Retained; no timer or background refresh exists |
 | Website public data | Same-origin discrete requests | Public model/release/reference reads are edge-cached; public analytics must use bounded batches |
@@ -57,5 +58,6 @@ Use `/api/v1/admin/analytics` and Worker Logs to verify:
 - Android Admin: at most one dashboard request per visible minute and none while hidden;
 - Web/Desktop Ops: no periodic traffic unless a deliberate refresh is enabled later;
 - no provider calls or Ollama generation while idle;
+- no GitHub/source-control calls without an explicit Android Admin action;
 - unexpected routes/clients are identifiable by hashed client key, route, purpose, status,
   rate-limit outcome, and cache status.

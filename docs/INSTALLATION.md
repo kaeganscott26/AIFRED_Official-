@@ -1,6 +1,10 @@
 # Installation
 
-## Update current development install
+## Dependencies
+
+Install the Windows build dependencies before using the lifecycle command: Visual Studio 2022 Desktop development with C++ and a Windows SDK, CMake, Ninja, PowerShell 7, Python 3, the .NET 10 SDK/runtime, and Git. See the [user guide](USER_GUIDE.md) for verification commands. Node.js and Android tooling are control-plane development dependencies, not plugin runtime requirements.
+
+## First install or update
 
 Close every DAW that may hold the VST3 open. In an elevated PowerShell 7 prompt run:
 
@@ -9,6 +13,8 @@ pwsh -NoProfile -File scripts/windows/lifecycle.ps1 -Action update
 ```
 
 The command runs build, tests, release staging, manifest/hash verification, promotion, VST3 installation, Intelligence Host installation, startup registration, host restart, and copied-file hash verification. Reload or rescan in the DAW afterward.
+
+To build without installing, use `scripts/windows/build.ps1`; [Build](BUILD.md) documents each action.
 
 ## Official ownership
 

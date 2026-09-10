@@ -259,11 +259,11 @@ async function renderReleaseActions() {
     return;
   }
 
-  const payload = await getJson("/v1/releases/current", { release: null });
+  const payload = await getJson("/v1/releases/current?channel=beta", { release: null });
   const release = payload?.release;
   if (!release?.artifact_published) {
     renderUnlockedDownloads({ releaseNotes });
-    setDistributionStatus("AIFRED 4.0 release artifacts are not published until automated validation and hash verification pass.");
+    setDistributionStatus("The latest free Beta artifact is unavailable while release verification is incomplete.");
     return;
   }
   renderUnlockedDownloads({
@@ -272,7 +272,7 @@ async function renderReleaseActions() {
     macos: release.artifacts?.macos?.download_url || DOWNLOAD_URLS.macosZip,
     releaseNotes
   });
-  setDistributionStatus(`AIFRED ${release.version} flagship artifacts are available.`);
+  setDistributionStatus(`AIFRED ${release.version} Beta artifacts are available free.`);
 }
 
 function clamp(value, min, max) {
@@ -553,3 +553,7 @@ void recordActivity("website.page.view", {
   subject: { type: "page", id: window.location.pathname, name: document.title || "AIFRED" },
   operation: { action: "view", status: "success", result: "page_loaded" }
 });
+
+if (new URLSearchParams(window.location.search).has("aifredDebug")) {
+  console.info("AIFRED website configuration loaded.");
+}

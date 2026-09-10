@@ -2,6 +2,7 @@ import { adminIdentity, apiIdentity, bearer, createAdminSession, enforceRateLimi
 import { HttpError, MAX_BODY, bounded, clientMetadata, json, publicCachedJson, readJson, sha256Hex } from "./http.js";
 import { classifyClient, enqueueActivity } from "./telemetry.js";
 import { invokeChatProvider, providerConfiguration, testOllamaProvider } from "./providers.js";
+import { EDITABLE_WEBSITE_FILES, readApprovedSourceFile, saveApprovedSourceFile, sourceControlStatus, validateSourceDraft } from "./source-control.js";
 
 const RELEASE_CACHE_SECONDS = 900;
 const MODEL_CACHE_SECONDS = 900;
@@ -61,6 +62,14 @@ function publicRelease(row) {
 function pathAfterApi(pathname) {
   if (pathname === "/api") return "/";
   return pathname.startsWith("/api/") ? pathname.slice(4) : pathname;
+}
+
+export function requestedReleaseChannel(request, fallback = "flagship") {
+  const value = bounded(new URL(request.url).searchParams.get("channel") || fallback, 20).toLowerCase();
+  if (value !== "beta" && value !== "flagship") {
+    throw new HttpError(400, "invalid_release_channel", "release channel must be beta or flagship");
+  }
+  return value;
 }
 
 function requireMethod(request, ...methods) {
@@ -205,9 +214,10 @@ async function models(request, env, ctx) {
 async function releases(request, env, ctx, currentOnly) {
   requireMethod(request, "GET", "HEAD");
   return publicCachedJson(request, ctx, async () => {
+    const channel = requestedReleaseChannel(request);
     const result = currentOnly
-      ? await env.AIFRED_OPS.prepare("SELECT channel, version, tag, url, published_at, updated_at, metadata_json FROM releases WHERE channel = 'flagship'").first()
-      : await env.AIFRED_OPS.prepare("SELECT channel, version, tag, url, published_at, updated_at, metadata_json FROM releases WHERE channel = 'flagship' ORDER BY channel").all();
+      ? await env.AIFRED_OPS.prepare("SELECT channel, version, tag, url, published_at, updated_at, metadata_json FROM releases WHERE channel = ?").bind(channel).first()
+      : await env.AIFRED_OPS.prepare("SELECT channel, version, tag, url, published_at, updated_at, metadata_json FROM releases ORDER BY channel").all();
     return currentOnly
       ? { ok: true, release: publicRelease(result) }
       : { ok: true, releases: (result.results || []).map(publicRelease) };
@@ -259,6 +269,21 @@ async function references(request, env, ctx) {
         classification_json = excluded.classification_json,
         active = 1
     `).bind(id, name, record.version, record.created_at, JSON.stringify(record.metrics), JSON.stringify(record.classification)).run();
+    trace.d1Writes += 1;
+    trace.queueEvents += 1;
+    ctx.waitUntil(enqueueActivity(env, {
+      id: crypto.randomUUID(),
+      created_at: record.created_at,
+      event_type: "reference.upload.accepted",
+      request_id: trace.requestId,
+      product: trace.product,
+      channel: trace.channel,
+      version: trace.version,
+      route: "/v1/references",
+      method: "POST",
+      status: 201,
+      metadata: { reference_id: id, name, version: record.version }
+    }));
     await idempotency.complete();
     return json({ ok: true, id, contract_version: "aifred.references.v1", rate_limit: outcome }, { status: 201 });
   } catch (error) {
@@ -449,8 +474,15 @@ async function adminLogout(request, env, trace) {
 }
 
 async function adminData(request, env, path, trace) {
+  const postPaths = new Set([
+    "/v1/admin/provider/test",
+    "/v1/admin/providers/ollama/test",
+    "/v1/admin/source/read",
+    "/v1/admin/source/validate",
+    "/v1/admin/source/save"
+  ]);
   const providerTestPath = path === "/v1/admin/provider/test" || path === "/v1/admin/providers/ollama/test";
-  if (providerTestPath) requireMethod(request, "POST");
+  if (postPaths.has(path)) requireMethod(request, "POST");
   else requireMethod(request, "GET", "HEAD");
   const identity = trace.adminIdentity || await adminIdentity(request, env);
   trace.adminIdentity = identity;
@@ -485,7 +517,7 @@ async function adminData(request, env, path, trace) {
     return json({ ok: true, inquiries: result.results || [], count: result.results?.length || 0 });
   }
   if (path === "/v1/admin/releases") {
-    const result = await env.AIFRED_OPS.prepare("SELECT channel, version, tag, url, published_at, updated_at, metadata_json FROM releases WHERE channel = 'flagship' ORDER BY channel").all();
+    const result = await env.AIFRED_OPS.prepare("SELECT channel, version, tag, url, published_at, updated_at, metadata_json FROM releases ORDER BY channel").all();
     return json({ ok: true, releases: (result.results || []).map(publicRelease) });
   }
   if (path === "/v1/admin/reference/list") {
@@ -549,6 +581,43 @@ async function adminData(request, env, path, trace) {
     trace.provider = "ollama";
     return json(result, { status: result.ok ? 200 : 502 });
   }
+  if (path === "/v1/admin/source/files") {
+    return json({ ok: true, files: EDITABLE_WEBSITE_FILES, ...sourceControlStatus(env) });
+  }
+  if (path === "/v1/admin/source/status") {
+    return json({ ok: true, ...sourceControlStatus(env) });
+  }
+  if (path === "/v1/admin/source/read") {
+    const body = await readJson(request, MAX_BODY.source);
+    return json(await readApprovedSourceFile(env, body.path));
+  }
+  if (path === "/v1/admin/source/validate") {
+    const body = await readJson(request, MAX_BODY.source);
+    return json(validateSourceDraft(body.path, body.content));
+  }
+  if (path === "/v1/admin/source/save") {
+    const body = await readJson(request, MAX_BODY.source);
+    const idempotency = await useIdempotency(request, env, path, identity.clientKey, 60);
+    try {
+      const result = await saveApprovedSourceFile(env, body);
+      await enqueueActivity(env, {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        event_type: "admin.website_source.committed",
+        request_id: trace.requestId,
+        route: path,
+        method: "POST",
+        status: 200,
+        metadata: { path: result.path, commit_sha: result.commit_sha, repository: result.repository, branch: result.branch }
+      });
+      trace.queueEvents += 1;
+      await idempotency.complete();
+      return json(result);
+    } catch (error) {
+      await idempotency.abandon();
+      throw error;
+    }
+  }
   if (path === "/v1/admin/export/site") {
     const payload = {
       schema: "aifred.admin-export.site.v1",
@@ -609,23 +678,41 @@ async function r2Object(request, bucket, key, downloadName, trace, immutable = t
   return new Response(request.method === "HEAD" ? null : object.body, { status: range ? 206 : 200, headers });
 }
 
-async function download(request, env, trace) {
+async function download(request, env, ctx, trace) {
   requireMethod(request, "GET", "HEAD");
+  const channel = requestedReleaseChannel(request, "beta");
   const asset = new URL(request.url).searchParams.get("asset") || "setup";
   const names = { setup: "AIFRED-VST3-Setup.exe", zip: "AIFRED-VST3-windows.zip", macos: "AIFRED-VST3-macos.zip" };
   if (!names[asset]) throw new HttpError(400, "invalid_asset", "unsupported release asset");
-  const release = await env.AIFRED_OPS.prepare("SELECT version, tag, metadata_json FROM releases WHERE channel = 'flagship'").first();
-  if (!release?.tag) throw new HttpError(404, "release_unavailable", "AIFRED 4 release is not published");
+  const release = await env.AIFRED_OPS.prepare("SELECT version, tag, metadata_json FROM releases WHERE channel = ?").bind(channel).first();
+  if (!release?.tag) throw new HttpError(404, "release_unavailable", `${channel} release is not published`);
   const metadata = parseMetadata(release.metadata_json);
   const artifact = metadata.artifacts?.[asset];
   if (metadata.status !== "published" || metadata.artifact_published !== true || !artifact?.key) {
-    throw new HttpError(404, "release_unavailable", "AIFRED 4 release artifact is not published");
+    throw new HttpError(404, "release_unavailable", `${channel} release artifact is not published`);
   }
   const key = String(artifact.key);
-  if (!/^releases\/flagship\/[A-Za-z0-9._-]+\/[A-Za-z0-9._\/-]+$/.test(key) || key.includes("..")) {
+  if (!new RegExp(`^releases/${channel}/[A-Za-z0-9._-]+/[A-Za-z0-9._/-]+$`).test(key) || key.includes("..")) {
     throw new HttpError(500, "invalid_release_metadata", "release artifact metadata is invalid");
   }
-  return r2Object(request, env.AIFRED_DOWNLOADS, key, bounded(artifact.name, 180) || names[asset], trace, false);
+  const response = await r2Object(request, env.AIFRED_DOWNLOADS, key, bounded(artifact.name, 180) || names[asset], trace, false);
+  if (request.method === "GET") {
+    trace.queueEvents += 1;
+    ctx.waitUntil(enqueueActivity(env, {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      event_type: "plugin.download.served",
+      request_id: trace.requestId,
+      product: "aifred",
+      channel,
+      version: release.version,
+      route: "/v1/downloads/plugin",
+      method: "GET",
+      status: response.status,
+      metadata: { asset, tag: release.tag, key }
+    }));
+  }
+  return response;
 }
 
 async function asset(request, env, path, trace) {
@@ -649,7 +736,7 @@ export async function routeRequest(request, env, ctx, trace) {
   if (path === "/v1/analysis" || path === "/v1/analysis/submit" || path === "/v1/analyzer/submit") return analysis(request, env, trace);
   if (path === "/v1/analytics/events" || path === "/v1/activity/record") return analytics(request, env, trace);
   if (path === "/v1/inquiries" || path === "/v1/inquiries/submit") return inquiry(request, env, trace);
-  if (path === "/v1/downloads/plugin") return download(request, env, trace);
+  if (path === "/v1/downloads/plugin") return download(request, env, ctx, trace);
   if (path.startsWith("/v1/assets/")) return asset(request, env, path, trace);
   if (path === "/v1/admin/login") return adminLogin(request, env, trace);
   if (path === "/v1/admin/logout") return adminLogout(request, env, trace);

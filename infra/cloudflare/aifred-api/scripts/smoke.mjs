@@ -34,10 +34,22 @@ for (const [name, path] of [
   ["health", "/api/health"],
   ["models", "/api/v1/models"],
   ["references", "/api/v1/references"],
-  ["release-current", "/api/v1/releases/current"]
+  ["release-flagship", "/api/v1/releases/current?channel=flagship"],
+  ["release-beta", "/api/v1/releases/current?channel=beta"]
 ]) {
   const { response, payload } = await jsonRequest(path);
   record(name, response, { schema_ok: Boolean(payload && (payload.ok === true || payload.object === "list")) });
+}
+for (const [name, path] of [
+  ["download-beta-setup", "/api/v1/downloads/plugin?channel=beta&asset=setup"],
+  ["download-beta-zip", "/api/v1/downloads/plugin?channel=beta&asset=zip"]
+]) {
+  const response = await fetch(`${base}${path}`, { method: "HEAD" });
+  record(name, response, {
+    attachment: response.headers.get("content-disposition") || "",
+    content_type: response.headers.get("content-type") || ""
+  });
+  await response.body?.cancel();
 }
 const referenceSecond = await fetch(`${base}/api/v1/references`);
 record("references-cache", referenceSecond, { cache: referenceSecond.headers.get("x-aifred-cache") || "" });
@@ -57,6 +69,8 @@ for (const [name, path] of [
   ["admin-analytics", "/api/v1/admin/analytics"],
   ["admin-providers", "/api/v1/admin/providers"],
   ["admin-ollama", "/api/v1/admin/providers/ollama"],
+  ["admin-source-files", "/api/v1/admin/source/files"],
+  ["admin-source-status", "/api/v1/admin/source/status"],
   ["admin-dashboard", "/api/v1/admin/dashboard/state"],
   ["admin-site-export", "/api/v1/admin/export/site"],
   ["admin-track-export", "/api/v1/admin/export/tracks"]

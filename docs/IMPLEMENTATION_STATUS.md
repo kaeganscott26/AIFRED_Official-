@@ -1,5 +1,24 @@
 # Implementation status
 
+## Repository/backend migration supplement
+
+The Official repository now contains the replacement static Pages website, Android and desktop administration clients, `/ops`, and dedicated `aifred-api` Worker. Source ownership follows `Pages -> website assets` and `aifred-api -> /api/*`.
+
+Current evidence boundaries:
+
+| Capability | Status |
+| --- | --- |
+| Dedicated Worker source and bindings | IMPLEMENTED IN SOURCE |
+| Worker unit/syntax/dry-run checks | VALIDATED LOCALLY: 14 Node tests and production-config dry run passed on 2026-09-10 |
+| Android approved website-source editor | IMPLEMENTED IN SOURCE; device behavior requires build/install validation |
+| Staging Worker | VALIDATED IN STAGING except provider/chat: version `9f0ff56e-b233-40d5-b52e-d4d2bbe75688`; provider gate is blocked by missing Ollama DNS/protected Tunnel |
+| Latest Beta GitHub artifacts in R2 | VALIDATED IN STAGING: installer and ZIP hashes match release `v0.3.6-beta-stable` |
+| Production `/api/*` cutover | NOT YET VERIFIED |
+| Pages source move from Beta to Official | NOT YET VERIFIED |
+| Beta production retirement | NOT STARTED; Beta must remain intact |
+
+The sections below record the earlier DSP/release pass. They do not claim current Cloudflare deployment state.
+
 ## Task identity
 
 - Starting Official HEAD: `2fd2577ffe0e075b301992465643c0e9bf42923f`
@@ -68,11 +87,13 @@ See [Testing](TESTING.md). FL Studio, proprietary meter comparisons, the full EB
 
 ## Next architecture gate
 
-INTELLIGENCE LAYER
+Complete and stabilize the backend/site ownership migration. The intelligence layer follows that gate; Babylon remains later.
 
 ## Related
 
 - [Documentation Hub](README.md)
+- [Repository Map](REPOSITORY_MAP.md)
+- [Cloudflare Migration Checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md)
 - [Architecture](ARCHITECTURE.md)
 - [DSP Configuration](DSP_CONFIGURATION.md)
 - [Testing](TESTING.md)

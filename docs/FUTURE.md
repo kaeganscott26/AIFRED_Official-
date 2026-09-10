@@ -1,6 +1,10 @@
 # Future architecture
 
-## Next gate: intelligence layer
+## Next gate: production ownership migration
+
+Complete the staged `/api/*` Worker cutover, move Pages source authority to Official, validate all administration clients, and retain a working Beta rollback before starting the intelligence layer. See the [migration checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md).
+
+## Later gate: intelligence layer
 
 The next project begins after the current machine is accepted:
 
@@ -15,7 +19,7 @@ DAW audio
   -> IntelligenceCore
 ```
 
-The intelligence layer is now structurally scaffolded under [`../intelligence/`](../intelligence/). The scaffold is documentation/ownership only; dotted/future runtime nodes remain unimplemented until their phase begins.
+The repository does not contain an active intelligence scaffold or runtime. The architecture below remains a future contract until the migration gate passes.
 
 Permanent rules:
 - intelligence consumes the deterministic `FilteredMixContext` boundary and cannot redefine measurements;
@@ -31,8 +35,6 @@ Permanent rules:
 2. **Session context and ten-session memory** — track meaningful session events, comparison anchors, previous advice/decisions, and retain only the current session plus the previous nine summaries.
 3. **Read-only DAW/session awareness** — normalize whatever project/track/mixer/route/plugin/transport metadata the host can legitimately expose; unavailable capability remains explicit.
 4. **Autonomous intelligence maintenance** — freshness checks, compaction, deduplication, ten-session rotation/eviction, context retrieval/budgeting and integrity repair. This phase manages AIFRED's understanding, not the mix.
-
-See [`../intelligence/PHASES.md`](../intelligence/PHASES.md) for scope and completion gates.
 
 ## Memory boundary
 
@@ -54,5 +56,4 @@ Babylon remains the final project phase. The present `MetricDetail` and spectrum
 - [AIFRED Filter](AIFRED_FILTER.md)
 - [DSP Configuration](DSP_CONFIGURATION.md)
 - [Implementation Status](IMPLEMENTATION_STATUS.md)
-- [Intelligence map](../intelligence/README.md)
-- [Intelligence phases](../intelligence/PHASES.md)
+- [Cloudflare migration checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md)

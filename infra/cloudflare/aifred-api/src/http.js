@@ -6,7 +6,8 @@ export const MAX_BODY = Object.freeze({
   chat: 192 * 1024,
   inquiry: 16 * 1024,
   login: 4 * 1024,
-  reference: 256 * 1024
+  reference: 256 * 1024,
+  source: 384 * 1024
 });
 
 export class HttpError extends Error {
@@ -101,7 +102,7 @@ export async function etagFor(value) {
 
 export async function publicCachedJson(request, ctx, payload, maxAge, staleWhileRevalidate = 300) {
   const url = new URL(request.url);
-  const cacheKey = new Request(`${url.origin}${url.pathname}`, { method: "GET" });
+  const cacheKey = new Request(`${url.origin}${url.pathname}${url.search}`, { method: "GET" });
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
   if (cached) {

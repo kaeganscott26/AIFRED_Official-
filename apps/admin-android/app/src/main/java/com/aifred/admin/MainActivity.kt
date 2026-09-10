@@ -100,8 +100,7 @@ enum class AdminTab {
 
 enum class UploadMode {
     CATALOG,
-    REFERENCE,
-    WEBSITE_ASSET
+    REFERENCE
 }
 
 data class ChatMessage(val role: String, val text: String)
@@ -213,6 +212,7 @@ data class AdminLoginResult(
 data class AdminFileReadResult(
     val ok: Boolean,
     val content: String,
+    val sha: String = "",
     val message: String
 )
 
@@ -249,14 +249,8 @@ private val WebsiteTextPresets = listOf(
     WebsitePathPreset("Config", "apps/website/config.js"),
     WebsitePathPreset("Catalog JSON", "apps/website/assets/data/beat_catalog.json"),
     WebsitePathPreset("Release Notes", "apps/website/assets/docs/aifred-release-notes.txt"),
-    WebsitePathPreset("Install Notes", "apps/website/assets/docs/aifred-installation.txt")
-)
-
-private val WebsiteAssetPresets = listOf(
-    WebsitePathPreset("Mascot", "apps/website/assets/brand/aifred-mascot.jpg"),
-    WebsitePathPreset("Brand Art", "apps/website/assets/brand/north3rnlight3r-brand.jpg"),
-    WebsitePathPreset("Background", "apps/website/assets/brand/north3rnlight3r-background.jpg"),
-    WebsitePathPreset("Gallery Image", "apps/website/assets/artwork/gallery/new-gallery-image.jpg")
+    WebsitePathPreset("Install Notes", "apps/website/assets/docs/aifred-installation.txt"),
+    WebsitePathPreset("System Requirements", "apps/website/assets/docs/aifred-system-requirements.md")
 )
 
 private val ReferenceGenres = listOf("rap", "hip-hop", "edm", "dubstep", "pop", "rock")
@@ -352,7 +346,6 @@ private fun uploadModeLabel(mode: UploadMode): String {
     return when (mode) {
         UploadMode.CATALOG -> "Catalog Audio"
         UploadMode.REFERENCE -> "Reference Audio"
-        UploadMode.WEBSITE_ASSET -> "Website Asset"
     }
 }
 
@@ -860,14 +853,11 @@ fun AIFREDAdminApp() {
     var soundPackTempo by remember { mutableStateOf("") }
     var soundPackPrice by remember { mutableStateOf(defaultPackPrice("soundpack")) }
     var referenceGenre by remember { mutableStateOf("rap") }
-    var websiteAssetPath by remember {
-        mutableStateOf("apps/website/assets/artwork/gallery/new-gallery-image.jpg")
-    }
-
     var commandInput by remember { mutableStateOf("curl -s https://north3rnlight3r.com/api/health") }
     var commandOutput by remember { mutableStateOf("") }
     var websiteFilePath by remember { mutableStateOf("apps/website/index.html") }
     var websiteFileContent by remember { mutableStateOf("") }
+    var websiteFileSha by remember { mutableStateOf("") }
     var websiteAdminOutput by remember { mutableStateOf("") }
     var siteDashboardSummary by remember { mutableStateOf("Admin login required for live site data.") }
     var lastActivityEventId by remember { mutableStateOf("") }
@@ -907,11 +897,6 @@ fun AIFREDAdminApp() {
                 UploadMode.REFERENCE -> {
                     if (soundPackTitle.isBlank()) {
                         soundPackTitle = selectedStem
-                    }
-                }
-                UploadMode.WEBSITE_ASSET -> {
-                    if (websiteAssetPath.isBlank() || websiteAssetPath == "apps/website/assets/artwork/gallery/new-gallery-image.jpg") {
-                        websiteAssetPath = "apps/website/assets/uploads/$selectedName"
                     }
                 }
             }
@@ -1408,7 +1393,6 @@ fun AIFREDAdminApp() {
                             soundPackTempo = soundPackTempo,
                             soundPackPrice = soundPackPrice,
                             referenceGenre = referenceGenre,
-                            websiteAssetPath = websiteAssetPath,
                             onAdminUser = { adminUser = it },
                             onAdminPassword = { adminPassword = it },
                             onUploadMode = { uploadMode = it },
@@ -1423,7 +1407,6 @@ fun AIFREDAdminApp() {
                             onSoundPackTempo = { soundPackTempo = it },
                             onSoundPackPrice = { soundPackPrice = it },
                             onReferenceGenre = { referenceGenre = it },
-                            onWebsiteAssetPath = { websiteAssetPath = it },
                             onPick = {
                                 fullFileAccess = hasFullFileAccessPermission()
                                 if (!fullFileAccess) {
@@ -1517,14 +1500,6 @@ fun AIFREDAdminApp() {
                                                         title = soundPackTitle.trim()
                                                     )
                                                 }
-                                                UploadMode.WEBSITE_ASSET -> {
-                                                    client.adminUploadFile(
-                                                        contentResolver = context.contentResolver,
-                                                        uri = uri,
-                                                        adminSessionToken = adminSessionToken,
-                                                        targetPath = websiteAssetPath.trim()
-                                                    )
-                                                }
                                             }
                                         }
                                         status = result
@@ -1544,9 +1519,9 @@ fun AIFREDAdminApp() {
                             adminSessionToken = adminSessionToken,
                             websiteFilePath = websiteFilePath,
                             websiteFileContent = websiteFileContent,
+                            websiteFileSha = websiteFileSha,
                             websiteOutput = websiteAdminOutput,
                             siteDashboardSummary = siteDashboardSummary,
-                            onWebsiteFilePath = { websiteFilePath = it },
                             onWebsiteFileContent = { websiteFileContent = it },
                             onRun = {
                                 val cmd = commandInput.trim()
@@ -1604,10 +1579,26 @@ fun AIFREDAdminApp() {
                                     websiteAdminOutput = result.message
                                     if (result.ok) {
                                         websiteFileContent = result.content
+                                        websiteFileSha = result.sha
                                         status = "loaded $path"
                                     } else {
+                                        websiteFileSha = ""
                                         status = result.message
                                     }
+                                }
+                            },
+                            onValidateFile = {
+                                if (adminSessionToken.isBlank()) {
+                                    status = "admin login required"
+                                    websiteAdminOutput = "admin login required"
+                                    return@CommandScreen
+                                }
+                                scope.launch {
+                                    status = "validating website source"
+                                    websiteAdminOutput = withContext(Dispatchers.IO) {
+                                        client.adminValidateFile(adminSessionToken, websiteFilePath, websiteFileContent)
+                                    }
+                                    status = "validation request complete"
                                 }
                             },
                             onSaveFile = {
@@ -1617,56 +1608,38 @@ fun AIFREDAdminApp() {
                                     return@CommandScreen
                                 }
                                 val path = websiteFilePath.trim()
-                                if (path.isEmpty()) {
-                                    status = "file path required"
-                                    websiteAdminOutput = "file path required"
+                                if (websiteFileSha.isBlank()) {
+                                    status = "load current source before saving"
+                                    websiteAdminOutput = "Load the current approved file before committing an edit."
                                     return@CommandScreen
                                 }
                                 scope.launch {
-                                    status = "saving and deploying website file"
+                                    status = "committing website source"
                                     websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminWriteFile(adminSessionToken, path, websiteFileContent)
+                                        client.adminWriteFile(adminSessionToken, path, websiteFileContent, websiteFileSha)
                                     }
-                                    status = "saved $path and requested deploy"
+                                    websiteFileSha = ""
+                                    status = "source commit request complete; reload to verify"
                                 }
                             },
-                            onDeletePath = {
+                            onSourceStatus = {
                                 if (adminSessionToken.isBlank()) {
                                     status = "admin login required"
                                     websiteAdminOutput = "admin login required"
                                     return@CommandScreen
                                 }
-                                val path = websiteFilePath.trim()
-                                if (path.isEmpty()) {
-                                    status = "path required"
-                                    websiteAdminOutput = "path required"
-                                    return@CommandScreen
-                                }
                                 scope.launch {
-                                    status = "deleting path"
+                                    status = "checking source-control status"
                                     websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminDeletePath(adminSessionToken, path)
+                                        client.adminSourceStatus(adminSessionToken)
                                     }
-                                    status = "deleted $path"
-                                }
-                            },
-                            onListDir = {
-                                if (adminSessionToken.isBlank()) {
-                                    status = "admin login required"
-                                    websiteAdminOutput = "admin login required"
-                                    return@CommandScreen
-                                }
-                                val path = websiteFilePath.trim().ifBlank { "website" }
-                                scope.launch {
-                                    status = "listing files"
-                                    websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminListFiles(adminSessionToken, path)
-                                    }
-                                    status = "listed $path"
+                                    status = "source-control status loaded"
                                 }
                             },
                             onUsePreset = { presetPath ->
                                 websiteFilePath = presetPath
+                                websiteFileContent = ""
+                                websiteFileSha = ""
                             },
                             onLoadCatalog = {
                                 if (adminSessionToken.isBlank()) {
@@ -2340,7 +2313,6 @@ fun UploadScreen(
     soundPackTempo: String,
     soundPackPrice: String,
     referenceGenre: String,
-    websiteAssetPath: String,
     onAdminUser: (String) -> Unit,
     onAdminPassword: (String) -> Unit,
     onUploadMode: (UploadMode) -> Unit,
@@ -2352,7 +2324,6 @@ fun UploadScreen(
     onSoundPackTempo: (String) -> Unit,
     onSoundPackPrice: (String) -> Unit,
     onReferenceGenre: (String) -> Unit,
-    onWebsiteAssetPath: (String) -> Unit,
     onPick: () -> Unit,
     onSaveAdminCredentials: () -> Unit,
     onLogin: () -> Unit,
@@ -2416,17 +2387,6 @@ fun UploadScreen(
                 }
             ) {
                 Text("Reference")
-            }
-            Button(
-                onClick = { onUploadMode(UploadMode.WEBSITE_ASSET) },
-                modifier = Modifier.weight(1f),
-                colors = if (uploadMode == UploadMode.WEBSITE_ASSET) {
-                    ButtonDefaults.buttonColors(containerColor = Color(0xFF18D2E7), contentColor = Color(0xFF001116))
-                } else {
-                    ButtonDefaults.buttonColors()
-                }
-            ) {
-                Text("Website")
             }
         }
 
@@ -2520,29 +2480,6 @@ fun UploadScreen(
                     color = Color(0xFF8DB0C8)
                 )
             }
-            UploadMode.WEBSITE_ASSET -> {
-                Text(text = "Website Asset Target", color = Color(0xFF8DB0C8))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    WebsiteAssetPresets.forEach { preset ->
-                        Button(
-                            onClick = { onWebsiteAssetPath(preset.path) },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(preset.label)
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = websiteAssetPath,
-                    onValueChange = onWebsiteAssetPath,
-                    label = { Text("Repo-relative target path") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text(
-                    text = "Use this for album art, banners, hero images, and any website photo replacement.",
-                    color = Color(0xFF8DB0C8)
-                )
-            }
         }
 
         Button(onClick = onUpload, modifier = Modifier.fillMaxWidth()) {
@@ -2560,16 +2497,16 @@ fun CommandScreen(
     adminSessionToken: String,
     websiteFilePath: String,
     websiteFileContent: String,
+    websiteFileSha: String,
     websiteOutput: String,
     siteDashboardSummary: String,
-    onWebsiteFilePath: (String) -> Unit,
     onWebsiteFileContent: (String) -> Unit,
     onRun: () -> Unit,
     onQuick: (String) -> Unit,
     onLoadFile: () -> Unit,
+    onValidateFile: () -> Unit,
     onSaveFile: () -> Unit,
-    onDeletePath: () -> Unit,
-    onListDir: () -> Unit,
+    onSourceStatus: () -> Unit,
     onUsePreset: (String) -> Unit,
     onLoadCatalog: () -> Unit,
     onRemoveTrackByKey: () -> Unit,
@@ -2652,9 +2589,61 @@ fun CommandScreen(
         )
 
         Text(
-            text = if (adminSessionToken.isBlank()) "Admin login required for operational data." else "Production admin session active.",
+            text = if (adminSessionToken.isBlank()) "Admin login required for website source control." else "Authenticated Official source control is available.",
             color = if (adminSessionToken.isBlank()) Color(0xFFEAA4A4) else Color(0xFF8FE0C9)
         )
+
+        Text(text = "Approved Website Source", color = Color(0xFF8DB0C8))
+        WebsiteTextPresets.chunked(4).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                row.forEach { preset ->
+                    Button(
+                        onClick = { onUsePreset(preset.path) },
+                        enabled = adminSessionToken.isNotBlank(),
+                        modifier = Modifier.weight(1f)
+                    ) { Text(preset.label) }
+                }
+            }
+        }
+        Text(text = websiteFilePath, color = Color(0xFFE8F3FF))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onLoadFile,
+                enabled = adminSessionToken.isNotBlank(),
+                modifier = Modifier.weight(1f)
+            ) { Text("Load") }
+            Button(
+                onClick = onValidateFile,
+                enabled = adminSessionToken.isNotBlank() && websiteFileContent.isNotEmpty(),
+                modifier = Modifier.weight(1f)
+            ) { Text("Validate") }
+        }
+        OutlinedTextField(
+            value = websiteFileContent,
+            onValueChange = onWebsiteFileContent,
+            enabled = adminSessionToken.isNotBlank(),
+            label = { Text("File Content") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(240.dp)
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onSaveFile,
+                enabled = adminSessionToken.isNotBlank() && websiteFileSha.isNotBlank() && websiteFileContent.isNotEmpty(),
+                modifier = Modifier.weight(1f)
+            ) { Text("Commit Source") }
+            Button(
+                onClick = onSourceStatus,
+                enabled = adminSessionToken.isNotBlank(),
+                modifier = Modifier.weight(1f)
+            ) { Text("Source Status") }
+        }
+        Text(
+            text = "The backend accepts these files only and requires the SHA from Load. A commit can trigger Pages after Official becomes the Pages source; confirm deployment before treating the edit as published.",
+            color = Color(0xFF8DB0C8)
+        )
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(onClick = onLoadInquiries, modifier = Modifier.weight(1f)) { Text("Inquiries") }
             Button(onClick = onLoadLogs, modifier = Modifier.weight(1f)) { Text("ADMINLOG") }
@@ -2664,7 +2653,7 @@ fun CommandScreen(
         }
 
         Text(
-            text = websiteOutput.ifBlank { "Read-only production admin results will appear here. Website and release changes deploy from the Official repository." },
+            text = websiteOutput.ifBlank { "Source-control and production admin results will appear here." },
             color = Color(0xFF9CD0EF),
             modifier = Modifier
                 .fillMaxWidth()
@@ -3465,7 +3454,7 @@ class ApiClient(
     fun adminReadFile(adminSessionToken: String, relPath: String): AdminFileReadResult {
         val (ok, rendered) = adminJsonPost(
             adminSessionToken,
-            "/api/v1/admin/files/read",
+            "/api/v1/admin/source/read",
             JSONObject().put("path", relPath)
         )
         return if (!ok) {
@@ -3473,34 +3462,50 @@ class ApiClient(
         } else {
             val payload = runCatching { JSONObject(rendered) }.getOrNull()
             if (payload != null && payload.optBoolean("ok")) {
-                AdminFileReadResult(ok = true, content = payload.optString("content", ""), message = "file loaded")
+                AdminFileReadResult(
+                    ok = true,
+                    content = payload.optString("content", ""),
+                    sha = payload.optString("sha", ""),
+                    message = "Loaded ${payload.optString("path", relPath)} from ${payload.optString("repository", "Official")}."
+                )
             } else {
                 AdminFileReadResult(ok = false, content = "", message = rendered)
             }
         }
     }
 
-    fun adminWriteFile(adminSessionToken: String, relPath: String, content: String): String {
+    fun adminValidateFile(adminSessionToken: String, relPath: String, content: String): String {
         val (_ok, rendered) = adminJsonPost(
             adminSessionToken,
-            "/api/v1/admin/files/write",
-            JSONObject().put("path", relPath).put("content", content).put("deploy", true)
+            "/api/v1/admin/source/validate",
+            JSONObject().put("path", relPath).put("content", content)
         )
         return rendered
     }
 
-    fun adminDeletePath(adminSessionToken: String, relPath: String): String {
-        val (_ok, rendered) = adminJsonPost(
-            adminSessionToken,
-            "/api/v1/admin/files/delete",
-            JSONObject().put("path", relPath)
-        )
-        return rendered
+    fun adminWriteFile(adminSessionToken: String, relPath: String, content: String, expectedSha: String): String {
+        return try {
+            val body = JSONObject()
+                .put("path", relPath)
+                .put("content", content)
+                .put("expected_sha", expectedSha)
+            val request = Request.Builder()
+                .url(endpoint("/api/v1/admin/source/save"))
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer $adminSessionToken")
+                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(request).execute().use { response ->
+                renderApiResult(response, response.body?.string().orEmpty())
+            }
+        } catch (error: Exception) {
+            "source commit error: ${error.message ?: "unknown error"}"
+        }
     }
 
-    fun adminListFiles(adminSessionToken: String, relPath: String): String {
-        val safePath = android.net.Uri.encode(relPath)
-        val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/files/list?path=$safePath")
+    fun adminSourceStatus(adminSessionToken: String): String {
+        val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/source/status")
         return rendered
     }
 
@@ -3618,49 +3623,6 @@ class ApiClient(
             }
         }
         return Pair(tempFile, uploadName)
-    }
-
-    fun adminUploadFile(
-        contentResolver: android.content.ContentResolver,
-        uri: Uri,
-        adminSessionToken: String,
-        targetPath: String
-    ): String {
-        return try {
-            val copied = copyUriToTempFile(contentResolver, uri, "AIFRED_asset_upload")
-                ?: return "cannot open file"
-            val (tempFile, uploadName) = copied
-            val mime = contentResolver.getType(uri).orEmpty().ifBlank { "application/octet-stream" }
-            val fileBody = tempFile.asRequestBody(mime.toMediaType())
-            val multipart = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart("path", targetPath)
-                .addFormDataPart("file", uploadName, fileBody)
-                .build()
-
-            val request = Request.Builder()
-                .url(endpoint("/api/v1/admin/files/upload"))
-                .addHeader("Authorization", "Bearer $adminSessionToken")
-                .apply {
-                    if (token.isNotBlank()) {
-                        addHeader("X-Api-Token", token)
-                    }
-                }
-                .post(multipart)
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                val raw = response.body?.string().orEmpty()
-                tempFile.delete()
-                if (response.isSuccessful) {
-                    "Uploaded ${targetPath.trim()} from $uploadName"
-                } else {
-                    "upload failed: ${raw.ifEmpty { "unknown error" }}"
-                }
-            }
-        } catch (error: Exception) {
-            "upload network error: ${error.message ?: "unknown error"}"
-        }
     }
 
     fun uploadReferenceTrack(

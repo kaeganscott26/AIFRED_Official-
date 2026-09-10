@@ -6,6 +6,7 @@ All live admin surfaces use `https://north3rnlight3r.com/api` and the protected 
 | --- | --- | --- | --- | --- |
 | Authenticated live status | Yes | Yes | Yes | Yes, through `/ops` WebKit |
 | Analytics/downloads/logs/inquiries | Yes | Yes | Yes | Yes, through `/ops` |
+| Approved website text source | Read, validate, commit | No | No | No |
 | Catalog/reference/track analysis | Read-only | Yes | Yes | Yes, through `/ops` |
 | Site and track exports | Yes | Yes | Yes | Yes, through `/ops` |
 | User-entered admin commands | Yes | No | No | No |
@@ -15,7 +16,9 @@ All live admin surfaces use `https://north3rnlight3r.com/api` and the protected 
 
 ## Android Admin
 
-The Compose app has Chat and Command tabs. It supports user-triggered chat, local provider profiles, catalog playback, read-only operational summaries, exports, and local diagnostic commands. Production provider settings, releases, website source, and artifacts are changed through the source-controlled deployment workflow—not through the app. UTC values are converted only for device presentation. Online login uses the backend signed session; saved offline owner credentials grant local-device features only.
+The Compose app has Chat, Upload, and Command tabs. It supports user-triggered chat, local provider profiles, catalog playback, bounded operational refresh, exports, and local diagnostic commands. The Command tab lists eight approved Official website text files, loads content with its Git blob SHA, validates edits, and commits through authenticated `/api/v1/admin/source/*` routes. The Worker holds the GitHub credential; the APK does not.
+
+The mobile editor cannot delete, create, traverse directories, or upload binary website assets. It marks a successful source commit as unverified for deployment. After Pages source authority moves to Official, the operator still checks the Pages deployment before treating an edit as published. Catalog/reference media use separate controlled storage routes.
 
 ## `/ops`
 

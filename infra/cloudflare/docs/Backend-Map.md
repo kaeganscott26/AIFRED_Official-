@@ -11,10 +11,14 @@ Current authority summary:
 - Repository: `kaeganscott26/AIFRED`
 - Website/backend source: `apps/website/`
 - Worker router: `apps/website/_worker.js`
-- Main API: `apps/website/functions/api/v1/[[path]].js`
-- Legacy compatibility shim: `apps/website/functions/api/[[path]].js`
-- WebSocket chat: `apps/website/functions/ws/chat.js`
-- Production project name used by deploy tooling: `aifred-site`
+- Static website and `/ops`: `apps/website/`
+- Dedicated API entry point: `infra/cloudflare/aifred-api/src/index.js`
+- API handlers: `infra/cloudflare/aifred-api/src/handlers.js`
+- Controlled mobile source edits: `infra/cloudflare/aifred-api/src/source-control.js`
+- Pages project name used by deploy tooling: `aifred-site`
+- Worker name: `aifred-api`
+
+Production cutover remains pending. Beta retains the current Pages Functions backend until the dedicated Worker passes the migration checklist.
 - Production branch: `main`
 
 Cloudflare config roles:

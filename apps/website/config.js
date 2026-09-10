@@ -5,10 +5,10 @@ window.AIFRED_CONFIG = {
   apiV1Base: __apiV1Base,
   contactEmail: "north3rnlight3rofficial@outlook.com",
   downloadUrls: {
-    windowsInstaller: `${__apiV1Base}/downloads/plugin?asset=setup`,
-    windowsZip: `${__apiV1Base}/downloads/plugin?asset=zip`,
-    macosZip: `${__apiV1Base}/downloads/plugin?asset=macos`,
-    releaseNotes: `${window.location.origin}/assets/docs/aifred-release-notes.txt`
+    windowsInstaller: `${__apiV1Base}/downloads/plugin?channel=beta&asset=setup`,
+    windowsZip: `${__apiV1Base}/downloads/plugin?channel=beta&asset=zip`,
+    macosZip: `${__apiV1Base}/downloads/plugin?channel=beta&asset=macos`,
+    releaseNotes: "https://github.com/kaeganscott26/AIFRED"
   },
-  productPrice: "AIFRED 4.0 flagship"
+  productPrice: "$149.99"
 };

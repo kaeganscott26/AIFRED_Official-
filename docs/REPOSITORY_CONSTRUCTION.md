@@ -8,10 +8,13 @@
 | Shared tests | [`shared-dsp/tests`](../shared-dsp/tests) |
 | Official plugin adapter/frontend | [`plugin/src`](../plugin/src) |
 | Intelligence transport | [`tools/AifredIntelligenceHost`](../tools/AifredIntelligenceHost) |
+| Pages website and `/ops` | [`apps/website`](../apps/website) |
+| Android and desktop administration | [`apps/admin-android`](../apps/admin-android), [`apps/admin-desktop`](../apps/admin-desktop) |
+| Dedicated `/api/*` Worker | [`infra/cloudflare/aifred-api`](../infra/cloudflare/aifred-api) |
 | Release/install automation | [`scripts`](../scripts) |
 | Canonical documentation | [`docs`](README.md) and [shared DSP README](../shared-dsp/README.md) |
 
-No alternate analyzer, serializer, Python runtime, `.NET AifredEngine`, empty adapter shell, admin/backend/website scaffold, or mock updater contract belongs in the Official source tree. Git retains removed history.
+No alternate analyzer, serializer, Python runtime, `.NET AifredEngine`, empty adapter shell, or mock updater contract belongs in the Official source tree. The website, administration clients, and production infrastructure are product source in Official; they must use the dedicated API Worker rather than add a second backend under Pages.
 
 ## Independent reproduction
 
@@ -23,9 +26,13 @@ Canonical platform roots are `out/windows-x64`, `out/macos-arm64`, and `out/linu
 
 The completed construction target is `DAW -> EngineSnapshot -> ObservationSnapshot -> FilteredMixContext`. The next project may replace or extend intelligence behind that boundary. Babylon remains the final project phase.
 
+Repository and production-infrastructure convergence comes before that next project. Until production ownership moves, Beta retains its live website/backend/admin sources as a rollback boundary.
+
 ## Related
 
 - [Architecture](ARCHITECTURE.md)
+- [Repository Map](REPOSITORY_MAP.md)
+- [Cloudflare Migration Checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md)
 - [Development](DEVELOPMENT.md)
 - [Build](BUILD.md)
 - [Future](FUTURE.md)
