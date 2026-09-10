@@ -8,10 +8,10 @@ Current evidence boundaries:
 
 | Capability | Status |
 | --- | --- |
-| Unified Pages website/backend source and bindings | IMPLEMENTED IN SOURCE; current-run preview evidence is recorded separately |
+| Unified Pages website/backend source and bindings | IMPLEMENTED IN SOURCE and partially validated in Pages preview |
 | Source integrity, module graph, and backend contracts | VALIDATED LOCALLY in the current working tree |
-| Android approved website-source editor | IMPLEMENTED IN SOURCE; build/tests and device behavior are separate evidence |
-| Pages preview | NOT YET VERIFIED in this recovery run |
+| Android approved website-source editor | IMPLEMENTED; 12 unit tests and preview-origin debug build pass; device validation pending |
+| Pages preview | PARTIAL: deployment `20436ef4-2172-431f-ad05-fd9acb07755e` passes public/static/storage/download gates; admin/provider secrets are absent |
 | Latest Beta GitHub artifacts in R2 | VALIDATED by exact R2 key, size, and independently computed SHA-256 |
 | Unified production promotion | NOT YET VERIFIED; rollback baseline remains live |
 | Pages source move from Beta to Official | NOT YET VERIFIED |

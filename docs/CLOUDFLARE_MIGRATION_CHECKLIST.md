@@ -10,17 +10,17 @@ Record repository SHA, deployment ID, command, result, timestamp, and operator. 
 - [x] Confirm no `/api/*` Worker route exists.
 - [x] Reconcile the monolithic backend into `apps/website` without changing DSP.
 - [x] Remove source conflict markers and Markdown fence corruption; enforce both in checks.
-- [ ] Commit and push a fully validated Official source tree.
+- [x] Commit and push the locally validated Official source repair. Preview acceptance remains partial until the missing secret/device gates clear.
 
 ## Preview
 
-- [ ] Deploy an Official non-production branch to Pages project `aifred-site` using `apps/website`.
-- [ ] Confirm preview bindings use preview D1 and do not mutate production D1.
-- [ ] Confirm required admin secret names exist in preview; stop authenticated validation if any are absent.
+- [x] Deploy an Official non-production branch to Pages project `aifred-site` using `apps/website`.
+- [x] Confirm preview bindings use preview D1 and do not mutate production D1.
+- [x] Confirm required admin secret names; required admin names are absent, so authenticated validation stopped.
 - [ ] Validate website/styles/assets, `/ops`, `/health`, catalog, references, models, analysis, provider/chat when available, admin login/session/dashboard/logout/exports, and source-control concurrency.
-- [ ] Validate installer and ZIP HEAD, range, filename, content type, length, and full SHA-256.
-- [ ] Build/test Android against preview and validate desktop configuration against preview.
-- [ ] Hold website and `/ops` idle for at least five minutes and confirm no uncontrolled traffic. Record any unavailable VST/device manual coverage separately.
+- [x] Validate installer and ZIP HEAD, range, filename, content type, length, and full SHA-256.
+- [ ] Build/test Android against preview and validate desktop configuration against preview. Build/tests passed; device and desktop UI validation remain.
+- [ ] Hold website and `/ops` idle for at least five minutes and confirm no uncontrolled traffic. Preview D1 stayed unchanged for five minutes and source has no timers; interactive browser/VST/device coverage remains.
 
 ## Production promotion
 
