@@ -2,3 +2,22 @@ name = "aifred-site"
 pages_build_output_dir = "."
 compatibility_date = "2026-08-25"
 compatibility_flags = ["nodejs_compat"]
+<<<<<<< HEAD
+=======
+
+[observability]
+enabled = true
+head_sampling_rate = 1
+redact_query_string = true
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 0.05
+persist = true
+>>>>>>> 1ff6c82ed62b6ecf897024b7b4e13363f32b238e
