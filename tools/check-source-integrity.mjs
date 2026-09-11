@@ -33,6 +33,20 @@ for (const file of files) {
       failures.push(`${file}: deployable source is wrapped in a Markdown fence`);
     }
   }
+
+  if (normalized === "apps/website/index.html") {
+    const scriptTags = [...content.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)];
+    for (const source of ["./config.js", "./app.js"]) {
+      const matches = scriptTags.filter((match) => match[1] === source || match[1] === source.slice(2));
+      if (matches.length !== 1) failures.push(`${file}: expected exactly one ${source} script include, found ${matches.length}`);
+      else if (!/\bdefer\b/i.test(matches[0][0])) failures.push(`${file}: ${source} must use defer so DOM bindings exist before runtime startup`);
+    }
+
+    for (const id of ["aifred-downloads", "catalog-list", "catalog-toggle", "catalog-refresh", "audio-player", "year"]) {
+      const count = [...content.matchAll(new RegExp(`\\bid=["']${id}["']`, "gi"))].length;
+      if (count !== 1) failures.push(`${file}: expected exactly one #${id}, found ${count}`);
+    }
+  }
 }
 
 if (failures.length) {
