@@ -8,7 +8,10 @@ const workerRoot = resolve(here, "..");
 const repositoryRoot = resolve(workerRoot, "..", "..", "..");
 const base = String(process.argv[2] || "").replace(/\/+$/, "");
 const expectProvider = process.argv.includes("--provider");
+const channel = String(process.argv.find((value) => value.startsWith("--channel="))?.split("=")[1] || "official").toLowerCase();
+const productVersion = channel === "beta" ? "0.3.6-beta-stable" : "4.0.0-alpha.2";
 if (!/^https:\/\//.test(base)) throw new Error("usage: node scripts/smoke.mjs https://api-base [--provider]");
+if (!new Set(["beta", "official"]).has(channel)) throw new Error("--channel must be beta or official");
 
 const secrets = JSON.parse(await readFile(resolve(workerRoot, ".secrets.local.json"), "utf8"));
 const envText = await readFile(resolve(repositoryRoot, ".env"), "utf8");
@@ -92,8 +95,8 @@ const analyticsHeaders = {
   "idempotency-key": batchKey,
   "x-aifred-client": "production-smoke",
   "x-aifred-product": "aifred",
-  "x-aifred-channel": "official",
-  "x-aifred-version": "4.0.0-alpha.2",
+  "x-aifred-channel": channel,
+  "x-aifred-version": productVersion,
   "x-aifred-platform": "windows",
   "x-aifred-purpose": "deployment-smoke"
 };
@@ -121,8 +124,8 @@ if (expectProvider) {
   const centres = [20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 250, 350, 450, 600, 750, 850, 1000, 1500, 2000, 3000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000, 20000];
   const context = {
     schema: "aifred.filtered-mix.v1",
-    product_channel: "official",
-    product_version: "4.0.0-alpha.2",
+    product_channel: channel,
+    product_version: productVersion,
     plugin_instance_id: `smoke-${randomUUID()}`,
     session_id: `smoke-${randomUUID()}`,
     profile_id: "MIX_BALANCED",
@@ -139,8 +142,8 @@ if (expectProvider) {
     "content-type": "application/json",
     "x-aifred-client": context.plugin_instance_id,
     "x-aifred-product": "aifred",
-    "x-aifred-channel": "official",
-    "x-aifred-version": "4.0.0-alpha.2",
+    "x-aifred-channel": channel,
+    "x-aifred-version": productVersion,
     "x-aifred-platform": "windows",
     "x-aifred-purpose": "deployment-smoke"
   };
@@ -186,5 +189,5 @@ record("admin-logout", logout);
 await logout.body?.cancel();
 
 const requiredFailures = results.filter((item) => !item.ok && !(item.name === "analytics-idempotency" && item.expected_conflict));
-console.log(JSON.stringify({ base, results, passed: requiredFailures.length === 0 }, null, 2));
+console.log(JSON.stringify({ base, channel, results, passed: requiredFailures.length === 0 }, null, 2));
 if (requiredFailures.length) process.exitCode = 1;

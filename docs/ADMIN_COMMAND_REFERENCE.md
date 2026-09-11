@@ -8,6 +8,16 @@ Only Android Admin currently has a user-entered command interface. `/ops`, Windo
 
 | Command | Android | `/ops` | Windows | macOS | Purpose |
 | --- | --- | --- | --- | --- | --- |
+| `help` | Yes | No | No | No | List the current backend command allowlist |
+| `health` | Yes | No | No | No | Check live website API health |
+| `catalog:list` | Yes | No | No | No | Count beat catalog tracks |
+| `models:list` | Yes | No | No | No | Show configured OpenAI/Ollama model routes |
+| `reference:stats` | Yes | No | No | No | Show analyzer reference-pool status |
+| `deploy:status` | Yes | No | No | No | Show unified Pages deployment authority |
+| `sales:list` | Yes | No | No | No | Show historical beta sales |
+| `inquiries:list` | Yes | No | No | No | Show recorded contact inquiries |
+| `export:site` | Yes | No | No | No | Show the authenticated site export route |
+| `export:tracks` | Yes | No | No | No | Show the authenticated track-analysis export route |
 | `action:local:pwd` | Yes | No | No | No | Show the app shell working directory |
 | `action:local:files` | Yes | No | No | No | List files in the app shell working directory |
 | `action:local:storage` | Yes | No | No | No | Show filesystem usage |
@@ -27,6 +37,166 @@ Only Android Admin currently has a user-entered command interface. `/ops`, Windo
 ## Backend commands
 
 Backend commands require a valid online admin session. The backend also accepts the explicit action alias `action:<command-id>`, which is what Android action buttons submit. Commands take no arguments and are case-sensitive after trimming. Unsupported commands return HTTP 400 / exit code 2.
+
+### help
+
+Exact Android syntax:
+
+```text
+help
+```
+
+- Purpose: List the current backend command allowlist.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: JSON command catalog.
+- Alias: `action:help`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### health
+
+Exact Android syntax:
+
+```text
+health
+```
+
+- Purpose: Check live website API health.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Service and API version.
+- Alias: `action:health`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### catalog:list
+
+Exact Android syntax:
+
+```text
+catalog:list
+```
+
+- Purpose: Count beat catalog tracks.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Catalog track count.
+- Alias: `action:catalog:list`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### models:list
+
+Exact Android syntax:
+
+```text
+models:list
+```
+
+- Purpose: Show configured OpenAI/Ollama model routes.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Provider configuration without secrets.
+- Alias: `action:models:list`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### reference:stats
+
+Exact Android syntax:
+
+```text
+reference:stats
+```
+
+- Purpose: Show analyzer reference-pool status.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Active reference count and storage availability.
+- Alias: `action:reference:stats`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### deploy:status
+
+Exact Android syntax:
+
+```text
+deploy:status
+```
+
+- Purpose: Show unified Pages deployment authority.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Repository, branch, Pages project, and architecture.
+- Alias: `action:deploy:status`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### sales:list
+
+Exact Android syntax:
+
+```text
+sales:list
+```
+
+- Purpose: Show historical beta sales.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Historical sale records from compatibility KV.
+- Alias: `action:sales:list`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### inquiries:list
+
+Exact Android syntax:
+
+```text
+inquiries:list
+```
+
+- Purpose: Show recorded contact inquiries.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Recent inquiry records.
+- Alias: `action:inquiries:list`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### export:site
+
+Exact Android syntax:
+
+```text
+export:site
+```
+
+- Purpose: Show the authenticated site export route.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Canonical site export route.
+- Alias: `action:export:site`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
+
+### export:tracks
+
+Exact Android syntax:
+
+```text
+export:tracks
+```
+
+- Purpose: Show the authenticated track-analysis export route.
+- Available in: Android Admin command terminal.
+- Arguments/options: None.
+- Authentication: Online admin session required.
+- Output: Canonical track-analysis export route.
+- Alias: `action:export:tracks`.
+- Related API: `POST /api/v1/command/run`; registry metadata from `GET /api/v1/registry/actions`.
 
 ## Android local registered actions
 

@@ -225,6 +225,25 @@ section { padding: 22px; }
   margin-top: 14px;
 }
 
+.aifred-product-shot {
+  margin: 14px 0 0;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(2, 8, 15, 0.94);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.aifred-product-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
 .distribution-status {
   min-height: 22px;
   margin: 0;
@@ -315,6 +334,10 @@ audio { width: 100%; }
   line-height: 1.5;
 }
 
+.reference-pool-status {
+  color: var(--green) !important;
+}
+
 .metric-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -366,6 +389,7 @@ audio { width: 100%; }
 
 .card-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
 }

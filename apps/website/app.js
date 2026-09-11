@@ -23,6 +23,7 @@ const analysisStatus = document.getElementById("analysis-status");
 const analysisMetrics = document.getElementById("analysis-metrics");
 const analysisSubmit = document.getElementById("analysis-submit");
 const analysisResult = document.getElementById("analysis-result");
+const referencePoolStatus = document.getElementById("reference-pool-status");
 
 let tracks = [];
 let currentAnalysis = null;
@@ -137,15 +138,54 @@ async function getJson(path, fallback) {
 }
 
 async function loadCatalog() {
-  const fallbackResponse = await fetch("assets/data/beat_catalog.json", { cache: "no-store" });
-  const fallback = await fallbackResponse.json();
-  tracks = fallback;
+  const payload = await getJson("/api/v1/catalog/list", null);
+  let source = "backend";
+  if (Array.isArray(payload?.tracks)) {
+    tracks = payload.tracks;
+  } else {
+    const fallbackResponse = await fetch("assets/data/beat_catalog.json", { cache: "no-store" });
+    tracks = await fallbackResponse.json();
+    source = "static-fallback";
+  }
   renderCatalog();
-  void recordActivity("catalog.loaded", { track_count: tracks.length }, {
+  void recordActivity("catalog.loaded", { count: tracks.length, category: source }, {
     surface: "catalog",
     subject: { type: "page", id: "catalog", name: "AIFRED catalog" },
     operation: { action: "load", status: "success", result: "catalog_rendered" }
   });
+}
+
+async function refreshReferencePoolStatus() {
+  if (!referencePoolStatus) return;
+  const payload = await getJson("/api/v1/reference/pool", null);
+  if (!payload?.ok || !Number.isFinite(Number(payload.count))) {
+    referencePoolStatus.textContent = "Reference pool is temporarily unavailable.";
+    return;
+  }
+  const count = Number(payload.count);
+  referencePoolStatus.textContent = `${count} active reference${count === 1 ? "" : "s"} available. Accepted analyzer metadata returns here through the AIFRED API.`;
+}
+
+async function analyzeCatalogTrack(track, title) {
+  analysisTitle.textContent = title;
+  analysisStatus.textContent = "Loading this catalog track into the browser analyzer…";
+  analysisSubmit.disabled = true;
+  try {
+    const response = await fetch(trackUrl(track), { cache: "no-store" });
+    if (!response.ok) throw new Error(`catalog audio request failed (${response.status})`);
+    const blob = await response.blob();
+    const file = new File([blob], track.asset_file_name || `${title}.mp3`, { type: blob.type || "audio/mpeg" });
+    await handleAnalysisFile(file);
+    document.getElementById("analyzer")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    void recordActivity("catalog.analysis.loaded", { size_bytes: blob.size }, {
+      surface: "catalog",
+      subject: { type: "track", id: track.key || track.asset_file_name || title, name: title },
+      operation: { action: "analyze", status: "success", result: "loaded_in_browser_analyzer" }
+    });
+  } catch (error) {
+    analysisStatus.textContent = "This catalog track could not be loaded into the analyzer.";
+    analysisResult.textContent = error.message || "Catalog audio request failed.";
+  }
 }
 
 function renderCatalog() {
@@ -162,14 +202,15 @@ function renderCatalog() {
       <h3>${title}</h3>
       <p>${bpm} · ${genre} · Free MP3 download</p>
       <div class="card-actions">
-        <button class="btn" type="button">Play</button>
+        <button class="btn" type="button" data-catalog-action="play">Play</button>
+        <button class="btn ghost" type="button" data-catalog-action="analyze">Analyze</button>
         <a class="btn ghost" href="${downloadUrl}" download>Download</a>
       </div>
     `;
     card.querySelector("img").addEventListener("error", (event) => {
       event.currentTarget.src = DEFAULT_ART;
     });
-    card.querySelector("button").addEventListener("click", () => {
+    card.querySelector('[data-catalog-action="play"]').addEventListener("click", () => {
       audioPlayer.crossOrigin = "anonymous";
       audioPlayer.src = trackUrl(track);
       nowTitle.textContent = title;
@@ -188,6 +229,9 @@ function renderCatalog() {
           operation: { action: "play", status: "failure", result: "browser_playback_rejected" }
         });
       });
+    });
+    card.querySelector('[data-catalog-action="analyze"]').addEventListener("click", () => {
+      void analyzeCatalogTrack(track, title);
     });
     card.querySelector("a").addEventListener("click", (event) => {
       const requestId = activityRequestId();
@@ -527,6 +571,13 @@ async function submitAnalysisGate() {
       `Why: ${payload.why || "No explanation returned."}`,
       `Persistence: ${payload.persistence || "none"}`
     ].join("\n");
+    void recordActivity("reference.upload.accepted", {}, {
+      requestId,
+      surface: "website.analysis",
+      subject: { type: "reference", id: payload.reference_id || payload.analysis_id || requestId },
+      operation: { action: "submit", status: "success", result: "metadata_stored" }
+    });
+    await refreshReferencePoolStatus();
   } catch (error) {
     analysisResult.textContent = `Analysis unavailable: ${error.message || "request failed"}`;
     void recordActivity("analysis.failed", {
@@ -586,6 +637,7 @@ analysisSubmit.addEventListener("click", submitAnalysisGate);
 void renderReleaseActions();
 setupForms();
 loadCatalog();
+void refreshReferencePoolStatus();
 void recordActivity("website.page.view", {
   distribution: "free"
 }, {
