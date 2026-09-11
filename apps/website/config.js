@@ -23,5 +23,6 @@ window.AIFRED_CONFIG = {
     windowsZip: `${__origin}/api/v1/downloads/plugin?channel=beta&asset=zip`,
     releaseNotes: "https://github.com/kaeganscott26/AIFRED"
   },
-  productPrice: "$149.99"
+  productPrice: "FREE",
+  
 };

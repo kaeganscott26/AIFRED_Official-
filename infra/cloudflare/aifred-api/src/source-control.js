@@ -12,7 +12,7 @@ export const EDITABLE_WEBSITE_FILES = Object.freeze([
   { label: "Catalog", path: "apps/website/assets/data/beat_catalog.json", kind: "json", max_bytes: 262144 },
   { label: "Release notes", path: "apps/website/assets/docs/aifred-release-notes.txt", kind: "text", max_bytes: 131072 },
   { label: "Install notes", path: "apps/website/assets/docs/aifred-installation.txt", kind: "text", max_bytes: 131072 },
-  { label: "System requirements", path: "apps/website/assets/docs/aifred-system-requirements.md", kind: "markdown", max_bytes: 131072 }
+  { label: "System requirements", path: "apps/website/assets/docs/aifred-system-requirements.md", kind: "markdown", }
 ]);
 
 const editableByPath = new Map(EDITABLE_WEBSITE_FILES.map((item) => [item.path, item]));
