@@ -1,13 +1,13 @@
 # Current AIFRED backend migration handoff
 
-Last updated: `2026-09-10T19:33:19-05:00`
+Last updated: `2026-09-10T19:42:35-05:00`
 
 This file records the observed current state only. It is updated after each validated milestone. Secret values are never recorded here.
 
 ## Repository state
 
-- Official implementation milestone: `145267aadd2623df3073001e7162defed8f309ef`; pushed to `origin/main`.
-- Beta client milestone: `6f92d432bf6d3cd0d0079bf6069b2543f831e248`; pushed to `origin/main`.
+- Official shared-contract milestone: `29107524e808e13439825726a81082d3c5a81382`; pushed to `origin/main`.
+- Beta reference-client milestone: `ff412d997cd50d141c8a9f22c3cb984f4fe1a402`; pushed to `origin/main`.
 - Current source contains two competing Official API implementations: Pages Advanced Mode backend modules under `apps/website/lib/backend/` and the dedicated Worker under `infra/cloudflare/aifred-api/`. Convergence is not complete.
 - Beta still contains its website/backend/admin infrastructure. Retirement is not complete.
 
@@ -50,13 +50,14 @@ This file records the observed current state only. It is updated after each vali
 - Official reference reads now target the single public pool route `/api/v1/reference/pool`.
 - Both IntelligenceHost channels normalize legacy AIFRED origins to `https://north3rnlight3r.com/api/v1`; contract tests prove model and chat requests use `/api/v1/models` and `/api/v1/chat/completions`, carry bearer authentication, and identify their correct `beta` or `official` channel.
 - Both IntelligenceHost contract suites pass. Worker validation remains at 17/17 passing tests and a successful Wrangler dry-run.
+- Beta now compiles a read-only Official reference-pool client into the VST3. It reads `https://north3rnlight3r.com/api/v1/reference/pool`, exposes metadata availability in Reference mode, and deliberately does not reinterpret browser metadata as native DSP comparison values.
+- The new Beta reference client/parser compiled, its offline contract test passed, and the compiled test client read and parsed all migrated records from the staging Official Worker. The full Beta test entrypoint built the VST3 and passed repository checks, 8 Python tests, IntelligenceHost tests, 4 CTest tests, 52 legacy backend/archive tests, and 35 legacy website checks; it initially stopped only at the expected shared lock change. Shared core was then recomputed in full as version `1.2.2` in both repositories and verifies 27/27 normalized files.
 
 ## Remaining work
 
 - Complete dedicated Worker capability parity for current Ops/Android/Desktop clients and prove it in staging.
 - Validate the migrated D1 pool through both plugin clients and later through production website ingestion.
 - Recover/reconcile ignored local environment inputs and configure production secrets by name without exposing values.
-- Wire the Beta VST Reference client to the D1-backed Official pool; its IntelligenceHost remote Chat contract is already canonical.
 - Decouple and physically remove Beta backend/site/admin infrastructure only after client/build tooling no longer depends on it.
 - Build, test, package, and publish a new Beta release; mirror and verify artifacts.
 - Deploy the Official Worker and Official website to production; validate the public domain and clients.
@@ -73,7 +74,7 @@ This file records the observed current state only. It is updated after each vali
 
 ## Exact next task
 
-Wire and test the Beta VST Reference client against the canonical pool, then decouple Beta build/release tooling and remove its backend/site/admin tree.
+Decouple Beta build/test/release tooling from website/backend/admin targets, validate the replacement pipeline, then commit the pre-deletion state before physically removing the old infrastructure.
 
 ## Rollback points
 
