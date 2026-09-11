@@ -19,7 +19,7 @@ body {
   font-family: "Space Grotesk", system-ui, sans-serif;
   background:
     linear-gradient(rgba(2, 6, 11, 0.78), rgba(2, 6, 11, 0.96)),
-    url("assets/brand/north3rnlight3r-background.jpg") top center / cover fixed,
+    url("apps\website\assets\showcase\album-art-02.jpg") top center / cover fixed,
     var(--bg);
   color: var(--text);
 }
@@ -166,11 +166,12 @@ section { padding: 22px; }
   justify-content: center;
   align-items: center;
   min-height: 42px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--bg);
   border-radius: 8px;
   padding: 10px 15px;
   background: linear-gradient(130deg, var(--cyan), var(--green));
   color: #03111a;
+  -webkit-text-fill-color: #03111a;
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
@@ -241,11 +242,8 @@ section { padding: 22px; }
   gap: 12px;
   margin-top: 24px;
 }
-
 .showcase-grid img {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  display: fill;
   border: 1px solid rgba(124, 240, 255, 0.22);
   border-radius: 8px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
