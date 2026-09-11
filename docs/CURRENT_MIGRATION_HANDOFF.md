@@ -1,12 +1,12 @@
 # Current AIFRED backend migration handoff
 
-Last updated: `2026-09-10T19:06:39-05:00`
+Last updated: `2026-09-10T19:17:21-05:00`
 
 This file records the observed current state only. It is updated after each validated milestone. Secret values are never recorded here.
 
 ## Repository state
 
-- Official: `main` at `dde171989fb894537489a3a0b74ffaa8bd7090db`; `origin/main` matches; worktree was clean after fetch.
+- Official implementation milestone: `6405fef209202a9a6ed6874a60125cc2d3baafed`; pushed to `origin/main`.
 - Beta: `main` at `a4bdaefe389830989e5e39aa4743ec952854164b`; `origin/main` matches; worktree was clean after fetch.
 - Current source contains two competing Official API implementations: Pages Advanced Mode backend modules under `apps/website/lib/backend/` and the dedicated Worker under `infra/cloudflare/aifred-api/`. Convergence is not complete.
 - Beta still contains its website/backend/admin infrastructure. Retirement is not complete.
@@ -18,7 +18,7 @@ This file records the observed current state only. It is updated after each vali
 - Current recorded production source authority: public Beta repository revision `05c4444c2bfeba0ed7407f878a65060efbe055ca`.
 - Current recorded production topology: Pages Advanced Mode serves website and API behavior; no zone Worker route was present at the last live baseline.
 - Official unified Pages preview: `20436ef4-2172-431f-ad05-fd9acb07755e` from Official revision `e1b98fd6efb4cc286d9ea81cb6e014ce9e1ec196`.
-- Dedicated Worker staging evidence is historical and incomplete for provider/chat; it must be revalidated before reuse.
+- Live read-only check found `aifred-api` at version `b628fee0-bef6-4081-a6f9-3aa2935dd896` with no Worker secrets. `aifred-api-staging` does not currently exist.
 - Production acceptance for this convergence: not run.
 
 ## Cloudflare resources currently recorded
@@ -36,10 +36,15 @@ This file records the observed current state only. It is updated after each vali
 - Both repositories fetched and verified clean/synchronized before migration changes.
 - Existing production/preview rollback documentation and recent repository history inspected.
 - Durable handoff created before convergence changes.
+- Dedicated `infra/cloudflare/aifred-api/` source is again declared canonical; its obsolete archive/deployment warnings were removed.
+- Public website analyzer and authenticated plugin analysis are separate routes. Accepted website analysis writes sanitized metadata to D1 `references_catalog`; the behavior has an automated route-level persistence test.
+- The FilteredMixContext server contract now accepts both `beta` and `official` product channels.
+- Worker validation passed 17 Node tests, syntax checks, repository construction checks, and Wrangler production dry-run. This is source validation, not staging or production proof.
+- Admin username was removed from versioned Wrangler variables; admin identity must be supplied as a Cloudflare secret.
 
 ## Remaining work
 
-- Select `infra/cloudflare/aifred-api/` as the only Official API implementation and prove capability parity.
+- Complete dedicated Worker capability parity for current Ops/Android/Desktop clients and prove it in staging.
 - Migrate historical reference metadata into one authoritative reference pool and test accepted website ingestion.
 - Recover/reconcile ignored local environment inputs and configure production secrets by name without exposing values.
 - Route Beta and Flagship clients to `https://north3rnlight3r.com/api/v1` and add shared-contract tests.
@@ -51,13 +56,14 @@ This file records the observed current state only. It is updated after each vali
 
 ## Current blockers
 
-- Live Cloudflare authority, resource state, secret-name inventory, protected provider connectivity, and production routing have not yet been revalidated in this run.
+- The current OAuth session can deploy Workers/Pages/routes but does not expose explicit Access mutation or DNS record-write scopes.
+- The production Worker has no secrets and staging Worker is absent; secrets must be reconciled from ignored local configuration before remote validation.
 - Provider/chat previously failed because `ollama.north3rnlight3r.com` did not resolve and protected Tunnel/Access credentials were unavailable.
 - Android device validation is independent and currently unverified; it does not block backend/site work.
 
 ## Exact next task
 
-Inventory the two Official API trees and Beta backend dependencies, then run the dedicated Worker test suite and a narrow live Cloudflare read-only check before choosing the first parity/convergence edit.
+Reconcile ignored local secret inputs into the canonical Worker's staging secret set, recreate staging, and validate the public website analyzer/reference path plus the existing Worker smoke suite without changing production routing.
 
 ## Rollback points
 
