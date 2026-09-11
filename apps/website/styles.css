@@ -229,6 +229,13 @@ section li {
   color: var(--text);
 }
 
+#beats .btn.ghost {
+  background: linear-gradient(130deg, var(--cyan), var(--green));
+  color: #03111a;
+  -webkit-text-fill-color: #03111a;
+  border-color: var(--bg);
+}
+
 .split {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
