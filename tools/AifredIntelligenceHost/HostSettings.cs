@@ -90,7 +90,7 @@ public sealed record HostSettings(
         if (!isAifredSite) return endpoint.TrimEnd('/');
         var path = uri.AbsolutePath.TrimEnd('/').ToLowerInvariant();
         if (path is not ("" or "/api" or "/api/v1" or "/v1")) return endpoint.TrimEnd('/');
-        var builder = new UriBuilder(uri) { Path = "/v1", Query = "", Fragment = "" };
+        var builder = new UriBuilder(uri) { Path = "/api/v1", Query = "", Fragment = "" };
         return builder.Uri.AbsoluteUri.TrimEnd('/');
     }
 

@@ -16,7 +16,7 @@ window.AIFRED_CONFIG = {
   origin: __origin,
   apiBase: __origin,
   apiV1Base: `${__origin}/api/v1`,
-  providerV1Base: `${__origin}/v1`,
+  providerV1Base: `${__origin}/api/v1`,
   contactEmail: "north3rnlight3rofficial@outlook.com",
   downloadUrls: {
     windowsInstaller: `${__origin}/api/v1/downloads/plugin?channel=beta&asset=setup`,

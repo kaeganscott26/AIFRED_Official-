@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #ifndef AIFRED_REFERENCE_API_URL
-#define AIFRED_REFERENCE_API_URL "https://north3rnlight3r.com/api/v1/references"
+#define AIFRED_REFERENCE_API_URL "https://north3rnlight3r.com/api/v1/reference/pool"
 #endif
 
 namespace aifred::services

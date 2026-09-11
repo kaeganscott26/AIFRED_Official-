@@ -83,7 +83,7 @@ async function flushActivity() {
   if (!activityBatch.length) return true;
   const events = activityBatch.splice(0, 50);
   try {
-    const response = await fetch(apiUrl("/v1/analytics/events"), {
+    const response = await fetch(apiUrl("/api/v1/analytics/events"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -258,7 +258,7 @@ async function renderReleaseActions() {
     return;
   }
 
-  const payload = await getJson("/v1/releases/current?channel=beta", { release: null });
+  const payload = await getJson("/api/v1/releases/current?channel=beta", { release: null });
   const release = payload?.release;
   if (!release?.published) {
     renderUnlockedDownloads({ releaseNotes });
@@ -497,7 +497,40 @@ async function handleAnalysisFile(file) {
 
 async function submitAnalysisGate() {
   if (!currentAnalysis) return;
-  analysisResult.textContent = "Local browser analysis retained on this device. Audio and browser-derived metrics were not uploaded or presented as native AIFRED DSP truth.";
+  const requestId = activityRequestId();
+  analysisSubmit.disabled = true;
+  analysisResult.textContent = "Submitting the quick direction check...";
+  try {
+    const response = await fetch(apiUrl("/api/v1/analysis/submit"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": requestId },
+      body: JSON.stringify({ ...currentAnalysis, session_id: activitySessionId(), request_id: requestId })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "analysis unavailable");
+    analysisResult.textContent = [
+      `${payload.classification || "Analysis result"}`,
+      `Reference utility: ${payload.reference_utility ?? payload.score}/100`,
+      `Technical caution: ${payload.technical_caution ?? "N/A"}/100`,
+      `Style tag: ${payload.style_tag || "unclassified"}`,
+      `Best use: ${payload.best_use || "No note returned."}`,
+      `Caution: ${payload.caution || "No caution returned."}`,
+      `Why: ${payload.why || "No explanation returned."}`,
+      `Persistence: ${payload.persistence || "none"}`
+    ].join("\n");
+  } catch (error) {
+    analysisResult.textContent = `Analysis unavailable: ${error.message || "request failed"}`;
+    void recordActivity("analysis.failed", {
+      error_type: error?.name || "Error"
+    }, {
+      requestId,
+      surface: "website.analysis",
+      subject: { type: "analysis", name: currentAnalysis.file_name || analysisTitle.textContent || "analysis" },
+      operation: { action: "analyze", status: "failure", result: "request_failed" }
+    });
+  } finally {
+    analysisSubmit.disabled = false;
+  }
 }
 
 function setupForms() {
@@ -509,7 +542,7 @@ function setupForms() {
     contactStatus.textContent = "Sending...";
     const requestId = activityRequestId();
     try {
-      const response = await fetch(apiUrl("/v1/inquiries"), {
+      const response = await fetch(apiUrl("/api/v1/inquiries"), {
         method: "POST",
         headers: { "Content-Type": "application/json", "Idempotency-Key": requestId },
         body: JSON.stringify({ name, email, message, session_id: activitySessionId(), request_id: requestId })

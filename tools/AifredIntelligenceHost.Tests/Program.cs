@@ -22,9 +22,10 @@ sealed class IntelligenceHostContractTests
     {
         await OllamaRoutePreservesQuestionAndContext();
         await OpenAiCompatibleRouteIsSelectable();
+        await CanonicalApiRoutesHaveExpectedPaths();
         await MissingProviderIsCleanlyUnavailable();
         PublicSettingsHideSecrets();
-        LegacyWebsiteBasesNormalizeToProviderV1();
+        LegacyWebsiteBasesNormalizeToCanonicalApiV1();
         var wrongUnit=Envelope(new JsonObject());wrongUnit["metrics"]![3]!["unit"]="dBFS";
         Expect(ContextContract.Validate(wrongUnit)!=null,"LUFS cannot be relabelled dBFS");
         var wrongBand=Envelope(new JsonObject());wrongBand["bands"]![16]!["centre_hz"]=300.0;
@@ -118,7 +119,29 @@ sealed class IntelligenceHostContractTests
             "public settings payload must not expose provider secrets");
     }
 
-    void LegacyWebsiteBasesNormalizeToProviderV1()
+    async Task CanonicalApiRoutesHaveExpectedPaths()
+    {
+        var capture = new RequestCapture();
+        var router = new ProviderRouter(() => new HttpClient(new MockHandler(capture, request =>
+            request.RequestUri?.AbsolutePath.EndsWith("/models", StringComparison.Ordinal) == true
+                ? Json(HttpStatusCode.OK, """{"data":[{"id":"aifred:latest"}]}""")
+                : Json(HttpStatusCode.OK, """{"choices":[{"message":{"content":"Canonical reply."}}]}"""))));
+        var settings = HostSettings.FromJson(new JsonObject
+        {
+            ["provider"] = "openai-compatible",
+            ["endpoint"] = "https://north3rnlight3r.com/v1",
+            ["model"] = "aifred:latest",
+            ["api_key"] = "test-only-key"
+        });
+        Expect((await router.CheckAsync(settings)).Available, "canonical API model discovery must be available");
+        Expect((await router.ChatAsync(settings, "Check the mix.", Envelope(new JsonObject()))).Success,
+            "canonical API chat must be available");
+        Expect(capture.Paths.Contains("/api/v1/models"), "model discovery must use /api/v1/models");
+        Expect(capture.Paths.Contains("/api/v1/chat/completions"), "chat must use /api/v1/chat/completions");
+        Expect(capture.Channels.Contains("official"), "Flagship requests must identify the official channel");
+    }
+
+    void LegacyWebsiteBasesNormalizeToCanonicalApiV1()
     {
         foreach (var endpoint in new[]
                  {
@@ -134,8 +157,8 @@ sealed class IntelligenceHostContractTests
                 ["endpoint"] = endpoint,
                 ["model"] = "aifred:latest"
             });
-            Expect(settings.Endpoint == "https://north3rnlight3r.com/v1",
-                $"legacy website base {endpoint} must normalize to the provider v1 route");
+            Expect(settings.Endpoint == "https://north3rnlight3r.com/api/v1",
+                $"legacy website base {endpoint} must normalize to the canonical API v1 route");
         }
         var external = HostSettings.FromJson(new JsonObject
         {
@@ -164,6 +187,8 @@ sealed class RequestCapture
 {
     public string LastBody { get; set; } = "";
     public bool SawBearerToken { get; set; }
+    public List<string> Paths { get; } = [];
+    public List<string> Channels { get; } = [];
 }
 
 sealed class MockHandler(RequestCapture capture,
@@ -174,6 +199,9 @@ sealed class MockHandler(RequestCapture capture,
                                                                   CancellationToken cancellationToken)
     {
         capture.SawBearerToken |= request.Headers.Authorization?.Scheme == "Bearer";
+        capture.Paths.Add(request.RequestUri?.AbsolutePath ?? "");
+        if (request.Headers.TryGetValues("X-AIFRED-Channel", out var channels))
+            capture.Channels.AddRange(channels);
         if (request.Content != null)
             capture.LastBody = await request.Content.ReadAsStringAsync(cancellationToken);
         return responseFactory(request);
