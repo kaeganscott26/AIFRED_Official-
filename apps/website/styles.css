@@ -236,6 +236,13 @@ section { padding: 22px; }
   background: linear-gradient(180deg, rgba(7, 17, 29, 0.86), rgba(3, 7, 12, 0.96));
 }
 
+
+.Aifred-VST-Show {
+   display: fill;
+  border: 1px solid rgba(124, 240, 255, 0.22);
+
+}
+
 .showcase-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

@@ -135,10 +135,6 @@
         <h2>Why AIFRED Exists</h2>
         <p>A lot of tools give you numbers. That doesn't always mean they give you clarity.</p>
         <p>
-          AIFRED was built because most producers do not need more clutter. They need a better read
-          on what the mix is doing.
-        </p>
-        <p>
           When you're deep in a session, the hardest part usually is not finding a plugin to throw on
           the chain. It's figuring out what actually needs attention first.
         </p>
@@ -151,8 +147,11 @@
           <li>How far off is it from the reference?</li>
           <li>What needs to be fixed first?</li>
         </ul>
-        <p>That is the point of the Halo. Not to look cool for no reason. To help you read the mix faster.</p>
-      </section>
+        <p class="aifred-showcase">
+        <img src="apps\website\assets\showcase\Screenshot\/(205).png" alt="AifredSide">
+        </p>
+  </div>
+</section>
 
       <section id="analyzer" class="analyzer-panel">
         <div class="section-head">
@@ -194,36 +193,24 @@
         </div>
       </section>
 
-      <section id="beats">
+       <section id="beats">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Beat Catalog</p>
-            <h2>Production by North3rnLight3r.</h2>
-            <p>This is where the music lives.</p>
-            <p>
-              Browse the catalog, preview beats, and lock in the sound directly. Whether you're
-              looking for something hard, melodic, dark, cinematic, or clean enough to build a full
-              song around, this is where you hear the work for yourself.
-            </p>
-            <p>No filler. No fake catalog. Just real beats and real direction.</p>
-            <p>Catalog MP3 downloads are currently free.</p>
-            <p>For custom production or commercial licensing questions, use the contact form.</p>
+            <p class="eyebrow">North3rnLight3r Beat Catalog</p>
+            <h2>Preview the catalog. License the record-ready ideas.</h2>
+            <p>The player uses the audio already packaged with this site. No dead buttons, no ghost catalog.</p>
           </div>
-          <div class="catalog-controls">
-            <a class="btn" href="#beats">Browse Beats</a>
-            <button class="btn ghost" id="catalog-toggle" type="button" aria-expanded="false" aria-controls="catalog-list">Show catalog</button>
-            <button class="btn ghost" id="catalog-refresh" type="button">Refresh catalog</button>
-          </div>
+          <button class="btn ghost" id="catalog-refresh" type="button">Refresh catalog</button>
         </div>
         <div class="player">
           <div>
             <p class="eyebrow">Now playing</p>
             <h3 id="now-title">Select a beat</h3>
-            <p id="now-meta">Production by North3rnLight3r.</p>
+            <p id="now-meta">BPM and style will appear here.</p>
           </div>
           <audio id="audio-player" controls preload="metadata"></audio>
         </div>
-        <div id="catalog-list" class="catalog-grid" aria-live="polite" hidden></div>
+        <div id="catalog-list" class="catalog-grid" aria-live="polite"></div>
       </section>
 
       <section id="offerings">
@@ -291,7 +278,4 @@
       <span>© <span id="year"></span></span>
     </footer>
 
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-  </body>
-</html>
+ 
