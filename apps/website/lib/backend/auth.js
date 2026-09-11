@@ -109,7 +109,25 @@ export async function adminIdentity(request, env) {
 
 export async function verifyAdminCredentials(username, password, env) {
   const expectedUser = String(env.AIFRED_ADMIN_USERNAME || "").trim();
-  const expectedHash = String(env.AIFRED_ADMIN_PASSWORD_SHA256 || "").trim().toLowerCase();
-  if (!expectedUser || !/^[a-f0-9]{64}$/.test(expectedHash)) return false;
-  return (await safeEqual(username, expectedUser)) && (await safeEqual(await sha256Hex(password), expectedHash));
+  const configuredVerifier = String(env.AIFRED_ADMIN_PASSWORD_SHA256 || "").trim();
+  const configuredPassword = String(env.AIFRED_ADMIN_PASSWORD || "");
+
+  if (!expectedUser || !(await safeEqual(username, expectedUser))) return false;
+
+  // Canonical production configuration: AIFRED_ADMIN_PASSWORD_SHA256 contains
+  // the lowercase/uppercase-insensitive 64-character SHA-256 digest.
+  if (/^[a-f0-9]{64}$/i.test(configuredVerifier)) {
+    return safeEqual(await sha256Hex(password), configuredVerifier.toLowerCase());
+  }
+
+  // Compatibility for existing deployments that accidentally stored the raw
+  // password under the legacy SHA256-named secret. This keeps production
+  // recoverable without weakening the session boundary. New deployments should
+  // use the digest form above.
+  if (configuredVerifier) return safeEqual(password, configuredVerifier);
+
+  // Local/dev convenience only. Production should prefer the digest secret.
+  if (configuredPassword) return safeEqual(password, configuredPassword);
+
+  return false;
 }
