@@ -95,6 +95,12 @@ export function validateSourceDraft(path, content) {
   if (bytes < 1) throw new HttpError(400, "invalid_source_content", "source content must not be empty");
   if (bytes > file.max_bytes) throw new HttpError(413, "source_content_too_large", `source content exceeds ${file.max_bytes} bytes`);
   if (content.includes("\0")) throw new HttpError(400, "invalid_source_content", "source content contains a null byte");
+  if (/^(?:<<<<<<<(?: .*)?|=======|>>>>>>>(?: .*)?)\s*$/m.test(content)) {
+    throw new HttpError(400, "invalid_source_content", "source contains unresolved merge markers");
+  }
+  if (["html", "css", "javascript", "json"].includes(file.kind) && /^\s*```/m.test(content)) {
+    throw new HttpError(400, "invalid_source_content", "deployable source must not contain Markdown fences");
+  }
   if (file.kind === "json") {
     try { JSON.parse(content); } catch { throw new HttpError(400, "invalid_source_json", "JSON source content is invalid"); }
   }

@@ -11,8 +11,8 @@ The unified Pages Advanced Mode runtime implements this contract from `apps/webs
 | GET/HEAD | `/api/health` | No | Constant-time service and contract health |
 | GET/HEAD | `/api/v1/models` | No | Configured public model descriptors |
 | GET/HEAD | `/api/v1/catalog/list` | No | Static Official catalog metadata |
-| GET/HEAD | `/api/v1/releases` | No | Flagship release metadata from D1 |
-| GET/HEAD | `/api/v1/releases/current` | No | Current flagship release metadata |
+| GET/HEAD | `/api/v1/releases` | No | Published Beta metadata from the pinned release manifest |
+| GET/HEAD | `/api/v1/releases/current` | No | Current Beta release metadata; unpublished releases are omitted |
 | GET/HEAD | `/api/v1/references` | No | Sanitized D1-backed reference catalog |
 | GET/HEAD | `/api/v1/reference/pool` | No | Alias of the sanitized reference catalog |
 | POST | `/api/v1/chat/completions` | Product/admin token | OpenAI-compatible request with `FilteredMixContext` and `Idempotency-Key` |
@@ -67,7 +67,7 @@ The save response contains commit evidence and `deployment.verified: false`. Con
 
 ## Storage authority
 
-D1 `references_catalog` owns structured public reference records. The request path does not list the legacy KV namespace. D1 also owns releases, inquiries, sessions, idempotency, activity, and rollups. R2 owns release/media bytes; Queue and Analytics Engine handle operational telemetry.
+D1 `references_catalog` owns structured public reference records. The request path does not list the legacy KV namespace. D1 also owns inquiries, sessions, idempotency, activity, and rollups. The pinned release manifest owns public artifact selection. R2 owns release/media bytes; direct D1 writes and Analytics Engine handle telemetry. No Queue is required.
 
 ## Local AifredIntelligenceHost
 

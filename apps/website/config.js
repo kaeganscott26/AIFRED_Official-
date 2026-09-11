@@ -1,5 +1,5 @@
 function __aifredOrigin(value) {
-  const fallback = "https://north3rnlight3r.com";
+  const fallback = window.location.origin;
   try {
     const url = new URL(String(value || fallback), window.location.origin);
     url.pathname = url.pathname.replace(/\/+$/, "").replace(/\/(?:api\/v1|api|v1)$/i, "") || "/";
@@ -11,7 +11,7 @@ function __aifredOrigin(value) {
   }
 }
 
-const __origin = __aifredOrigin(window.AIFRED_API_BASE_URL);
+const __origin = __aifredOrigin(window.location.origin);
 window.AIFRED_CONFIG = {
   origin: __origin,
   apiBase: __origin,

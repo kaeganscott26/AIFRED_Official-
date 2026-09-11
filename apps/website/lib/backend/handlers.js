@@ -2,6 +2,7 @@ import { adminIdentity, apiIdentity, bearer, createAdminSession, enforceRateLimi
 import { HttpError, MAX_BODY, bounded, clientMetadata, json, publicCachedJson, readJson, sha256Hex } from "./http.js";
 import { classifyClient, enqueueActivities, enqueueActivity } from "./telemetry.js";
 import { invokeChatProvider, providerConfiguration, testOllamaProvider } from "./providers.js";
+import { browserReferenceName, classifyBrowserReference, normalizeBrowserMetrics } from "./reference-gate.js";
 import { EDITABLE_WEBSITE_FILES, readApprovedSourceFile, saveApprovedSourceFile, sourceControlStatus, validateSourceDraft } from "./source-control.js";
 import { publicRelease, publicReleaseManifest, releaseAsset, releaseForChannel } from "../release-manifest.js";
 
@@ -28,7 +29,7 @@ function pathAfterApi(pathname) {
   return pathname.startsWith("/api/") ? pathname.slice(4) : pathname;
 }
 
-export function requestedReleaseChannel(request, fallback = "flagship") {
+export function requestedReleaseChannel(request, fallback = "beta") {
   const value = bounded(new URL(request.url).searchParams.get("channel") || fallback, 20).toLowerCase();
   if (value !== "beta" && value !== "flagship") {
     throw new HttpError(400, "invalid_release_channel", "release channel must be beta or flagship");
@@ -49,7 +50,7 @@ async function analyticsIdentity(request, env) {
   if (bearer(request)) return apiIdentity(request, env, true);
   const origin = bounded(request.headers.get("origin"), 200);
   const fetchSite = bounded(request.headers.get("sec-fetch-site"), 24);
-  const allowedOrigins = new Set([env.AIFRED_PUBLIC_ORIGIN, "https://north3rnlight3r.com", "https://www.north3rnlight3r.com"]);
+  const allowedOrigins = new Set([new URL(request.url).origin, env.AIFRED_PUBLIC_ORIGIN, "https://north3rnlight3r.com", "https://www.north3rnlight3r.com"]);
   if (!allowedOrigins.has(origin) || !new Set(["same-origin", "same-site"]).has(fetchSite)) {
     throw new HttpError(401, "authentication_required", "valid analytics authentication or same-site browser context is required");
   }
@@ -115,7 +116,7 @@ export function validateFilteredContext(context) {
   if (!Array.isArray(context.metrics) || context.metrics.length !== 16 || !Array.isArray(context.bands) || context.bands.length !== 30) {
     throw new HttpError(400, "invalid_measurement_context", "context must contain the 16 metric and 30 band FilteredMixContext payload");
   }
-  if (context.product_channel !== "official") throw new HttpError(400, "invalid_measurement_context", "context.product_channel must be official");
+  if (!new Set(["beta", "official"]).has(context.product_channel)) throw new HttpError(400, "invalid_measurement_context", "context.product_channel must be beta or official");
   const revision = PROFILE_REVISIONS.get(context.profile_id);
   if (!revision || context.profile_version !== revision) throw new HttpError(400, "invalid_measurement_context", "context profile identity or revision is unsupported");
   if (Array.isArray(context.session_context) && context.session_context.length > 4) throw new HttpError(400, "invalid_measurement_context", "context session history exceeds its bound");
@@ -191,10 +192,13 @@ async function references(request, env, ctx, trace) {
       const records = await loadReferenceRecords(env, 500);
       return {
         ok: true,
+        schema: "aifred.reference-pool.public.v1",
         contract_version: "aifred.references.v1",
         references: records,
+        records,
         reference: records[0] || null,
         count: records.length,
+        source: "aifred-ops.references_catalog",
         reason: records.length ? "" : "No usable references are available."
       };
     }, REFERENCE_CACHE_SECONDS, 900);
@@ -268,6 +272,66 @@ async function loadReferenceRecords(env, limit) {
     metrics: JSON.parse(row.metrics_json),
     classification: JSON.parse(row.classification_json)
   }));
+}
+
+async function websiteAnalysis(request, env, ctx, trace) {
+  requireMethod(request, "POST");
+  trace.rateLimitOutcome = await enforceRateLimit(env.ANALYSIS_RATE_LIMITER, await rateLimitKey(request), { db: env.AIFRED_OPS, scope: "website-analysis", limit: 10 });
+  const body = await readJson(request, MAX_BODY.analysis);
+  const metrics = normalizeBrowserMetrics(body);
+  const gate = classifyBrowserReference(metrics);
+  const analysisId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  let persistence = "disposed";
+
+  if (gate.accepted) {
+    const durationSeconds = Math.max(0, Math.min(86400, Number(body.duration_seconds || 0)));
+    const classification = { ...gate, duration_seconds: Number.isFinite(durationSeconds) ? durationSeconds : 0, source: "website-analyzer" };
+    await env.AIFRED_OPS.prepare(`
+      INSERT INTO references_catalog (id, name, version, created_at, metrics_json, classification_json, active)
+      VALUES (?, ?, ?, ?, ?, ?, 1)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        version = excluded.version,
+        created_at = excluded.created_at,
+        metrics_json = excluded.metrics_json,
+        classification_json = excluded.classification_json,
+        active = 1
+    `).bind(analysisId, browserReferenceName(analysisId), "website-analyzer.v1", createdAt, JSON.stringify(metrics), JSON.stringify(classification)).run();
+    trace.d1Writes += 1;
+    persistence = "stored";
+  }
+
+  ctx.waitUntil(enqueueActivity(env, {
+    id: crypto.randomUUID(),
+    created_at: createdAt,
+    event_type: "website.analysis.submitted",
+    request_id: bounded(body.request_id, 128) || trace.requestId,
+    product: "aifred-website",
+    channel: "beta",
+    platform: "browser",
+    route: "/v1/analysis/submit",
+    method: "POST",
+    status: 200,
+    metadata: { analysis_id: analysisId, accepted: gate.accepted, score: gate.score, classification: gate.classification, persistence }
+  }));
+
+  return json({
+    ok: true,
+    accepted: gate.accepted,
+    score: gate.score,
+    classification: gate.classification,
+    reference_utility: gate.reference_utility,
+    technical_caution: gate.technical_caution,
+    style_tag: gate.style_tag,
+    best_use: gate.best_use,
+    caution: gate.caution,
+    why: gate.why,
+    action: gate.accepted ? "metadata stored in the AIFRED reference pool" : "metadata rejected or kept out of the pool",
+    persistence,
+    checks: gate.checks,
+    analysis_id: gate.accepted ? analysisId : null
+  });
 }
 
 async function analysis(request, env, trace) {
@@ -683,6 +747,9 @@ async function download(request, env, ctx, trace) {
   const requestedAsset = new URL(request.url).searchParams.get("asset") || "setup";
   const { release, asset, logicalName } = releaseAsset(channel, requestedAsset);
   if (!release) throw new HttpError(400, "invalid_release_channel", "release channel must be beta or flagship");
+  if (channel !== "beta" || release.source_repository !== "kaeganscott26/AIFRED") {
+    throw new HttpError(404, "release_unavailable", "release artifact is not published");
+  }
   if (!logicalName) throw new HttpError(400, "invalid_asset", "unsupported release asset");
   if (!release.published || !asset?.published) {
     throw new HttpError(404, "release_unavailable", `${channel} release artifact is not published`);
@@ -738,7 +805,8 @@ export async function routeRequest(request, env, ctx, trace) {
   if (path === "/v1/releases/current") return releases(request, env, ctx, true);
   if (path === "/v1/chat/completions" || path === "/v1/chat/ask") return chat(request, env, trace);
   if (path === "/v1/references" || path === "/v1/reference/pool") return references(request, env, ctx, trace);
-  if (path === "/v1/analysis" || path === "/v1/analysis/submit" || path === "/v1/analyzer/submit") return analysis(request, env, trace);
+  if (path === "/v1/analysis/submit" || path === "/v1/analyzer/submit") return websiteAnalysis(request, env, ctx, trace);
+  if (path === "/v1/analysis") return analysis(request, env, trace);
   if (path === "/v1/analytics/events" || path === "/v1/activity/record") return analytics(request, env, trace);
   if (path === "/v1/inquiries" || path === "/v1/inquiries/submit") return inquiry(request, env, trace);
   if (path === "/v1/downloads/plugin") return download(request, env, ctx, trace);

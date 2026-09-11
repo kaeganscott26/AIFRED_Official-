@@ -63,7 +63,7 @@ export function releaseAsset(channel, requestedAsset) {
 }
 
 export function publicRelease(release) {
-  if (!release) return null;
+  if (!release?.published) return null;
   return {
     channel: release.channel,
     version: release.version,
@@ -84,7 +84,7 @@ export function publicRelease(release) {
 }
 
 export function publicReleaseManifest() {
-  return Object.values(RELEASES).map(publicRelease);
+  return Object.values(RELEASES).filter((release) => release.published).map(publicRelease);
 }
 
 export { RELEASES };

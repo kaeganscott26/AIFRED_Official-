@@ -1,5 +1,9 @@
 # Current AIFRED backend migration handoff
 
+> SUPERSEDED HISTORICAL HANDOFF. Do not execute the "next task", release, deletion,
+> or dedicated-Worker instructions below. The recovery authority and current live
+> evidence are maintained only in [backend_map.md](../backend_map.md).
+
 Last updated: `2026-09-10T19:45:26-05:00`
 
 This file records the observed current state only. It is updated after each validated milestone. Secret values are never recorded here.

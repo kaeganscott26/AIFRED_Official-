@@ -12,6 +12,9 @@ The site and backend are one Pages Advanced Mode deployment. `_worker.js` owns `
 
 ## Evidence boundary
 
+Current live state and acceptance evidence: [backend_map.md](../backend_map.md).
+The older deployment IDs below are historical rollback evidence, not current status.
+
 The current live rollback baseline is deployment `b2b33ea0-e74e-46a0-a6b5-53fb5c5d4b4e`, documented in [the recovery baseline](cloudflare/2026-09-10-live-recovery-baseline.md). At capture time, Pages Git integration still named the public Beta repository. Official becomes production source authority only after an Official preview passes, the unified deployment is promoted, the Git source is changed, and production is observed successfully. Source implementation or a preview alone does not establish production state.
 
 ## Authoritative paths
@@ -49,7 +52,12 @@ npm ci --prefix apps
 npm --prefix apps run website:check
 ```
 
-Pages has no equivalent of a Worker production-route dry run; a non-production branch deployment is the packaging/runtime gate. Validate the complete route, storage, admin, download, client, and idle-traffic matrix on that preview before changing production. Apply production D1 migrations only immediately before a validated promotion. Capture the production deployment ID again, retain the rollback, promote the same verified architecture, then observe production for several minutes.
+Use `npm --prefix apps run website:preview` for a filtered, bundled Pages preview.
+The helper enforces the public asset list because Pages ignores `.assetsignore`.
+The preview uses the existing canonical D1 references and does not clone them.
+Validate static files, APIs, real references, downloads, admin and provider behavior
+before `npm --prefix apps run website:deploy`. Capture the production deployment ID
+again and retain rollback. No plugin build or release is part of website recovery.
 
 ## Admin source control
 

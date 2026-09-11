@@ -40,10 +40,12 @@ Pages/Workers access platform storage through bindings, not through a browser/AP
 
 | Binding | Resource | Responsibility |
 | --- | --- | --- |
-| `AIFRED_REFERENCE_POOL` | Workers KV | accepted reference/analysis metadata |
+| `AIFRED_REFERENCE_POOL` | Workers KV | retained historical compatibility; not listed on requests |
 | `AIFRED_REFERENCE_BUCKET` | R2 `aifred-reference-pool` | licensed/private reference objects and metadata mirrors |
 | `AIFRED_DOWNLOADS` | R2 `aifred-downloads` | release artifacts, catalog media and website-managed assets |
-| `AIFRED_SALES_LOG` | Workers KV | activity, inquiries, runtime routing and admin throttling |
+| `AIFRED_SALES_LOG` | Workers KV | retained historical records; no new request-event writes |
+| `AIFRED_OPS` | D1 `aifred-ops` | canonical references, activity, inquiries, sessions and throttling |
+| `AIFRED_ANALYTICS` | Analytics Engine | optional operational telemetry |
 
 A Worker that has an R2/KV binding does not need an S3 access key to use that resource. S3-compatible credentials are only for external tooling that accesses R2 through the S3 API.
 

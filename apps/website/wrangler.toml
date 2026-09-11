@@ -45,7 +45,7 @@ AIFRED_PUBLIC_ORIGIN = "https://north3rnlight3r.com"
 AIFRED_API_BASE_URL = "https://north3rnlight3r.com"
 AIFRED_GITHUB_REPO = "kaeganscott26/AIFRED_Official-"
 AIFRED_GITHUB_BRANCH = "main"
-AIFRED_PAGES_PROJECT = "aifred-api-staging"
+AIFRED_PAGES_PROJECT = "aifred-site"
 AIFRED_CONTACT_EMAIL = "north3rnlight3rofficial@outlook.com"
 AIFRED_ENVIRONMENT = "preview"
 
@@ -67,8 +67,9 @@ bucket_name = "aifred-reference-pool"
 
 [[env.preview.d1_databases]]
 binding = "AIFRED_OPS"
-database_name = "aifred-ops-preview"
-database_id = "3e1f0f18-08cc-4f91-b02e-1c3c10c77dbb"
+# The canonical reference pool already lives here; do not clone its contents.
+database_name = "aifred-ops"
+database_id = "60d95cd8-d1da-486c-b6fd-4bfedcd7bc47"
 
 [[env.preview.analytics_engine_datasets]]
 binding = "AIFRED_ANALYTICS"

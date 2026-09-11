@@ -4,7 +4,10 @@ import test from "node:test";
 import backend from "../apps/website/lib/backend/index.js";
 import siteWorker from "../apps/website/_worker.js";
 import { sha256Hex } from "../apps/website/lib/backend/http.js";
-import { releaseAsset, releaseForChannel } from "../apps/website/lib/release-manifest.js";
+import { releaseAsset, releaseForChannel, publicReleaseManifest } from "../apps/website/lib/release-manifest.js";
+import { validateFilteredContext } from "../apps/website/lib/backend/handlers.js";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
 import {
   EDITABLE_WEBSITE_FILES,
   readApprovedSourceFile,
@@ -19,6 +22,48 @@ function context() {
     async flush() { await Promise.all(pending); }
   };
 }
+
+test("preview browser configuration stays on its own origin", () => {
+  const window = { location: { origin: "https://recovery.aifred-site.pages.dev" } };
+  vm.runInNewContext(readFileSync(new URL('../apps/website/config.js', import.meta.url), 'utf8'), { window, URL });
+  assert.equal(window.AIFRED_CONFIG.apiV1Base, window.location.origin + '/api/v1');
+});
+
+test("public release listing excludes the unpublished release", () => {
+  assert.deepEqual(publicReleaseManifest().map(r => r.channel), ['beta']);
+});
+
+test("the Pages backend accepts both client channels without changing measurement validation", () => {
+  const metrics = [
+    ['sample_peak','dBFS'], ['rms','dBFS'], ['true_peak','dBTP'],
+    ['momentary_loudness','LUFS'], ['short_term_loudness','LUFS'], ['integrated_loudness','LUFS'],
+    ['loudness_range','LU'], ['broadband_crest','dB'], ['correlation','ratio'],
+    ['left_energy','dBFS'], ['right_energy','dBFS'], ['mid_energy','dBFS'], ['side_energy','dBFS'],
+    ['left_right_balance','dB'], ['side_to_mid','dB'], ['width','percent']
+  ];
+  const centres = [20,30,40,50,60,70,80,90,100,150,200,250,350,450,600,750,850,1000,1500,2000,3000,4000,6000,8000,10000,12000,14000,16000,18000,20000];
+  const payload = {
+    schema:'aifred.filtered-mix.v1', product_version:'test', plugin_instance_id:'instance',
+    session_id:'session', profile_id:'MIX_BALANCED', profile_version:1, observation_id:'1', session_context:[],
+    metrics:metrics.map(([metric,unit])=>({metric,unit,available:false})),
+    bands:centres.map(centre_hz=>({metric:'band_energy',unit:'dBFS',available:false,centre_hz}))
+  };
+  for (const channel of ['beta', 'official']) {
+    payload.product_channel = channel;
+    assert.equal(validateFilteredContext(payload).product_channel, channel);
+  }
+  payload.bands[16].centre_hz = 300;
+  assert.throws(() => validateFilteredContext(payload), /frequency contract/);
+});
+
+test("website metadata submission reaches its handler without native client authentication", async () => {
+  const env = adminEnv(await sha256Hex('password'));
+  const response = await request(env, '/api/v1/analysis/submit', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({metrics:{}})
+  });
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error, 'invalid_browser_analysis');
+});
 
 class FakeStatement {
   constructor(db, sql) {
@@ -240,6 +285,8 @@ test("mobile source editing remains an exact existing-text-file allowlist", () =
   });
   assert.throws(() => validateSourceDraft("apps/website/../.env", "secret"), /not approved/);
   assert.throws(() => validateSourceDraft("apps/website/assets/brand/logo.png", "binary"), /not approved/);
+  assert.throws(() => validateSourceDraft("apps/website/styles.css", "```css\nbody {}\n```"), /Markdown fences/);
+  assert.throws(() => validateSourceDraft("apps/website/config.js", "<<<<<<< current\nwindow.x = 1;\n=======\nwindow.x = 2;\n>>>>>>> incoming"), /merge markers/);
 });
 
 test("mobile source read and save target Official with optimistic concurrency", async () => {

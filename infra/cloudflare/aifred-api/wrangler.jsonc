@@ -1,16 +1,12 @@
 {
+  // Historical donor only. Production uses apps/website/_worker.js in aifred-site.
   "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
   "name": "aifred-api",
   "main": "src/index.js",
   "compatibility_date": "2026-09-08",
   "workers_dev": false,
   "preview_urls": false,
-  "routes": [
-    {
-      "pattern": "north3rnlight3r.com/api/*",
-      "zone_name": "north3rnlight3r.com"
-    }
-  ],
+  "routes": [],
   "observability": {
     "enabled": true,
     "logs": {

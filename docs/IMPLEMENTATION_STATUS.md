@@ -1,5 +1,8 @@
 # Implementation status
 
+> Website/backend state below is historical. Use [backend_map.md](../backend_map.md)
+> for current recovery and live deployment evidence. The DSP history remains unchanged.
+
 ## Repository/backend migration supplement
 
 The Official working tree contains one Pages Advanced Mode website/backend, Android and desktop administration clients, and `/ops`. `apps/website/_worker.js` owns static fallthrough and all backend routes; the abandoned `aifred-api` experiment is not the production architecture.

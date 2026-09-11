@@ -1,5 +1,8 @@
 # Unified Pages production migration checklist
 
+> Historical checklist, superseded by [backend_map.md](../backend_map.md).
+> Its plugin builds, releases, deletion steps, and intelligence work are outside this recovery.
+
 Record repository SHA, deployment ID, command, result, timestamp, and operator. A local or preview pass does not establish production state.
 
 ## Recovery and source

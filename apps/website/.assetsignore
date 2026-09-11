@@ -2,3 +2,10 @@
 .forge/**
 assets/.forge/**
 wrangler.toml
+README.md
+lib/**
+functions/**
+migrations/**
+node_modules/**
+.wrangler/**
+.env*

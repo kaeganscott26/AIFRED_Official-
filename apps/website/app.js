@@ -265,12 +265,21 @@ async function renderReleaseActions() {
     setDistributionStatus("The latest free Beta artifact is unavailable while release verification is incomplete.");
     return;
   }
-  renderUnlockedDownloads({
-    setup: release.artifacts?.setup?.download_url || DOWNLOAD_URLS.windowsInstaller,
-    zip: release.artifacts?.zip?.download_url || DOWNLOAD_URLS.windowsZip,
-    releaseNotes
-  });
-  setDistributionStatus(`AIFRED ${release.version} Beta artifacts are available free.`);
+  const downloads = { releaseNotes };
+  await Promise.all(["setup", "zip"].map(async (name) => {
+    const artifact = release.artifacts?.[name];
+    if (!artifact?.published || !artifact.download_url) return;
+    const url = new URL(artifact.download_url, window.location.origin);
+    if (url.origin !== window.location.origin) return;
+    try {
+      const response = await fetch(url, { method: "HEAD", cache: "no-store" });
+      if (response.ok && Number(response.headers.get("content-length")) === artifact.size_bytes &&
+          response.headers.get("content-type")?.split(";")[0] === artifact.content_type &&
+          response.headers.get("content-disposition")?.includes(artifact.filename)) downloads[name] = url.href;
+    } catch { /* Unavailable artifacts have no public download button. */ }
+  }));
+  renderUnlockedDownloads(downloads);
+  setDistributionStatus(downloads.setup || downloads.zip ? "AIFRED Beta — FREE DOWNLOAD" : "");
 }
 
 function clamp(value, min, max) {

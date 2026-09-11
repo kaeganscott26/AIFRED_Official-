@@ -1,5 +1,11 @@
 # AIFRED API
 
+> OBSOLETE DEPLOYMENT PLAN. This directory is donor/reference material only.
+> Production is the single `aifred-site` Pages Advanced Mode deployment sourced
+> from `apps/website`. Do not deploy this Worker or give staging a domain route.
+> The current authority and evidence are in [backend_map.md](../../../backend_map.md).
+> All deployment instructions below are historical and superseded.
+
 This directory is the sole authoritative server implementation for AIFRED API behavior.
 Production is deployed as the `aifred-api` Worker and is routed only at
 `north3rnlight3r.com/api/*`. The Official Pages project owns all other website routes.
