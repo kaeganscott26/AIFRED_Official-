@@ -1,13 +1,13 @@
 # Current AIFRED backend migration handoff
 
-Last updated: `2026-09-10T19:26:53-05:00`
+Last updated: `2026-09-10T19:33:19-05:00`
 
 This file records the observed current state only. It is updated after each validated milestone. Secret values are never recorded here.
 
 ## Repository state
 
-- Official implementation milestone: `6405fef209202a9a6ed6874a60125cc2d3baafed`; pushed to `origin/main`.
-- Beta: `main` at `a4bdaefe389830989e5e39aa4743ec952854164b`; `origin/main` matches; worktree was clean after fetch.
+- Official implementation milestone: `145267aadd2623df3073001e7162defed8f309ef`; pushed to `origin/main`.
+- Beta client milestone: `6f92d432bf6d3cd0d0079bf6069b2543f831e248`; pushed to `origin/main`.
 - Current source contains two competing Official API implementations: Pages Advanced Mode backend modules under `apps/website/lib/backend/` and the dedicated Worker under `infra/cloudflare/aifred-api/`. Convergence is not complete.
 - Beta still contains its website/backend/admin infrastructure. Retirement is not complete.
 
@@ -46,13 +46,17 @@ This file records the observed current state only. It is updated after each vali
 - Non-provider staging smoke passed public API, release/download, admin, source-control status, analytics idempotency, and logout checks.
 - Migrated all 22 historical R2 reference metadata objects into D1. Identity, names, ISO timestamps, metrics, and classification round-tripped 22/22; R2 source objects were not modified.
 - Staging website analyzer ingestion and D1-backed pool retrieval passed with one synthetic row that was precisely removed after verification.
+- Restored the Official website's public analyzer submission to `/api/v1/analysis/submit`; website analytics, inquiries, release lookup, downloads, and provider configuration now use the canonical `/api/v1` base.
+- Official reference reads now target the single public pool route `/api/v1/reference/pool`.
+- Both IntelligenceHost channels normalize legacy AIFRED origins to `https://north3rnlight3r.com/api/v1`; contract tests prove model and chat requests use `/api/v1/models` and `/api/v1/chat/completions`, carry bearer authentication, and identify their correct `beta` or `official` channel.
+- Both IntelligenceHost contract suites pass. Worker validation remains at 17/17 passing tests and a successful Wrangler dry-run.
 
 ## Remaining work
 
 - Complete dedicated Worker capability parity for current Ops/Android/Desktop clients and prove it in staging.
 - Validate the migrated D1 pool through both plugin clients and later through production website ingestion.
 - Recover/reconcile ignored local environment inputs and configure production secrets by name without exposing values.
-- Route Beta and Flagship clients to `https://north3rnlight3r.com/api/v1` and add shared-contract tests.
+- Wire the Beta VST Reference client to the D1-backed Official pool; its IntelligenceHost remote Chat contract is already canonical.
 - Decouple and physically remove Beta backend/site/admin infrastructure only after client/build tooling no longer depends on it.
 - Build, test, package, and publish a new Beta release; mirror and verify artifacts.
 - Deploy the Official Worker and Official website to production; validate the public domain and clients.
@@ -69,11 +73,11 @@ This file records the observed current state only. It is updated after each vali
 
 ## Exact next task
 
-Implement and test the remaining current Ops/Android/Desktop Admin contract against the canonical Worker, then route both plugin clients to the same `/api/v1` contract before touching Beta infrastructure.
+Wire and test the Beta VST Reference client against the canonical pool, then decouple Beta build/release tooling and remove its backend/site/admin tree.
 
 ## Rollback points
 
 - Official source rollback: `dde171989fb894537489a3a0b74ffaa8bd7090db`.
-- Beta source rollback: `a4bdaefe389830989e5e39aa4743ec952854164b`.
+- Beta source rollback: `a4bdaefe389830989e5e39aa4743ec952854164b` (pre-client convergence).
 - Production Pages rollback deployment: `b2b33ea0-e74e-46a0-a6b5-53fb5c5d4b4e`.
 - Prior Official preview: `20436ef4-2172-431f-ad05-fd9acb07755e`.
