@@ -1,6 +1,6 @@
 # Current AIFRED backend migration handoff
 
-Last updated: `2026-09-10T19:17:21-05:00`
+Last updated: `2026-09-10T19:26:53-05:00`
 
 This file records the observed current state only. It is updated after each validated milestone. Secret values are never recorded here.
 
@@ -18,7 +18,7 @@ This file records the observed current state only. It is updated after each vali
 - Current recorded production source authority: public Beta repository revision `05c4444c2bfeba0ed7407f878a65060efbe055ca`.
 - Current recorded production topology: Pages Advanced Mode serves website and API behavior; no zone Worker route was present at the last live baseline.
 - Official unified Pages preview: `20436ef4-2172-431f-ad05-fd9acb07755e` from Official revision `e1b98fd6efb4cc286d9ea81cb6e014ce9e1ec196`.
-- Live read-only check found `aifred-api` at version `b628fee0-bef6-4081-a6f9-3aa2935dd896` with no Worker secrets. `aifred-api-staging` does not currently exist.
+- Staging Worker is deployed at version `17816c14-693c-44d9-8f2a-fe0693490eab`. Production `aifred-api` remains at `b628fee0-bef6-4081-a6f9-3aa2935dd896` with no secrets and is not yet the public route owner.
 - Production acceptance for this convergence: not run.
 
 ## Cloudflare resources currently recorded
@@ -29,7 +29,8 @@ This file records the observed current state only. It is updated after each vali
 - R2: `aifred-downloads`, `aifred-reference-pool`.
 - KV: `AIFRED_REFERENCE_POOL`, `AIFRED_SALES_LOG` (legacy data sources; not authoritative target storage).
 - Queues: `aifred-events`, `aifred-events-staging`.
-- Reference source discovered at the last live baseline: 22 JSON metadata objects under `aifred-reference-pool/reference-pool/metadata/`; D1 `references_catalog` was empty at that baseline.
+- Reference source: 22 JSON metadata objects under `aifred-reference-pool/reference-pool/metadata/`.
+- Authoritative reference destination: D1 `aifred-ops.references_catalog`, now 22 active rows.
 
 ## Completed work
 
@@ -41,11 +42,15 @@ This file records the observed current state only. It is updated after each vali
 - The FilteredMixContext server contract now accepts both `beta` and `official` product channels.
 - Worker validation passed 17 Node tests, syntax checks, repository construction checks, and Wrangler production dry-run. This is source validation, not staging or production proof.
 - Admin username was removed from versioned Wrangler variables; admin identity must be supplied as a Cloudflare secret.
+- Recreated `aifred-api-staging`, configured seven recovered secret names, and applied D1 migration `0004_pages_unified_runtime.sql`.
+- Non-provider staging smoke passed public API, release/download, admin, source-control status, analytics idempotency, and logout checks.
+- Migrated all 22 historical R2 reference metadata objects into D1. Identity, names, ISO timestamps, metrics, and classification round-tripped 22/22; R2 source objects were not modified.
+- Staging website analyzer ingestion and D1-backed pool retrieval passed with one synthetic row that was precisely removed after verification.
 
 ## Remaining work
 
 - Complete dedicated Worker capability parity for current Ops/Android/Desktop clients and prove it in staging.
-- Migrate historical reference metadata into one authoritative reference pool and test accepted website ingestion.
+- Validate the migrated D1 pool through both plugin clients and later through production website ingestion.
 - Recover/reconcile ignored local environment inputs and configure production secrets by name without exposing values.
 - Route Beta and Flagship clients to `https://north3rnlight3r.com/api/v1` and add shared-contract tests.
 - Decouple and physically remove Beta backend/site/admin infrastructure only after client/build tooling no longer depends on it.
@@ -57,13 +62,14 @@ This file records the observed current state only. It is updated after each vali
 ## Current blockers
 
 - The current OAuth session can deploy Workers/Pages/routes but does not expose explicit Access mutation or DNS record-write scopes.
-- The production Worker has no secrets and staging Worker is absent; secrets must be reconciled from ignored local configuration before remote validation.
+- The production Worker still has no secrets. Staging has the recovered API, analytics, admin identity/hash/session, GitHub, and Ollama API secret names.
+- `OLLAMA_ACCESS_CLIENT_ID` and `OLLAMA_ACCESS_CLIENT_SECRET` remain unavailable, so protected provider/chat validation is blocked.
 - Provider/chat previously failed because `ollama.north3rnlight3r.com` did not resolve and protected Tunnel/Access credentials were unavailable.
 - Android device validation is independent and currently unverified; it does not block backend/site work.
 
 ## Exact next task
 
-Reconcile ignored local secret inputs into the canonical Worker's staging secret set, recreate staging, and validate the public website analyzer/reference path plus the existing Worker smoke suite without changing production routing.
+Implement and test the remaining current Ops/Android/Desktop Admin contract against the canonical Worker, then route both plugin clients to the same `/api/v1` contract before touching Beta infrastructure.
 
 ## Rollback points
 
