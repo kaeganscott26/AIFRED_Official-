@@ -1,14 +1,16 @@
-name = "aifred-site"
+name = "aifred-api-staging"
 pages_build_output_dir = "."
 compatibility_date = "2026-08-25"
 compatibility_flags = ["nodejs_compat"]
+
+
 
 [vars]
 AIFRED_PUBLIC_ORIGIN = "https://north3rnlight3r.com"
 AIFRED_API_BASE_URL = "https://north3rnlight3r.com"
 AIFRED_GITHUB_REPO = "kaeganscott26/AIFRED_Official-"
 AIFRED_GITHUB_BRANCH = "main"
-AIFRED_PAGES_PROJECT = "aifred-site"
+AIFRED_PAGES_PROJECT = "aifred-api-staging"
 AIFRED_CONTACT_EMAIL = "north3rnlight3rofficial@outlook.com"
 AIFRED_ENVIRONMENT = "production"
 
@@ -43,7 +45,7 @@ AIFRED_PUBLIC_ORIGIN = "https://north3rnlight3r.com"
 AIFRED_API_BASE_URL = "https://north3rnlight3r.com"
 AIFRED_GITHUB_REPO = "kaeganscott26/AIFRED_Official-"
 AIFRED_GITHUB_BRANCH = "main"
-AIFRED_PAGES_PROJECT = "aifred-site"
+AIFRED_PAGES_PROJECT = "aifred-api-staging"
 AIFRED_CONTACT_EMAIL = "north3rnlight3rofficial@outlook.com"
 AIFRED_ENVIRONMENT = "preview"
 
