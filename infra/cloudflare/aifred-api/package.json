@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check src/index.js && node --check src/providers.js && node --check src/source-control.js && node --test test/*.test.js && wrangler deploy --dry-run --env=",
+    "check": "node --check src/index.js && node --check src/providers.js && node --check src/reference-gate.js && node --check src/source-control.js && node --test test/*.test.js && wrangler deploy --dry-run --env=",
     "deploy": "wrangler deploy",
     "deploy:staging": "wrangler deploy --env staging",
     "smoke:staging": "node scripts/smoke.mjs https://aifred-api-staging.aifred-site.workers.dev",

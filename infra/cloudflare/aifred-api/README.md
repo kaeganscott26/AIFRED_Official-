@@ -1,9 +1,8 @@
-# Abandoned split-Worker migration archive
+# AIFRED API
 
-This directory preserves useful schema, tests, and bounded-telemetry work from the abandoned
-`aifred-api` experiment. It is not a deployment target or source of production routing truth.
-The supported implementation is the unified Pages Advanced Mode runtime under `apps/website`.
-Do not deploy this Worker or add an `/api/*` route for it.
+This directory is the sole authoritative server implementation for AIFRED API behavior.
+Production is deployed as the `aifred-api` Worker and is routed only at
+`north3rnlight3r.com/api/*`. The Official Pages project owns all other website routes.
 
 ## Traffic contract
 
@@ -33,7 +32,7 @@ Do not deploy this Worker or add an `/api/*` route for it.
 | Analytics Engine `aifred_events` | Per-request operational dimensions and latency/counter metrics |
 | Queue `aifred-events` | Async activity ingestion and request-rollup batching |
 
-## Historical validation only
+## Validation and deployment
 
 Local source validation:
 
@@ -45,5 +44,10 @@ npm run check
 The check runs syntax tests, Node contract tests, and a Wrangler dry run. It does not prove remote
 bindings, secret presence, staging health, production routing, or Pages publication.
 
-Do not run this directory's deploy, route, secret, or remote migration commands. Port an approved
-change into `apps/website`, validate the unified preview, and follow the current migration checklist.
+Public website analysis uses `/api/v1/analysis/submit` (or `/api/v1/analyzer/submit`). It applies
+the retained browser reference gate and stores only accepted, sanitized metadata in D1
+`references_catalog`. Plugin analysis uses the distinct authenticated `/api/v1/analysis` route.
+
+Run production and staging deployments, D1 migrations, and secret configuration from this
+directory with Wrangler. Secret values belong only in ignored local files and Cloudflare secrets;
+never put them in this README, `wrangler.jsonc`, tests, or source.

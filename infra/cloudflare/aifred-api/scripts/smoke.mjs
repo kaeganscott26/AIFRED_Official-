@@ -16,7 +16,12 @@ const localEnv = Object.fromEntries(envText.split(/\r?\n/).flatMap((line) => {
   const match = line.match(/^([A-Z0-9_]+)=(.*)$/);
   return match ? [[match[1], match[2]]] : [];
 }));
-if (!localEnv.AIFRED_ADMIN_PASSWORD) throw new Error("AIFRED_ADMIN_PASSWORD is missing from the ignored repository .env");
+function required(name) {
+  const value = String(localEnv[name] || "").trim();
+  if (!value) throw new Error(`${name} is missing from the ignored repository .env`);
+  return value;
+}
+required("AIFRED_ADMIN_PASSWORD");
 
 const results = [];
 function record(name, response, details = {}) {
@@ -58,7 +63,7 @@ await referenceSecond.body?.cancel();
 const login = await jsonRequest("/api/v1/admin/login", {
   method: "POST",
   headers: { "content-type": "application/json" },
-  body: JSON.stringify({ username: localEnv.AIFRED_ADMIN_USERNAME || "North3rnLight3r", password: localEnv.AIFRED_ADMIN_PASSWORD })
+  body: JSON.stringify({ username: required("AIFRED_ADMIN_USERNAME"), password: required("AIFRED_ADMIN_PASSWORD") })
 });
 record("admin-login", login.response, { token_shape: /^[-_A-Za-z0-9]+\.[-_A-Za-z0-9]+$/.test(login.payload?.session_token || "") });
 if (!login.response.ok) throw new Error("admin login failed");

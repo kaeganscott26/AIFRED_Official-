@@ -2,6 +2,7 @@ import { adminIdentity, apiIdentity, bearer, createAdminSession, enforceRateLimi
 import { HttpError, MAX_BODY, bounded, clientMetadata, json, publicCachedJson, readJson, sha256Hex } from "./http.js";
 import { classifyClient, enqueueActivity } from "./telemetry.js";
 import { invokeChatProvider, providerConfiguration, testOllamaProvider } from "./providers.js";
+import { browserReferenceName, classifyBrowserReference, normalizeBrowserMetrics } from "./reference-gate.js";
 import { EDITABLE_WEBSITE_FILES, readApprovedSourceFile, saveApprovedSourceFile, sourceControlStatus, validateSourceDraft } from "./source-control.js";
 
 const RELEASE_CACHE_SECONDS = 900;
@@ -151,7 +152,7 @@ export function validateFilteredContext(context) {
   if (!Array.isArray(context.metrics) || context.metrics.length !== 16 || !Array.isArray(context.bands) || context.bands.length !== 30) {
     throw new HttpError(400, "invalid_measurement_context", "context must contain the 16 metric and 30 band FilteredMixContext payload");
   }
-  if (context.product_channel !== "official") throw new HttpError(400, "invalid_measurement_context", "context.product_channel must be official");
+  if (!new Set(["beta", "official"]).has(context.product_channel)) throw new HttpError(400, "invalid_measurement_context", "context.product_channel must be beta or official");
   const revision = PROFILE_REVISIONS.get(context.profile_id);
   if (!revision || context.profile_version !== revision) throw new HttpError(400, "invalid_measurement_context", "context profile identity or revision is unsupported");
   if (Array.isArray(context.session_context) && context.session_context.length > 4) throw new HttpError(400, "invalid_measurement_context", "context session history exceeds its bound");
@@ -230,10 +231,13 @@ async function references(request, env, ctx) {
       const records = await loadReferenceRecords(env, 500);
       return {
         ok: true,
+        schema: "aifred.reference-pool.public.v1",
         contract_version: "aifred.references.v1",
         references: records,
+        records,
         reference: records[0] || null,
         count: records.length,
+        source: "aifred-ops.references_catalog",
         reason: records.length ? "" : "No usable references are available."
       };
     }, REFERENCE_CACHE_SECONDS, 900);
@@ -297,18 +301,91 @@ async function loadReferenceRecords(env, limit) {
     SELECT id, name, version, created_at, metrics_json, classification_json
     FROM references_catalog WHERE active = 1 ORDER BY created_at DESC LIMIT ?
   `).bind(limit).all();
-  return (result.results || []).map((row) => ({
-    available: true,
-    id: row.id,
-    name: row.name,
-    version: row.version,
-    created_at: row.created_at,
-    metrics: JSON.parse(row.metrics_json),
-    classification: JSON.parse(row.classification_json)
-  }));
+  return (result.results || []).flatMap((row) => {
+    const metrics = parseMetadata(row.metrics_json);
+    const classification = parseMetadata(row.classification_json);
+    if (!row.id || !row.name || Object.keys(metrics).length === 0) return [];
+    return [{
+      available: true,
+      id: row.id,
+      name: row.name,
+      version: row.version,
+      created_at: row.created_at,
+      duration_seconds: Number(classification.duration_seconds || 0),
+      metrics,
+      classification,
+      classification_label: bounded(classification.classification, 80),
+      reference_utility: Number(classification.reference_utility || 0),
+      technical_caution: Number(classification.technical_caution || 0),
+      style_tag: bounded(classification.style_tag, 80),
+      best_use: bounded(classification.best_use, 300),
+      caution: bounded(classification.caution, 300)
+    }];
+  });
 }
 
-async function analysis(request, env, trace) {
+async function websiteAnalysis(request, env, ctx, trace) {
+  requireMethod(request, "POST");
+  trace.rateLimitOutcome = await enforceRateLimit(env.ANALYSIS_RATE_LIMITER, await rateLimitKey(request));
+  const body = await readJson(request, MAX_BODY.analysis);
+  const metrics = normalizeBrowserMetrics(body);
+  const gate = classifyBrowserReference(metrics);
+  const analysisId = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  let persistence = "disposed";
+
+  if (gate.accepted) {
+    const durationSeconds = Math.max(0, Math.min(86400, Number(body.duration_seconds || 0)));
+    const classification = { ...gate, duration_seconds: Number.isFinite(durationSeconds) ? durationSeconds : 0, source: "website-analyzer" };
+    await env.AIFRED_OPS.prepare(`
+      INSERT INTO references_catalog (id, name, version, created_at, metrics_json, classification_json, active)
+      VALUES (?, ?, ?, ?, ?, ?, 1)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        version = excluded.version,
+        created_at = excluded.created_at,
+        metrics_json = excluded.metrics_json,
+        classification_json = excluded.classification_json,
+        active = 1
+    `).bind(analysisId, browserReferenceName(analysisId), "website-analyzer.v1", createdAt, JSON.stringify(metrics), JSON.stringify(classification)).run();
+    trace.d1Writes += 1;
+    persistence = "stored";
+  }
+
+  trace.queueEvents += 1;
+  ctx.waitUntil(enqueueActivity(env, {
+    id: crypto.randomUUID(),
+    created_at: createdAt,
+    event_type: "website.analysis.submitted",
+    request_id: bounded(body.request_id, 128) || trace.requestId,
+    product: "aifred-website",
+    channel: "beta",
+    platform: "browser",
+    route: "/v1/analysis/submit",
+    method: "POST",
+    status: 200,
+    metadata: { analysis_id: analysisId, accepted: gate.accepted, score: gate.score, classification: gate.classification, persistence }
+  }));
+
+  return json({
+    ok: true,
+    accepted: gate.accepted,
+    score: gate.score,
+    classification: gate.classification,
+    reference_utility: gate.reference_utility,
+    technical_caution: gate.technical_caution,
+    style_tag: gate.style_tag,
+    best_use: gate.best_use,
+    caution: gate.caution,
+    why: gate.why,
+    action: gate.accepted ? "metadata stored in the AIFRED reference pool" : "metadata rejected or kept out of the pool",
+    persistence,
+    checks: gate.checks,
+    analysis_id: gate.accepted ? analysisId : null
+  });
+}
+
+async function pluginAnalysis(request, env, trace) {
   requireMethod(request, "POST");
   const identity = await apiIdentity(request, env);
   trace.clientKey = identity.clientKey.slice(0, 32);
@@ -733,7 +810,8 @@ export async function routeRequest(request, env, ctx, trace) {
   if (path === "/v1/releases/current") return releases(request, env, ctx, true);
   if (path === "/v1/chat/completions" || path === "/v1/chat/ask") return chat(request, env, trace);
   if (path === "/v1/references" || path === "/v1/reference/pool") return references(request, env, ctx);
-  if (path === "/v1/analysis" || path === "/v1/analysis/submit" || path === "/v1/analyzer/submit") return analysis(request, env, trace);
+  if (path === "/v1/analysis") return pluginAnalysis(request, env, trace);
+  if (path === "/v1/analysis/submit" || path === "/v1/analyzer/submit") return websiteAnalysis(request, env, ctx, trace);
   if (path === "/v1/analytics/events" || path === "/v1/activity/record") return analytics(request, env, trace);
   if (path === "/v1/inquiries" || path === "/v1/inquiries/submit") return inquiry(request, env, trace);
   if (path === "/v1/downloads/plugin") return download(request, env, ctx, trace);
