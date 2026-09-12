@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../../Maestro"
+		},
+		{
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "AIFRED_Official-"
+	}
+}
