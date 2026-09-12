@@ -19,10 +19,8 @@ the Pages storage bindings does not make it the production route owner.
 ## Current control-plane state
 
 Pages Git source is `kaeganscott26/AIFRED_Official-`, branch `main`. The Pages
-build output directory is `apps/website`; the previous Git deployment failed
-because it used the repository-name-prefixed path
-`AIFRED_Official-\\apps\\website`. The last successful ad-hoc deployment is
-retained as rollback evidence until the corrected Git deployment succeeds.
+build output directory is `apps/website`. Git deployment `db7d9cf9` from commit
+`bba3238` is active and serves the corrected website/backend bundle.
 
 The apex custom domain is already registered but remains pending because its
 zone CNAME is missing. Existing `www` and Access configuration were not
@@ -78,8 +76,9 @@ npm --prefix apps run website:preview
 npm --prefix apps run website:deploy
 ```
 
-After deployment, verify repository HEAD, Pages deployment ID, static assets,
-`/health`, `/api/health`, `/api/v1/reference/pool`, `/v1/models`, authenticated
-admin routes, download HEAD metadata and full artifact hashes. Wait five idle
-minutes before making idle-traffic claims. Treat source, automation, preview,
-production, installed APK, and manual plugin/DAW evidence as separate records.
+The corrected deployment `db7d9cf9` was verified for repository commit
+`bba3238`, static assets, `/health`, `/api/health`, registry/chat settings,
+`/api/v1/reference/pool`, `/v1/models`, `/ops`, download HEAD metadata, and full
+installer/ZIP hashes. Treat source, automation, preview, production, installed
+APK, and manual plugin/DAW evidence as separate records; wait five idle minutes
+before making idle-traffic claims.

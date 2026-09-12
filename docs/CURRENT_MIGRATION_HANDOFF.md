@@ -9,8 +9,8 @@ recreating the migration. Secret values are never recorded.
 - Unified source: `apps/website`; router: `apps/website/_worker.js`.
 - Production target: Pages project `aifred-site`.
 - Staging: `aifred-api-staging`, isolated and not routed to production.
-- Pages Git source is Official. Its build output was corrected to `apps/website`;
-  the next Git deployment is the required proof of the fix.
+- Pages Git source is Official. Its build output is `apps/website`; deployment
+  `db7d9cf9` from commit `bba3238` is active and verified.
 - No zone Worker route owns `/api/*`.
 
 ## Cloudflare state
@@ -60,17 +60,16 @@ Beta artifact when R2 does not match the manifest.
 
 `npm --prefix apps run website:check` covers source/module/assets, backend
 contracts, command metadata, and repository construction. Beta current release
-verification passed 17 hashed files. Full-content comparison of the previous
-Pages download and the earlier local preview package passed; the current Beta
-R2 upload must be rechecked after the next Pages deployment. Android requires
-the local SDK/JDK build and, separately, physical-device validation. No DAW
-scan/load claim follows from website or Android automation.
+verification passed 17 hashed files. Deployment `db7d9cf9` served both current
+R2 objects; full-content downloads matched the local Beta current files and
+manifest hashes. Android requires the local SDK/JDK build and, separately,
+physical-device validation. No DAW scan/load claim follows from website or
+Android automation.
 
 ## Remaining external step
 
 An authorized Cloudflare DNS administrator must add the apex CNAME to
 `aifred-site.pages.dev` (the Pages project already has the pending apex custom
-domain). Then trigger/observe the corrected Git deployment and verify the apex,
-`/api/health`, static assets, downloads, `/ops`, admin routes, and five-minute
-idle behavior. Do not delete the existing Access applications or staging
-resources as part of that verification.
+domain). Then verify the apex after DNS propagation. Do not delete the existing
+Access applications or staging resources as part of that verification; the
+deployment and Pages-hostname checks are complete.

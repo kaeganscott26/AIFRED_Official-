@@ -34,6 +34,8 @@ binary website assets. The server, not the APK, holds `GITHUB_TOKEN`.
 - JVM target `17`, Jetpack Compose, OkHttp, Kotlin coroutines
 - request-driven HTTP chat; WebSocket is retained for the website adapter only
 - local AifredIntelligenceHost remains separate at `127.0.0.1:8788` for Official
+- latest local debug build: 27,964,690 bytes, SHA-256
+  `5a862a8924fa1bc88e03dfaf7de5bfd5d0fb7440e6b0e9750baa77dd0ccc773a`
 
 The client uses the OpenAI-compatible `/v1/models` and
 `/v1/chat/completions` contract. It can use the website route, local Ollama, or

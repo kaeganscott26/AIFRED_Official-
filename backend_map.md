@@ -32,9 +32,8 @@ production or used by the website request path.
 | Pages project | `aifred-site` |
 | Pages Git source | Official repository, `main` |
 | Pages build output | `apps/website` (corrected from the failing `AIFRED_Official-\\apps\\website` path) |
-| Latest Git deployment before this repair | `ecaa9606` failed because that output path did not exist |
-| Last successful Pages deployment | `091ed822` from the prior ad-hoc package |
-| Pages assets/API | Healthy on `aifred-site.pages.dev` |
+| Latest Git deployment | `db7d9cf9` from commit `bba3238`, active and verified |
+| Pages assets/API | Healthy on `db7d9cf9.aifred-site.pages.dev` and project hostname |
 | Apex custom domain | Registered but pending until the zone has the Pages CNAME |
 | `www` custom domain | Active but currently protected by an existing Cloudflare Access redirect |
 | Zone Worker routes | None |
@@ -43,8 +42,8 @@ production or used by the website request path.
 The apex DNS write could not be completed by the current Wrangler OAuth scope
 (`zone:read` only). No Access application, secret, or existing DNS record was
 removed or overwritten. Until the CNAME is added, the Pages hostname is the
-verified public test origin and the Android production origin remains the
-intended canonical URL rather than a completed DNS claim.
+verified deployment origin and the Android production origin remains the
+intended canonical URL rather than a completed apex-DNS claim.
 
 ## Shared API contract
 
@@ -108,9 +107,13 @@ npm --prefix apps run website:deploy
 
 The helper bundles `_worker.js` and packages only public website files/assets.
 It does not publish repository source, secrets, SQL, or generated build output.
-After a Git or ad-hoc deployment, verify the Pages deployment ID, `/`, static
-assets, `/health`, `/api/health`, `/api/v1/reference/pool`, `/v1/models`,
-downloads, chat/provider behavior, `/ops`, and authenticated admin routes.
+Deployment `db7d9cf9` was verified for `/`, static assets, `/health`,
+`/api/health`, `/api/v1/registry/actions`, `/api/v1/chat/settings`,
+`/api/v1/reference/pool`, `/v1/models`, `/ops`, and both full public artifact
+downloads. The downloaded installer and ZIP matched the Beta current files by
+size and SHA-256. Authenticated admin routes remain covered by the local
+contract suite and require owner credentials for live testing. Wait at least
+five minutes with no synthetic traffic before making idle-traffic claims.
 Wait at least five minutes with no synthetic traffic before making idle-traffic
 claims. Report repository HEAD, deployment ID, manifest SHA/hashes, and manual
 host/client coverage separately.

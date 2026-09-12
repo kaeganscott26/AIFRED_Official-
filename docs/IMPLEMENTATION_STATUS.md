@@ -11,12 +11,12 @@ Current evidence boundaries:
 
 | Capability | Status |
 | --- | --- |
-| Unified Pages website/backend source and bindings | IMPLEMENTED in Official source; Pages build path corrected; next Git deployment pending |
+| Unified Pages website/backend source and bindings | IMPLEMENTED; Git deployment `db7d9cf9` from `bba3238` active |
 | Source integrity, module graph, and backend contracts | VALIDATED LOCALLY in the current working tree |
 | Android admin surface | RESTORED Upload tab, server registry/commands, settings/provider controls, catalog/reference/sales/admin routes; APK build/device validation separate |
 | Pages runtime | Healthy on `aifred-site.pages.dev`; existing production secrets/bindings preserved |
 | Current Beta artifacts in R2 | VERIFIED from Beta `out/windows-x64/current`; manifest hashes and R2 keys updated |
-| Unified production deployment | PENDING next corrected Git deployment and apex DNS verification |
+| Unified production deployment | Pages deployment VERIFIED; apex DNS still pending CNAME |
 | Pages source move from Beta to Official | VERIFIED in live Pages source configuration |
 | Beta production retirement | NOT APPLICABLE; Beta remains the public client/release channel |
 
