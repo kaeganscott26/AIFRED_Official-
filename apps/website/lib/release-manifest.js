@@ -6,6 +6,8 @@ const RELEASES = Object.freeze({
     source_repository: "kaeganscott26/AIFRED",
     release_url: "https://github.com/kaeganscott26/AIFRED/releases/tag/v0.3.6-beta-stable",
     published_at: "2026-09-07T01:30:42Z",
+    artifact_source: "out/windows-x64/current",
+    artifact_git_sha: "ec922b930205f7dc0accdefa733fa357df95bcf6",
     published: true,
     assets: Object.freeze({
       setup: Object.freeze({
@@ -13,9 +15,8 @@ const RELEASES = Object.freeze({
         r2_key: "releases/beta/v0.3.6-beta-stable/AIFRED-VST3-Setup.exe",
         filename: "AIFRED-VST3-Setup.exe",
         content_type: "application/vnd.microsoft.portable-executable",
-        size_bytes: 53964697,
-        sha256: "ce9664d2cb3632cf72c3af930377cf3f0b6d15282c5ed1f33c8ec31aa829e71f",
-        github_fallback_url: "https://github.com/kaeganscott26/AIFRED/releases/download/v0.3.6-beta-stable/AIFRED-VST3-Setup.exe",
+        size_bytes: 53930848,
+        sha256: "d0731bfa6afdf5af02e9429bd03a847d7d06df1e549760c04fe5548bb3ae3421",
         published: true
       }),
       zip: Object.freeze({
@@ -23,9 +24,8 @@ const RELEASES = Object.freeze({
         r2_key: "releases/beta/v0.3.6-beta-stable/AIFRED-VST3-windows.zip",
         filename: "AIFRED-VST3-windows.zip",
         content_type: "application/zip",
-        size_bytes: 2323863,
-        sha256: "3bde33e7f30386d29baec937ed0613f2ee09cf5e322f1c76d758c6d78c6f2ea9",
-        github_fallback_url: "https://github.com/kaeganscott26/AIFRED/releases/download/v0.3.6-beta-stable/AIFRED-VST3-windows.zip",
+        size_bytes: 2363132,
+        sha256: "9cbcebbefe1928bbd7f5fd533abbc3136d7fcbcd6059ec72fbb3d108305a8d36",
         published: true
       })
     })

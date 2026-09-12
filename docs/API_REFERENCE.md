@@ -1,82 +1,88 @@
 # AIFRED API reference
 
-Production candidate base: `https://north3rnlight3r.com/api`.
-
-The unified Pages Advanced Mode runtime implements this contract from `apps/website`. Application routes use the same origin with `/api/v1`; OpenAI-compatible provider routes retain `/v1`. Production routing remains separate from source and preview evidence until promotion is verified.
+The canonical application API is the same-origin Pages backend:
+`https://north3rnlight3r.com/api/v1`. The apex is the intended production
+origin; until its pending DNS verification is complete, validate against the
+healthy `aifred-site.pages.dev` deployment. `/v1/*` is retained for native and
+OpenAI-compatible compatibility routes.
 
 ## Public and product routes
 
-| Method | Production path | Auth | Behavior |
+| Method | Path | Auth | Behavior |
 | --- | --- | --- | --- |
-| GET/HEAD | `/api/health` | No | Constant-time service and contract health |
+| GET/HEAD | `/api/health` | No | Service and contract health |
 | GET/HEAD | `/api/v1/models` | No | Configured public model descriptors |
-| GET/HEAD | `/api/v1/catalog/list` | No | Static Official catalog metadata |
-| GET/HEAD | `/api/v1/releases` | No | Published Beta metadata from the pinned release manifest |
-| GET/HEAD | `/api/v1/releases/current` | No | Current Beta release metadata; unpublished releases are omitted |
-| GET/HEAD | `/api/v1/references` | No | Sanitized D1-backed reference catalog |
-| GET/HEAD | `/api/v1/reference/pool` | No | Alias of the sanitized reference catalog |
-| POST | `/api/v1/chat/completions` | Product/admin token | OpenAI-compatible request with `FilteredMixContext` and `Idempotency-Key` |
-| POST | `/api/v1/analysis` | Product/admin token | Bounded `FilteredMixContext` submission |
-| POST | `/api/v1/analysis/submit` | Product/admin token | Alias of analysis submission |
-| POST | `/api/v1/analyzer/submit` | Product/admin token | Alias of analysis submission |
-| POST | `/api/v1/analytics/events` | Product token or allowed same-site browser | Sanitized batch of 1–50 events |
-| POST | `/api/v1/activity/record` | Product token or allowed same-site browser | Alias of analytics ingestion |
-| POST | `/api/v1/inquiries` | No | Bounded contact inquiry |
-| POST | `/api/v1/inquiries/submit` | No | Alias of inquiry submission |
-| GET/HEAD | `/api/v1/downloads/plugin?asset=setup\|zip\|macos` | No | Allowlisted release object from R2 |
+| GET/HEAD | `/api/v1/catalog/list` | No | Official catalog metadata |
+| GET/HEAD | `/api/v1/releases` and `/current` | No | Published Beta release metadata |
+| GET/HEAD | `/api/v1/references` and `/reference/pool` | No | Sanitized D1 reference catalog |
+| POST | `/api/v1/chat/completions` and `/chat/ask` | Product/admin token | Provider-backed chat grounded in bounded `FilteredMixContext` |
+| POST | `/api/v1/analysis` and `/analysis/submit` | Product/admin token | Bounded analysis submission |
+| POST | `/api/v1/analyzer/submit` | Product/admin token | Analysis alias |
+| POST | `/api/v1/analytics/events` and `/activity/record` | Product token or same-site browser | Sanitized activity batch |
+| POST | `/api/v1/inquiries` and `/inquiries/submit` | No | Bounded contact inquiry |
+| GET/HEAD | `/api/v1/downloads/plugin?asset=setup\|zip` | No | Pinned public Beta R2 artifact |
 | GET/HEAD | `/api/v1/assets/<approved-key>` | No | Known R2 object with Range support |
+| GET/HEAD | `/api/v1/registry/actions` | No | Backend command metadata for admin clients |
+| GET/HEAD | `/api/v1/chat/settings` | No | Redacted chat runtime settings |
 
-Public models and releases cache for 15 minutes. References cache for five minutes. Admin, chat, analysis, inquiry, and analytics responses use `Cache-Control: no-store`.
+Public models/releases cache for 15 minutes and references for five minutes.
+Admin, chat, analysis, inquiry, and analytics responses are `no-store`.
 
 ## Measurement contract
 
-Chat and analysis accept AIFRED-owned `aifred.filtered-mix.v1` context only. The Worker checks the Official channel, profile revision, 16 metric identities/units, and exact 30-band frequency contract. The provider may interpret this context but cannot redefine DSP truth.
+Chat and analysis accept AIFRED-owned `aifred.filtered-mix.v1` context only.
+The backend validates channel, profile revision, metric identities/units, and
+the exact 30-band frequency contract. A provider may interpret that context;
+it cannot redefine DSP truth, snapshots, session state, or evidence authority.
 
 ## Admin session and operations
 
-`POST /api/v1/admin/login` accepts the configured username and password over HTTPS. Success returns a bounded signed session. `POST /api/v1/admin/logout` revokes it. All other admin routes require the returned bearer session.
+`POST /api/v1/admin/login` accepts the owner credential over HTTPS and returns
+a bounded signed bearer session. `POST /api/v1/admin/logout` revokes it. Other
+admin routes require that session.
 
 Read routes:
 
-- `GET /api/v1/admin/status` and `/ops/status`
-- `GET /api/v1/admin/analytics`
-- `GET /api/v1/admin/activity` and `/logs/list`
-- `GET /api/v1/admin/inquiries` and `/inquiries/list`
-- `GET /api/v1/admin/releases`
-- `GET /api/v1/admin/reference/list`
-- `GET /api/v1/admin/catalog/list`
-- `GET /api/v1/admin/dashboard/state`
-- `GET /api/v1/admin/providers` and `/providers/ollama`
-- `GET /api/v1/admin/export/site` and `/export/tracks`
+- `/api/v1/admin/status` and `/ops/status`
+- `/api/v1/admin/analytics`, `/activity`, `/logs/list`, `/inquiries/list`,
+  `/releases`, `/reference/list`, `/catalog/list`, `/sales/list`
+- `/api/v1/admin/dashboard/state`
+- `/api/v1/admin/providers` and `/providers/ollama`
+- `/api/v1/admin/export/site` and `/export/tracks`
 
-Provider checks run only after an explicit `POST /api/v1/admin/provider/test` or `/providers/ollama/test` request. Dashboard and health requests never probe Ollama.
+Mutating/explicit routes:
+
+- `POST /api/v1/command/run` accepts only the server allowlist and never runs
+  arbitrary shell or filesystem input.
+- `POST /api/v1/admin/api/config` saves provider routing in the existing
+  runtime KV; `POST /api/v1/admin/api/test` probes only the requested provider.
+- `GET /api/v1/admin/chat/settings` reads authenticated settings, including the
+  operator-entered webhook secret; the public settings route is redacted.
+  `POST /api/v1/admin/chat/settings/save` saves bounded chat settings.
+- `POST /api/v1/admin/catalog/upload` and `/reference/upload` use controlled
+  R2 storage; `POST /catalog/remove` updates the approved catalog source.
+- Provider checks occur only after an explicit request. Health/dashboard
+  requests never probe Ollama.
 
 ## Android website-source administration
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/api/v1/admin/source/files` | Return the exact editable Official website-file allowlist |
-| GET | `/api/v1/admin/source/status` | Report repository, branch, credential presence, and unverified deployment state without secrets |
-| POST | `/api/v1/admin/source/read` | Read one approved file and return its Git blob SHA |
-| POST | `/api/v1/admin/source/validate` | Validate an approved text draft without writing |
-| POST | `/api/v1/admin/source/save` | Commit a validated update with the loaded SHA and an `Idempotency-Key` |
+`GET /api/v1/admin/source/files` returns the exact eight-file Official text
+allowlist. `POST /source/read` returns current text plus its Git blob SHA;
+`POST /source/validate` validates without writing; and `POST /source/save`
+requires that SHA plus an `Idempotency-Key` before committing to Official.
 
-The Worker accepts eight named text files under `apps/website`. It rejects path traversal, directory access, arbitrary files, deletion, file creation, and binary uploads. Save requires `GITHUB_TOKEN` in the Worker environment and a fine-grained credential limited to Official repository contents. The phone never receives that credential.
+The backend rejects path traversal, directory access, arbitrary files,
+deletion, creation, and binary website-asset uploads. `GITHUB_TOKEN` remains
+server-held. A commit SHA is source evidence only; verify the resulting Pages
+deployment separately.
 
-The save response contains commit evidence and `deployment.verified: false`. Confirm the Pages deployment after every commit. Official has not yet replaced Beta as the verified Pages source.
+## Storage and local host
 
-## Storage authority
+D1 `references_catalog` owns structured public references; D1 also owns
+sessions, idempotency, limits, activity, and rollups. R2 owns release/media
+bytes. KV remains historical compatibility and sales storage. Analytics Engine
+receives optional telemetry; production Pages has no Queue dependency.
 
-D1 `references_catalog` owns structured public reference records. The request path does not list the legacy KV namespace. D1 also owns inquiries, sessions, idempotency, activity, and rollups. The pinned release manifest owns public artifact selection. R2 owns release/media bytes; direct D1 writes and Analytics Engine handle telemetry. No Queue is required.
-
-## Local AifredIntelligenceHost
-
-Beta uses `http://127.0.0.1:8787`; Official uses `http://127.0.0.1:8788`.
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET | `/health` | Host/channel/schema and provider availability |
-| POST | `/chat` | User message plus strict `FilteredMixContext` |
-| GET/POST | `/v1/settings` | Redacted provider settings read/update |
-
-The local host remains separate from the Cloudflare control plane and makes no provider request while idle.
+Beta uses `http://127.0.0.1:8787`; Official uses `http://127.0.0.1:8788` for
+the local AifredIntelligenceHost. The local host remains independent of
+Cloudflare and makes no provider request while idle.

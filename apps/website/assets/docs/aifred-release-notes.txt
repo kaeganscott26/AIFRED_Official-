@@ -1,11 +1,12 @@
 AIFRED Beta — FREE DOWNLOAD
 
 Public release: v0.3.6-beta-stable
-Source: https://github.com/kaeganscott26/AIFRED/releases/tag/v0.3.6-beta-stable
+Website artifact source: Beta out/windows-x64/current
 
 Validated website downloads:
 - AIFRED-VST3-Setup.exe — Windows installer
 - AIFRED-VST3-windows.zip — Windows VST3 ZIP
 
-Both downloads are the published Beta artifacts. The website verifies their
-filename, content type and byte length before displaying download buttons.
+Both downloads are the verified Beta current artifacts. The website verifies
+their filename, content type and byte length before displaying download buttons;
+it never falls back to an external or stale binary.

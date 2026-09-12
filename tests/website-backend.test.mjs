@@ -178,11 +178,13 @@ test("release manifest pins the validated Windows artifacts and advertises no ma
   const beta = releaseForChannel("beta");
   assert.equal(beta.tag, "v0.3.6-beta-stable");
   assert.equal(beta.assets.setup.filename, "AIFRED-VST3-Setup.exe");
-  assert.equal(beta.assets.setup.size_bytes, 53964697);
-  assert.equal(beta.assets.setup.sha256, "ce9664d2cb3632cf72c3af930377cf3f0b6d15282c5ed1f33c8ec31aa829e71f");
+  assert.equal(beta.artifact_source, "out/windows-x64/current");
+  assert.equal(beta.artifact_git_sha, "ec922b930205f7dc0accdefa733fa357df95bcf6");
+  assert.equal(beta.assets.setup.size_bytes, 53930848);
+  assert.equal(beta.assets.setup.sha256, "d0731bfa6afdf5af02e9429bd03a847d7d06df1e549760c04fe5548bb3ae3421");
   assert.equal(beta.assets.zip.filename, "AIFRED-VST3-windows.zip");
-  assert.equal(beta.assets.zip.size_bytes, 2323863);
-  assert.equal(beta.assets.zip.sha256, "3bde33e7f30386d29baec937ed0613f2ee09cf5e322f1c76d758c6d78c6f2ea9");
+  assert.equal(beta.assets.zip.size_bytes, 2363132);
+  assert.equal(beta.assets.zip.sha256, "9cbcebbefe1928bbd7f5fd533abbc3136d7fcbcd6059ec72fbb3d108305a8d36");
   assert.equal(beta.assets.macos, undefined);
 });
 
@@ -198,11 +200,47 @@ test("Advanced Mode dispatches backend routes and falls through to ASSETS", asyn
   await ctx.flush();
 });
 
+test("the shared Android/admin contract exposes a public registry and authenticated allowlisted command route", async () => {
+  const env = adminEnv(await sha256Hex("password"));
+  const registry = await request(env, "/api/v1/registry/actions");
+  assert.equal(registry.status, 200);
+  const registryBody = await registry.json();
+  assert.equal(registryBody.ok, true);
+  assert.ok(registryBody.actions.some((action) => action.id === "health"));
+
+  const settings = await request(env, "/api/v1/chat/settings");
+  assert.equal(settings.status, 200);
+  assert.equal((await settings.json()).settings.transport_mode, "http");
+
+  const unauthorized = await request(env, "/api/v1/command/run", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ command_line: "health" })
+  });
+  assert.equal(unauthorized.status, 401);
+
+  const login = await request(env, "/api/v1/admin/login", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: "operator", password: "password" })
+  });
+  const token = (await login.json()).session_token;
+  const command = await request(env, "/api/v1/command/run", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ command_line: "health" })
+  });
+  assert.equal(command.status, 200);
+  const commandBody = await command.json();
+  assert.equal(commandBody.ok, true);
+  assert.match(commandBody.stdout, /aifred-site/);
+});
+
 test("download HEAD returns exact filename, type, size, ETag, and manifest hash", async () => {
   const env = adminEnv(await sha256Hex("password"));
   for (const [name, filename, type, size] of [
-    ["setup", "AIFRED-VST3-Setup.exe", "application/vnd.microsoft.portable-executable", "53964697"],
-    ["zip", "AIFRED-VST3-windows.zip", "application/zip", "2323863"]
+    ["setup", "AIFRED-VST3-Setup.exe", "application/vnd.microsoft.portable-executable", "53930848"],
+    ["zip", "AIFRED-VST3-windows.zip", "application/zip", "2363132"]
   ]) {
     const response = await request(env, `/api/v1/downloads/plugin?channel=beta&asset=${name}`, { method: "HEAD" });
     assert.equal(response.status, 200);
@@ -220,7 +258,7 @@ test("download range requests return 206 with bounded metadata and a nonempty bo
     headers: { range: "bytes=0-99" }
   });
   assert.equal(response.status, 206);
-  assert.equal(response.headers.get("content-range"), "bytes 0-99/2323863");
+  assert.equal(response.headers.get("content-range"), "bytes 0-99/2363132");
   assert.equal(response.headers.get("content-length"), "100");
   assert.equal((await response.arrayBuffer()).byteLength, 100);
 });
@@ -235,12 +273,12 @@ test("unknown or unpublished downloads return structured non-200 JSON", async ()
   assert.equal((await unpublished.json()).error, "release_unavailable");
 });
 
-test("missing public Beta R2 object redirects only to the pinned GitHub release asset", async () => {
+test("missing public Beta R2 object never falls back to a stale external binary", async () => {
   const env = adminEnv(await sha256Hex("password"));
   env.AIFRED_DOWNLOADS = { async head() { return null; } };
-  const response = await request(env, "/api/v1/downloads/plugin?channel=beta&asset=setup", { redirect: "manual" });
-  assert.equal(response.status, 307);
-  assert.equal(response.headers.get("location"), releaseAsset("beta", "setup").asset.github_fallback_url);
+  const response = await request(env, "/api/v1/downloads/plugin?channel=beta&asset=setup");
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, "release_artifact_unavailable");
 });
 
 test("admin login, session verification, exports, and logout use the D1 session boundary", async () => {

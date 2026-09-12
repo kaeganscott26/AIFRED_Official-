@@ -26,7 +26,7 @@ cpSync(join(source,'assets'),join(output,'assets'),{recursive:true});
 await build({entryPoints:[join(source,'_worker.js')],outfile:join(output,'_worker.js'),bundle:true,format:'esm',platform:'browser',target:'es2022',external:['cloudflare:*','node:*'],legalComments:'none'});
 // Read bindings from the authoritative config, kept outside the asset output.
 let config=readFileSync(join(source,'wrangler.toml'),'utf8');
-config=config.replace('pages_build_output_dir = "."','pages_build_output_dir = "AIFRED_Official-/apps/website"');
+config=config.replace('pages_build_output_dir = "apps/website"','pages_build_output_dir = "AIFRED_Official-/apps/website"');
 writeFileSync(join(staging,'wrangler.toml'),config);
 console.log(`Pages package from ${source}: ${output}`);
 const sha=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).stdout.trim();

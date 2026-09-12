@@ -1,90 +1,123 @@
-# AIFRED backend map — current recovery state
+# AIFRED backend map — current state
 
-Updated 2026-09-11. This is the single current backend map. Older migration documents are historical.
+Updated 2026-09-12. This file is the current website/backend and Cloudflare
+evidence record. Dated migration notes are historical and are not deployment
+instructions.
 
-## Live production versus recovered source
+## Runtime authority
+
+The production runtime is one Cloudflare Pages Advanced Mode project:
+
+```text
+north3rnlight3r.com/* -> Pages project aifred-site -> apps/website/_worker.js
+                                      -> backend routes or env.ASSETS.fetch
+```
+
+`apps/website/_worker.js` is the only production request router. It dispatches
+`/health`, `/v1/*`, `/api/*`, `/api/v1/*`, and `/ws/chat` to the same backend;
+all other requests fall through to the Pages asset binding. No dedicated
+Worker may intercept production `/api/*`.
+
+The repository and Pages Git source are `kaeganscott26/AIFRED_Official-`,
+branch `main`, with website source under `apps/website`. `aifred-api-staging`
+is an isolated smoke/donor Worker, not the production route owner. Its live
+storage bindings match the Pages resources and it additionally retains
+staging-only queue and rate-limit bindings; those are not copied into
+production or used by the website request path.
+
+## Current live evidence
 
 | Item | Verified state |
 | --- | --- |
-| Public domains | `north3rnlight3r.com`, `www.north3rnlight3r.com` |
-| Cloudflare project | Existing Pages project `aifred-site`; both custom domains active |
-| Current production deployment | `3adb682f-48c4-4380-ade8-ed320fc7faf5` (preserved rollback) |
-| Current production recorded commit | Beta `468f06ed859d0887ffd86f0f997370944aabbe24` |
-| Current Pages Git source | Absent in live API response; Git automation/source reassignment is not verified |
-| Recovered source authority | `kaeganscott26/AIFRED_Official-`, `apps/website` |
-| Recovered preview | `https://recovery-completion.aifred-site.pages.dev` |
-| Production promotion | Not performed: configured Ollama connection fails acceptance |
-| Zone Worker routes | None; neither API Worker owns a production domain route |
+| Pages project | `aifred-site` |
+| Pages Git source | Official repository, `main` |
+| Pages build output | `apps/website` (corrected from the failing `AIFRED_Official-\\apps\\website` path) |
+| Latest Git deployment before this repair | `ecaa9606` failed because that output path did not exist |
+| Last successful Pages deployment | `091ed822` from the prior ad-hoc package |
+| Pages assets/API | Healthy on `aifred-site.pages.dev` |
+| Apex custom domain | Registered but pending until the zone has the Pages CNAME |
+| `www` custom domain | Active but currently protected by an existing Cloudflare Access redirect |
+| Zone Worker routes | None |
+| `aifred-api-staging` | Exists, isolated, no production route |
 
-Live production `/styles.css` and `/app.js` return 404. Pages build root/output are empty and the recorded deployment uses the Beta revision whose website/backend files were removed. Official's CSS matches the known-good recovery CSS byte-for-byte. The recovered preview renders the intended styled website and Ops console. Current HTML prose is preserved except malformed download markup, unsupported platform links, and unreleased product advertising.
+The apex DNS write could not be completed by the current Wrangler OAuth scope
+(`zone:read` only). No Access application, secret, or existing DNS record was
+removed or overwritten. Until the CNAME is added, the Pages hostname is the
+verified public test origin and the Android production origin remains the
+intended canonical URL rather than a completed DNS claim.
 
-## One request router
+## Shared API contract
 
-`apps/website/_worker.js` is the only runtime entry point. It imports `lib/backend/index.js` and explicitly invokes the WebSocket compatibility handler; Pages file routing is not relied on.
+Web, Beta, Official, Android Admin, desktop Admin, and `/ops` use the same
+origin and versioned application contract:
 
-| Request | Dispatch |
-| --- | --- |
-| `www.north3rnlight3r.com/*` | 308 to the same path/query on the apex |
-| `/health` | Backend health |
-| `/api`, `/api/*`, `/api/v1`, `/api/v1/*` | Backend; strip `/api` and use versioned contracts; unknown routes return JSON 404 |
-| `/v1`, `/v1/*` | Same backend compatibility contracts |
-| `/ws/chat` | Explicit WebSocket adapter to the same chat handler |
-| `/ops`, `/ops.html` | Real Ops static frontend through `env.ASSETS.fetch(request)` |
-| Every other path | `env.ASSETS.fetch(request)`; missing files use a real 404 page |
+```text
+https://north3rnlight3r.com/api/v1
+```
 
-Browser config derives `window.location.origin`; browser/admin API prefix is `/api/v1`. Both existing native host source copies normalize AIFRED origins to `/api/v1`. The recovered backend accepts both `beta` and `official` measured-context identities. No plugin/host source was changed or rebuilt in recovery.
+Browser config derives the current origin. Native clients normalize legacy
+origins to `/api/v1`. OpenAI-compatible provider routes remain available at
+`/v1/*` for compatibility. Both `beta` and `official` measured-context
+identities are accepted without changing DSP validation.
 
-## Chat and references
+Public routes include health, models, catalog, releases, references, chat,
+analysis, analytics, inquiries, downloads, and approved R2 assets. The Android
+admin contract additionally includes:
 
-Chat: client -> `/api/v1/chat/completions` (also `/v1/chat/completions`) -> `_worker.js` -> `lib/backend/handlers.js` -> `providers.js` -> `OLLAMA_BASE_URL/v1/chat/completions`. Existing client/admin authentication, context validation, idempotency and D1 rate limits remain enforced. `OLLMA_MODEL` remains a compatible alias for the deployed legacy spelling. No new provider was introduced.
+- `GET /api/v1/registry/actions` for the server allowlist;
+- `POST /api/v1/command/run` for authenticated allowlisted commands;
+- `GET /api/v1/chat/settings` and authenticated settings save;
+- authenticated provider configuration/test routes;
+- authenticated catalog/reference upload, catalog removal, sales, logs,
+  inquiries, dashboard, export, and approved-source routes.
 
-The existing `aifred-ollama` tunnel (`d4c779b6-a550-4058-b4de-3368451045c3`) reports healthy, but its remote configuration is null and the zone has no Ollama hostname record. Preview provider test and chat return 502. Phase 13's DNS restriction prevents silently adding that hostname. Production promotion remains pending this connection repair and successful provider validation.
+The command route never executes arbitrary shell or filesystem input. Website
+source administration remains limited to the existing approved text-file
+allowlist, optimistic Git SHA checks, and server-held GitHub credentials.
+Binary website assets and arbitrary create/delete/path operations remain
+unsupported.
 
-References: `/api/v1/reference/pool`, `/v1/reference/pool`, and `/api/v1/references` read the existing `aifred-ops.references_catalog`. Both pool routes returned the 22 real active records in preview. Existing KV/R2 reference contents were not changed; no reference database was created. Browser metadata submission uses the existing recovered reference gate; native analysis remains separately authenticated.
+## Bindings
 
-## Existing storage and bindings
+Production Pages uses the existing resources below. `ASSETS` is supplied by
+Pages and is not a Worker binding that should be recreated elsewhere.
 
-| Binding | Resource / use |
-| --- | --- |
-| `ASSETS` | Pages static assets |
-| `AIFRED_OPS` | D1 `aifred-ops`, `60d95cd8-d1da-486c-b6fd-4bfedcd7bc47`: references, inquiries, sessions, idempotency, limits, activity and rollups |
-| `AIFRED_DOWNLOADS` | R2 `aifred-downloads`: pinned Beta binaries and compatibility catalog media |
-| `AIFRED_REFERENCE_BUCKET` | Existing R2 `aifred-reference-pool`, retained reference assets; pool reads use D1 |
-| `AIFRED_REFERENCE_POOL` | Existing KV `8a120701767e474f928d1af7037cd68a`, historical compatibility, no request-time list |
-| `AIFRED_SALES_LOG` | Existing KV `2c66da7795b54135a4d67e514b97491f`, historical compatibility, no event writes |
-| `AIFRED_ANALYTICS` | Preview `aifred_events_preview`; production config `aifred_events`; optional telemetry |
+| Binding | Resource | Responsibility |
+| --- | --- | --- |
+| `AIFRED_OPS` | D1 `aifred-ops` | references, sessions, idempotency, limits, activity and rollups |
+| `AIFRED_DOWNLOADS` | R2 `aifred-downloads` | pinned Beta artifacts and catalog media |
+| `AIFRED_REFERENCE_BUCKET` | R2 `aifred-reference-pool` | licensed reference audio |
+| `AIFRED_REFERENCE_POOL` | KV `8a120701767e474f928d1af7037cd68a` | historical runtime compatibility |
+| `AIFRED_SALES_LOG` | KV `2c66da7795b54135a4d67e514b97491f` | historical sales compatibility, read-only |
+| `AIFRED_ANALYTICS` | Analytics Engine `aifred_events` | optional request telemetry |
 
-Production at the baseline has the two KV and two R2 bindings but no D1/Analytics binding. Recovered preview binds canonical D1 and the existing preview Analytics dataset. The deploy configuration will supply existing resources at promotion. No Queue dependency exists in the Pages runtime. `wrangler pages download config` was run into ignored scratch space and compared before deployment; production secret values were never overwritten.
+Staging uses the same D1/KV/R2 resources with dataset
+`aifred_events_staging`, queue `aifred-events-staging`, and staging rate-limit
+namespaces. This preserves current staging configuration while keeping it
+isolated from the production Pages route.
 
-## Public Beta downloads and catalog
+## Deployment and validation
 
-Only AIFRED Beta is public: `kaeganscott26/AIFRED`, tag `v0.3.6-beta-stable`. `lib/release-manifest.js` pins these objects:
+Run the repository check, then use the existing packaging/deployment helper:
 
-| Artifact | R2 key | Bytes | SHA-256 |
-| --- | --- | ---: | --- |
-| Windows installer | `releases/beta/v0.3.6-beta-stable/AIFRED-VST3-Setup.exe` | 53,964,697 | `ce9664d2cb3632cf72c3af930377cf3f0b6d15282c5ed1f33c8ec31aa829e71f` |
-| Windows ZIP | `releases/beta/v0.3.6-beta-stable/AIFRED-VST3-windows.zip` | 2,323,863 | `3bde33e7f30386d29baec937ed0613f2ee09cf5e322f1c76d758c6d78c6f2ea9` |
+```powershell
+npm --prefix apps run website:check
+npm --prefix apps run website:preview
+npm --prefix apps run website:deploy
+```
 
-Routes: `/api/v1/downloads/plugin?channel=beta&asset=setup` and `asset=zip`. HEAD and GET 200, byte-range 206, filename, content type, length and full-file SHA-256 passed in preview and match the public GitHub release. Unpublished release metadata is not returned by the public listing; its private placeholder remains. No Official binary was uploaded. Download buttons appear only after matching HEAD verification.
+The helper bundles `_worker.js` and packages only public website files/assets.
+It does not publish repository source, secrets, SQL, or generated build output.
+After a Git or ad-hoc deployment, verify the Pages deployment ID, `/`, static
+assets, `/health`, `/api/health`, `/api/v1/reference/pool`, `/v1/models`,
+downloads, chat/provider behavior, `/ops`, and authenticated admin routes.
+Wait at least five minutes with no synthetic traffic before making idle-traffic
+claims. Report repository HEAD, deployment ID, manifest SHA/hashes, and manual
+host/client coverage separately.
 
-The unchanged catalog contains 53 real tracks. All 53 referenced MP3s were recovered from `.codex/skills/AIFRED-3.6-Beta RECOVERY_REFERRENCE_ONLY/apps/website/assets/audio/catalog/` into `apps/website/assets/audio/catalog/`. Catalog data and three existing images already matched or resolved; no entries were fabricated. The full 58-file referenced asset graph passes exact-case, existence, nonempty and Pages size-limit checks. Representative static MP3 GETs and existing `/api/v1/assets/audio/catalog/*` R2 range requests passed.
+## Release boundary
 
-## Ops and credentials
-
-Preview `/ops`, `/ops.html`, `/ops.css`, `/ops.js` pass HTTP/content-type checks and a browser-rendered screenshot confirms styling. Login/logout, status, dashboard/state, providers, references, analytics, exports, source list/status/read/validation pass. Source-save rejects non-allowlisted paths; optimistic concurrency has automated coverage. No arbitrary path writes or synthetic reference inserts were performed.
-
-Production encrypted names preserved: `AIFRED_ADMIN_PASSWORD_SHA256`, `AIFRED_ADMIN_SESSION_SECRET`, `AIFRED_ADMIN_USERNAME`, `AIFRED_CHAT_PROVIDER`, `AIFRED_PLUGIN_RELEASE_TAG`, `AIFRED_RELEASE_VERSION`, `Cloudflaireapi`, `GITHUB_TOKEN`, `OLLAMA_BASE_URL`, `OLLMA_MODEL`.
-
-Preview reused existing local credential values for `AIFRED_API_TOKEN`, `AIFRED_ANALYTICS_API_TOKEN`, the three admin names, `AIFRED_CHAT_PROVIDER`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_API_TOKEN`, and `GITHUB_TOKEN`. A preview binding reconciliation initially passed the API's redacted GitHub value back; the preview binding was recovered with the existing locally configured fine-grained PAT, and authenticated Official source reads now pass. Production bindings were untouched. No credential was generated or rotated.
-
-`AIFRED-AUTH`: the available local GitHub credential is a fine-grained PAT and can read Official. Its human-assigned label cannot be verified with the available GitHub API session; an App lookup for `aifred-auth` returned 404. No replacement GitHub credential was created. Production `GITHUB_TOKEN` remains unchanged and awaits production runtime validation.
-
-`aifred-api-staging` remains an isolated donor Worker with no production route. Old `aifred-api` has no zone route and was not deployed or revived. Its local donor configuration no longer declares a production route, and its documentation is explicitly obsolete.
-
-## Deployment and validation boundary
-
-Use `npm --prefix apps run website:check`, then `npm --prefix apps run website:preview`. Pages ignores `.assetsignore`; `tools/deploy-website.mjs` packages only the public files/assets and bundled router from `apps/website` into a retained temporary mirror. Private backend/config/SQL paths return 404 in that preview. The router and static source remain entirely in Official; no Beta runtime dependency exists.
-
-Local tests: 13 passing backend/frontend contracts plus syntax/import, asset graph, command-registry and repository checks. Protected plugin/DSP/host/CMake/installer paths have zero diff against recovery start `656ead82648405cfdab206a9cf7db17099900fef`. Beta remains clean at `468f06ed859d0887ffd86f0f997370944aabbe24` with no tracked website/API tree. No VST was built, installed, packaged or released; DAW coverage is not claimed.
-
-Real remaining defects: Ollama DNS/ingress and provider 502; production promotion/bindings/source automation still pending; production authenticated Ops/GitHub validation pending; `AIFRED-AUTH` label not independently confirmed. The currently broken production deployment has deliberately not been replaced while required provider acceptance is failing.
+Only the pinned public Beta artifacts are advertised. Official binaries are
+not exposed by the website. DSP precision, the FilteredMixContext contract,
+and AifredIntelligenceHost ownership remain unchanged by this website/admin
+repair.

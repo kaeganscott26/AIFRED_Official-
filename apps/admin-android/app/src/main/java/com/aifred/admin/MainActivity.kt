@@ -948,6 +948,16 @@ fun AIFREDAdminApp() {
         chatSettingsPersistence = "request-driven"
     }
 
+    LaunchedEffect(adminSessionToken) {
+        if (adminSessionToken.isBlank() || adminSessionToken.startsWith("local-admin-")) return@LaunchedEffect
+        val result = withContext(Dispatchers.IO) { chatClient.getChatSettings(adminSessionToken) }
+        if (result.ok) {
+            chatSettings = result.settings
+            chatWebsocketUrl = result.websocketUrl
+            chatSettingsPersistence = result.persistence
+        }
+    }
+
     DisposableEffect(Unit) {
         mediaPlayer.setOnCompletionListener {
             isPlaying = false
@@ -1093,6 +1103,12 @@ fun AIFREDAdminApp() {
                         selected = activeTab == AdminTab.CHAT,
                         modifier = Modifier.weight(1f),
                         onClick = { activeTab = AdminTab.CHAT }
+                    )
+                    TabButton(
+                        label = "Upload",
+                        selected = activeTab == AdminTab.UPLOAD,
+                        modifier = Modifier.weight(1f),
+                        onClick = { activeTab = AdminTab.UPLOAD }
                     )
                     TabButton(
                         label = "Command",
@@ -3117,12 +3133,14 @@ class ApiClient(
         }
     }
 
-    fun getChatSettings(): ChatSettingsResult {
+    fun getChatSettings(adminSessionToken: String = ""): ChatSettingsResult {
         return try {
             val request = Request.Builder()
-                .url(endpoint("/api/v1/chat/settings"))
+                .url(endpoint(if (adminSessionToken.isBlank()) "/api/v1/chat/settings" else "/api/v1/admin/chat/settings"))
                 .apply {
-                    if (token.isNotBlank()) {
+                    if (adminSessionToken.isNotBlank()) {
+                        addHeader("Authorization", "Bearer $adminSessionToken")
+                    } else if (token.isNotBlank()) {
                         addHeader("Authorization", "Bearer $token")
                     }
                 }
@@ -3250,7 +3268,27 @@ class ApiClient(
     }
 
     fun listActions(): List<RegisteredAction> {
-        return LocalShellActions.distinctBy { it.id }
+        val remote = runCatching {
+            val request = Request.Builder()
+                .url(endpoint("/api/v1/registry/actions"))
+                .get()
+                .build()
+            client.newCall(request).execute().use { response ->
+                val payload = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
+                val items = payload?.optJSONArray("actions") ?: return@use emptyList()
+                buildList {
+                    for (index in 0 until items.length()) {
+                        val item = items.optJSONObject(index) ?: continue
+                        val id = item.optString("id").trim()
+                        val command = item.optString("command", id).trim()
+                        if (response.isSuccessful && id.isNotBlank() && command.isNotBlank()) {
+                            add(RegisteredAction(id, item.optString("description", id), command, localOnly = false))
+                        }
+                    }
+                }
+            }
+        }.getOrDefault(emptyList())
+        return (remote + LocalShellActions).distinctBy { it.id }
     }
 
     fun runCommand(adminSessionToken: String, command: String): String {
@@ -3417,6 +3455,7 @@ class ApiClient(
                 .url(endpoint(route))
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer $adminSessionToken")
+                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("X-Api-Token", token)
@@ -3651,6 +3690,7 @@ class ApiClient(
             val request = Request.Builder()
                 .url(endpoint("/api/v1/admin/reference/upload"))
                 .addHeader("Authorization", "Bearer $adminSessionToken")
+                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("X-Api-Token", token)
@@ -3702,6 +3742,7 @@ class ApiClient(
             val request = Request.Builder()
                 .url(endpoint("/api/v1/admin/catalog/upload"))
                 .addHeader("Authorization", "Bearer $adminSessionToken")
+                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("X-Api-Token", token)

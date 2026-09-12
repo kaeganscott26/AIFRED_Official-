@@ -2,6 +2,8 @@
 
 The currently verified website downloads are for 64-bit Windows and a VST3-compatible DAW.
 
-See the [published Beta release](https://github.com/kaeganscott26/AIFRED/releases/tag/v0.3.6-beta-stable) for installation and release-specific requirements.
+Use the verified Beta download buttons on this website for the current
+installer/ZIP. The public package is sourced from the Beta
+`out/windows-x64/current` artifact and is served from the canonical R2 bucket.
 
 Audio analysis and optional conversational provider configuration are separate. Never include administrator or deployment credentials in plugin configuration.

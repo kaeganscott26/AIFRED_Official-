@@ -1,103 +1,69 @@
 # AIFRED Admin | Private Android Management Console
 
-The AIFRED Android admin app is owner-only operational software for the North3rnLight3r website/backend and catalog.
+AIFRED Android Admin is owner-only operational software for the North3rnLight3r
+website/backend and catalog. Its production base is
+`https://north3rnlight3r.com/api`; it appends `/v1/*` and `/v1/admin/*` from
+`BuildConfig.AIFRED_BASE_URL`. Override the base only for development with the
+Gradle property `AIFRED_BASE_URL` or ignored `local.properties` key
+`aifredBaseUrl`.
 
-The production API candidate is `https://north3rnlight3r.com/api`. The app builds `/v1/*` and `/v1/admin/*` routes from the single `BuildConfig.AIFRED_BASE_URL`. Override it only for development with Gradle property `AIFRED_BASE_URL` or untracked `local.properties` key `aifredBaseUrl`.
+The website, Beta and Official clients, Android Admin, desktop Admin, and `/ops`
+share the same Pages backend. The Android app does not call the staging Worker
+by default.
 
-The Commands screen exposes authenticated live analytics, downloads, inquiries, logs, references, API/deployment status, **Export Site Data**, and **Export Track Analysis**. Exports are fetched off the UI thread from `/api/v1/admin/export/site` or `/api/v1/admin/export/tracks`, written to the app-private `files/exports` directory, and reported with their exact filename/location.
+## Responsibilities
 
-The VST remains local-first: it calls AifredIntelligenceHost at `http://127.0.0.1:8788`; AifredIntelligenceHost selects local Ollama (`http://127.0.0.1:11434`) or a configured compatible provider. The plugin does not depend on Cloudflare.
+- authenticated owner access, website chat, model selection, and catalog playback;
+- catalog audio/metadata upload and licensed-reference upload through controlled R2 routes;
+- server action registry and authenticated allowlisted backend commands;
+- analytics, downloads, inquiries, activity/logs, references, sales, status, dashboard, and exports;
+- provider configuration/test and bounded chat-settings load/save;
+- approved Official website text reads, validation, and optimistic source commits;
+- separate local-only, non-root Android/Termux diagnostics.
 
-It lives at:
+The Upload tab and the restored Command controls use the same `/api/v1` routes
+as `/ops`. The phone never executes arbitrary backend shell input. Website
+source controls accept only the existing eight approved text files, require a
+fresh Git blob SHA, and cannot create/delete/traverse arbitrary paths or upload
+binary website assets. The server, not the APK, holds `GITHUB_TOKEN`.
 
-```text
-apps/admin-android/
-```
+## Technical state
 
-## Current Responsibilities
+- App version `2.3.0`, version code `243`
+- `compileSdk = 35`, `targetSdk = 35`, minimum SDK `29`
+- JVM target `17`, Jetpack Compose, OkHttp, Kotlin coroutines
+- request-driven HTTP chat; WebSocket is retained for the website adapter only
+- local AifredIntelligenceHost remains separate at `127.0.0.1:8788` for Official
 
-- Authenticated admin access.
-- Website/backend chat and model selection.
-- Catalog audio and metadata uploads.
-- Licensed reference uploads.
-- Approved Official website text reads, validation, and optimistic source commits through authenticated backend routes.
-- Registered backend commands plus a separate local-only registry of non-root Linux/Termux/Android diagnostics.
-- Historical sales, inquiries, activity, downloads, and upload visibility.
-- Free catalog-distribution metadata; commercial licensing remains inquiry-based.
+The client uses the OpenAI-compatible `/v1/models` and
+`/v1/chat/completions` contract. It can use the website route, local Ollama, or
+OpenAI according to the selected phone profile. A provider is interpretation
+infrastructure; it does not replace AIFRED measurements or FilteredMixContext.
 
-## Current Technical State
-
-- Backend candidate: `https://north3rnlight3r.com/api`; production cutover is not yet verified
-- App version: `2.3.0`
-- Version code: `243` (kept above 241 so Android accepts it as an upgrade)
-- `compileSdk = 35`
-- `targetSdk = 35`
-- Minimum SDK: 29
-- JVM target: 17
-- UI: Jetpack Compose
-- Networking: OkHttp
-- Async work: Kotlin coroutines
-
-The AI client uses the OpenAI-compatible API base contract. Configure the host/root with `AIFRED_BASE_URL`; the client appends `/v1` routes such as `/v1/models` and `/v1/chat/completions`.
-
-Current model routes can include:
-
-- `aifred:latest`
-- `gpt-5.6-luna`
-
-## Local Build
-
-Linux/Termux-style host shell:
-
-```sh
-cd apps/admin-android
-./gradlew :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+## Build and install
 
 Windows PowerShell:
 
 ```powershell
 cd apps/admin-android
-.\gradlew.bat assembleDebug
+.\gradlew.bat test assembleDebug
 ```
 
-Install locally with ADB:
+Install the generated debug APK locally with ADB:
 
 ```powershell
-$adb=Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+$adb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 & $adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
-The in-app local registry includes read-only/non-root commands for working directory, file listing, disk usage, identity, kernel details, visible processes, network state, environment, Termux package/info queries, Android version/packages/logs, and production API health. Local actions run on the phone; backend actions remain server allowlisted.
+The release build currently uses debug signing and is private owner tooling;
+do not publish it as a public store artifact or GitHub release. Report build,
+install, and physical-device/DAW evidence separately.
 
-The exact generated inventory is [Administrator Command Reference](../../docs/ADMIN_COMMAND_REFERENCE.md). `config/admin-commands.json` is authoritative; do not maintain another command table here.
+## Security and traffic
 
-Catalog playback resolves the website API's relative `/api/v1/assets/audio/catalog/...` paths against `AIFRED_BASE_URL` before passing them to Android `MediaPlayer`. This keeps mobile playback on the same controlled R2-backed streaming routes as the website.
-
-The Chat tab includes an API Configuration module with Website, Local Ollama, and OpenAI profiles. Operators can edit the endpoint and model, enter an API key when required, test discovery, and apply the profile without rebuilding the APK. The selected phone profile is stored in app-private storage with Android backup disabled, and API keys are never written to the repository.
-
-The Command tab provides phone-based website management through the same-origin Pages backend. The UI exposes eight approved text files under `apps/website`, requires a fresh Git blob SHA before each commit, and offers load, validate, commit, and source-status actions. The backend uses a server-side `GITHUB_TOKEN` scoped to Official contents. It rejects arbitrary paths, delete/create operations, and binary uploads. A commit response does not prove Pages deployed it.
-
-Android cleartext transport is enabled because local Ollama commonly uses HTTP, but the app rejects public cleartext endpoints and accepts HTTP only for loopback/private-network hosts. `127.0.0.1` means the phone itself unless an ADB reverse mapping is active; otherwise use the workstation's reachable private LAN address. Cloudflare Pages cannot use a private/loopback URL and requires an authenticated, publicly reachable HTTPS tunnel or service endpoint.
-
-No operator password or password verifier is hardcoded in the APK source. Offline login is available only after the owner explicitly saves credentials into the app's private, non-backed-up storage.
-
-## Distribution
-
-The app is private and owner-only.
-
-Current policy:
-
-- Keep source in the private AIFRED repository.
-- Build/install locally for the owner's device.
-- Do not attach the APK to public GitHub releases.
-- Do not publish the app through a public app-store listing.
-
-The current `release` build type uses the debug signing configuration and has minification disabled, so it should not be treated as a hardened public production build.
-
-## Security
-
-Do not commit or publish private local configuration, owner credentials, or provider/deployment values.
-
-The app can use offline-aware owner login and authenticated backend routes. Access should remain restricted to the owner.
+Android cleartext transport is enabled only for local/private provider use; the
+production website/API requires HTTPS. Admin sessions are bounded and revoked
+server-side. Secrets, passwords, tokens, and private local configuration are
+never committed. Chat and provider probes run only from explicit user actions;
+there is no periodic Cloudflare API polling from the plugin or app.

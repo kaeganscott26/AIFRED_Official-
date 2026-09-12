@@ -1,6 +1,6 @@
 # AIFRED Ecosystem Configuration
 
-This document defines where configuration belongs across AIFRED 4, the public Beta, the website, Cloudflare, private admin consoles, and AifredIntelligenceHost.
+This document defines where configuration belongs across AIFRED 4, the public Beta, the website, Cloudflare, private admin consoles, and AifredIntelligenceHost. It describes the current unified Pages topology, not the historical split-Worker experiment.
 
 ## One local source of truth, multiple security domains
 
@@ -33,6 +33,13 @@ GET https://north3rnlight3r.com/api/v1/references
 ```
 
 Beta and AIFRED 4 may consume that same read-only endpoint. The endpoint exposes analysis/reference measurements required by AIFRED while withholding licensed audio objects, owner credentials, repository credentials, and private storage identifiers.
+
+The production route owner is Pages project `aifred-site`. `aifred-api-staging`
+is retained as an isolated smoke Worker with staging telemetry/queue/rate-limit
+resources; it must not be used as a second production `/api/*` router. The
+public website advertises only the verified Beta artifacts from the Beta
+repository's `out/windows-x64/current` package. Official `out/windows-x64/current`
+alpha artifacts are not public downloads.
 
 ## Cloudflare binding ownership
 
@@ -87,7 +94,7 @@ For local Pages development, generate/use an ignored `.env` or `.dev.vars`; neve
 Native Cloudflare Pages Git integration and GitHub repository API access are separate concerns.
 
 - **Pages Git integration** authorizes Cloudflare's GitHub App to build/deploy a selected repository on push. No long-lived Cloudflare API token needs to be placed in GitHub for ordinary Git-triggered deployments.
-- **`GITHUB_TOKEN` in the `aifred-site` runtime** authorizes Android Admin to read and update the exact approved website text-file allowlist in `kaeganscott26/AIFRED_Official-`. Keep it as a Cloudflare secret with repository Contents write permission. The backend requires the loaded blob SHA and does not support arbitrary paths, delete, create, or binary upload.
+- **`GITHUB_TOKEN` in the `aifred-site` runtime** authorizes Android Admin to read and update the exact approved website text-file allowlist in `kaeganscott26/AIFRED_Official-`. Keep it as a Cloudflare secret with repository Contents write permission. The backend requires the loaded blob SHA and does not support arbitrary paths, delete, create, or binary website-asset upload.
 
 ## Distribution configuration
 

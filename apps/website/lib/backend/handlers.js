@@ -5,6 +5,7 @@ import { invokeChatProvider, providerConfiguration, testOllamaProvider } from ".
 import { browserReferenceName, classifyBrowserReference, normalizeBrowserMetrics } from "./reference-gate.js";
 import { EDITABLE_WEBSITE_FILES, readApprovedSourceFile, saveApprovedSourceFile, sourceControlStatus, validateSourceDraft } from "./source-control.js";
 import { publicRelease, publicReleaseManifest, releaseAsset, releaseForChannel } from "../release-manifest.js";
+import { backendActionCatalog, chatSettingsPayload, executeAdminCommand, historicalSales, removeCatalogTrack, saveChatSettings, saveRuntimeProviderConfig, testRuntimeProvider, uploadCatalogAudio, uploadLicensedReference } from "./admin-tools.js";
 
 const RELEASE_CACHE_SECONDS = 900;
 const MODEL_CACHE_SECONDS = 900;
@@ -511,8 +512,14 @@ async function adminLogout(request, env, trace) {
 
 async function adminData(request, env, path, trace) {
   const postPaths = new Set([
+    "/v1/admin/api/config",
+    "/v1/admin/api/test",
+    "/v1/admin/catalog/remove",
+    "/v1/admin/catalog/upload",
+    "/v1/admin/chat/settings/save",
     "/v1/admin/provider/test",
     "/v1/admin/providers/ollama/test",
+    "/v1/admin/reference/upload",
     "/v1/admin/source/read",
     "/v1/admin/source/validate",
     "/v1/admin/source/save"
@@ -532,6 +539,69 @@ async function adminData(request, env, path, trace) {
   if (path === "/v1/admin/status" || path === "/v1/admin/ops/status") {
     const providers = providerConfiguration(env);
     return json({ ok: true, service: "aifred-site", api_version: "v1", authority: "kaeganscott26/AIFRED_Official-", architecture: "pages-advanced-mode", storage: { d1: Boolean(env.AIFRED_OPS), queue: false, analytics_engine: Boolean(env.AIFRED_ANALYTICS), historical_kv_read_only: Boolean(env.AIFRED_SALES_LOG), r2: Boolean(env.AIFRED_DOWNLOADS) }, provider: { active: providers.active, configured: providers.providers.some((item) => item.id === providers.active && item.configured), tested: false } });
+  }
+  if (path === "/v1/admin/api/config") {
+    return json(await saveRuntimeProviderConfig(env, await readJson(request, MAX_BODY.provider)));
+  }
+  if (path === "/v1/admin/api/test") {
+    const result = await testRuntimeProvider(env, await readJson(request, MAX_BODY.provider));
+    trace.providerCalls += 1;
+    trace.provider = result.provider || "";
+    return json({ ok: Boolean(result.ok), ...result, message: result.ok ? `${result.provider || "provider"} is reachable` : `${result.provider || "provider"} test failed` }, { status: result.ok ? 200 : 502 });
+  }
+  if (path === "/v1/admin/chat/settings/save") {
+    const settings = await saveChatSettings(env, await readJson(request, MAX_BODY.settings));
+    const payload = await chatSettingsPayload(request, env, true);
+    return json({ ...payload, settings });
+  }
+  if (path === "/v1/admin/chat/settings") {
+    return json(await chatSettingsPayload(request, env, true));
+  }
+  if (path === "/v1/admin/catalog/upload") {
+    const result = await uploadCatalogAudio(request, env);
+    await enqueueActivity(env, {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      event_type: "admin.catalog_upload.accepted",
+      request_id: trace.requestId,
+      route: path,
+      method: "POST",
+      status: 201,
+      metadata: { stored_path: result.stored_path, title: result.track?.title || "", commit_sha: result.commit || "" }
+    });
+    trace.d1Writes += 1;
+    return json(result, { status: 201 });
+  }
+  if (path === "/v1/admin/catalog/remove") {
+    const body = await readJson(request, MAX_BODY.provider);
+    const result = await removeCatalogTrack(env, body.key);
+    await enqueueActivity(env, {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      event_type: "admin.catalog_track.removed",
+      request_id: trace.requestId,
+      route: path,
+      method: "POST",
+      status: 200,
+      metadata: { key: result.removed, commit_sha: result.commit || "" }
+    });
+    trace.d1Writes += 1;
+    return json(result);
+  }
+  if (path === "/v1/admin/reference/upload") {
+    const result = await uploadLicensedReference(request, env);
+    await enqueueActivity(env, {
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+      event_type: "reference.upload.accepted",
+      request_id: trace.requestId,
+      route: path,
+      method: "POST",
+      status: 201,
+      metadata: { stored_path: result.stored_path, genre: result.genre, title: result.title }
+    });
+    trace.d1Writes += 1;
+    return json(result, { status: 201 });
   }
   if (path === "/v1/admin/analytics") {
     const since = new Date(Date.now() - 60 * 60 * 1000).toISOString().slice(0, 16) + ":00.000Z";
@@ -582,6 +652,9 @@ async function adminData(request, env, path, trace) {
   if (path === "/v1/admin/catalog/list") {
     const tracks = await loadCatalog(request, env);
     return json({ ok: true, tracks, count: tracks.length, source: "official-static-catalog" });
+  }
+  if (path === "/v1/admin/sales/list") {
+    return json({ ok: true, ...(await historicalSales(env)) });
   }
   if (path === "/v1/admin/dashboard/state") {
     const [analyticsResponse, activityResponse, inquiriesResponse, releasesResponse, referencesResponse, catalogResponse] = await Promise.all([
@@ -760,8 +833,7 @@ async function download(request, env, ctx, trace) {
   }
   const head = await env.AIFRED_DOWNLOADS?.head?.(key);
   if (!head || head.size < 1 || head.size !== asset.size_bytes) {
-    if (channel === "beta" && asset.github_fallback_url) return Response.redirect(asset.github_fallback_url, 307);
-    throw new HttpError(502, "release_artifact_invalid", "release artifact is missing or does not match the release manifest");
+    throw new HttpError(503, "release_artifact_unavailable", "the release artifact is not available in the configured R2 storage");
   }
   const response = await r2Object(request, env.AIFRED_DOWNLOADS, key, asset.filename, trace, false);
   const headers = new Headers(response.headers);
@@ -808,6 +880,26 @@ export async function routeRequest(request, env, ctx, trace) {
   if (path === "/v1/analysis/submit" || path === "/v1/analyzer/submit") return websiteAnalysis(request, env, ctx, trace);
   if (path === "/v1/analysis") return analysis(request, env, trace);
   if (path === "/v1/analytics/events" || path === "/v1/activity/record") return analytics(request, env, trace);
+  if (path === "/v1/registry/actions") {
+    requireMethod(request, "GET", "HEAD");
+    return json({ ok: true, actions: backendActionCatalog(), authority: "aifred-site Pages Advanced Mode" });
+  }
+  if (path === "/v1/chat/settings") {
+    requireMethod(request, "GET", "HEAD");
+    return json(await chatSettingsPayload(request, env));
+  }
+  if (path === "/v1/command/run") {
+    requireMethod(request, "POST");
+    const identity = await adminIdentity(request, env);
+    trace.adminIdentity = identity;
+    trace.clientKey = identity.clientKey.slice(0, 32);
+    trace.rateLimitOutcome = await enforceRateLimit(env.ADMIN_RATE_LIMITER, identity.clientKey, {
+      db: env.AIFRED_OPS, scope: "admin", limit: 60
+    });
+    const body = await readJson(request, MAX_BODY.command);
+    const result = await executeAdminCommand(body.command_line || body.command, request, env);
+    return json(result, { status: result.ok ? 200 : 400 });
+  }
   if (path === "/v1/inquiries" || path === "/v1/inquiries/submit") return inquiry(request, env, trace);
   if (path === "/v1/downloads/plugin") return download(request, env, ctx, trace);
   if (path.startsWith("/v1/assets/")) return asset(request, env, path, trace);

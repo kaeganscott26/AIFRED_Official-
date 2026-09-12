@@ -1,7 +1,7 @@
 # Implementation status
 
-> Website/backend state below is historical. Use [backend_map.md](../backend_map.md)
-> for current recovery and live deployment evidence. The DSP history remains unchanged.
+> Website/backend status below is current as of 2026-09-12. Use [backend_map.md](../backend_map.md)
+> for the detailed live evidence. The DSP history remains unchanged.
 
 ## Repository/backend migration supplement
 
@@ -11,14 +11,14 @@ Current evidence boundaries:
 
 | Capability | Status |
 | --- | --- |
-| Unified Pages website/backend source and bindings | IMPLEMENTED IN SOURCE and partially validated in Pages preview |
+| Unified Pages website/backend source and bindings | IMPLEMENTED in Official source; Pages build path corrected; next Git deployment pending |
 | Source integrity, module graph, and backend contracts | VALIDATED LOCALLY in the current working tree |
-| Android approved website-source editor | IMPLEMENTED; 12 unit tests and preview-origin debug build pass; device validation pending |
-| Pages preview | PARTIAL: deployment `20436ef4-2172-431f-ad05-fd9acb07755e` passes public/static/storage/download gates; admin/provider secrets are absent |
-| Latest Beta GitHub artifacts in R2 | VALIDATED by exact R2 key, size, and independently computed SHA-256 |
-| Unified production promotion | NOT YET VERIFIED; rollback baseline remains live |
-| Pages source move from Beta to Official | NOT YET VERIFIED |
-| Beta production retirement | NOT STARTED; Beta remains intact |
+| Android admin surface | RESTORED Upload tab, server registry/commands, settings/provider controls, catalog/reference/sales/admin routes; APK build/device validation separate |
+| Pages runtime | Healthy on `aifred-site.pages.dev`; existing production secrets/bindings preserved |
+| Current Beta artifacts in R2 | VERIFIED from Beta `out/windows-x64/current`; manifest hashes and R2 keys updated |
+| Unified production deployment | PENDING next corrected Git deployment and apex DNS verification |
+| Pages source move from Beta to Official | VERIFIED in live Pages source configuration |
+| Beta production retirement | NOT APPLICABLE; Beta remains the public client/release channel |
 
 The sections below record the earlier DSP/release pass. They do not claim current Cloudflare deployment state.
 

@@ -1,28 +1,34 @@
 # AIFRED unified Pages website/backend
 
-This directory is the complete Cloudflare Pages Advanced Mode source for project `aifred-site`. `_worker.js` dispatches `/health`, `/v1/*`, `/api/*`, `/api/v1/*`, and `/ws/chat`; every remaining request falls through to `env.ASSETS.fetch(request)`.
+This directory is the complete Cloudflare Pages Advanced Mode source for
+project `aifred-site`. `_worker.js` dispatches `/health`, `/v1/*`, `/api/*`,
+`/api/v1/*`, and `/ws/chat` to the backend; every other request falls through
+to `env.ASSETS.fetch(request)`.
 
-There is no separate production API Worker. The canonical origin is `https://north3rnlight3r.com`, application APIs use `/api/v1`, and OpenAI-compatible provider routes use `/v1`.
+There is one production site/API runtime. The canonical application origin is
+`https://north3rnlight3r.com`, application routes use `/api/v1`, and provider-
+compatible routes retain `/v1`. Beta, Official, Android Admin, desktop Admin,
+and `/ops` use this same API contract. `aifred-api-staging` remains isolated
+for smoke testing and is not a second production `/api/*` Worker.
 
-```sh
+```powershell
 npm ci --prefix apps
 npm --prefix apps run website:check
 npm --prefix apps run website:dev
 ```
 
-Deploy preview branches before production. Never commit `.dev.vars`; use `.dev.vars.example` for names only. See [API Reference](../../docs/API_REFERENCE.md), [`/ops` Guide](../../docs/OPS_GUIDE.md), and [Cloudflare Production Guide](../../docs/CLOUDFLARE_PRODUCTION.md).
+Use `npm --prefix apps run website:preview` for a filtered preview and
+`npm --prefix apps run website:deploy` for the existing Pages deployment
+pipeline. The repository’s Pages build output is `apps/website`; the helper
+bundles `_worker.js` and packages only public HTML/CSS/JS/assets, headers, and
+the worker bundle. It never publishes secrets, SQL, backend source, or
+generated build output.
 
-Use `npm --prefix apps run website:preview` from the repository root. After all
-acceptance checks pass, `npm --prefix apps run website:deploy` promotes `main` to
-the existing Pages project. Both commands use `tools/deploy-website.mjs`.
+Never commit `.dev.vars` or `.env`. Use the example files for variable names.
+See [API Reference](../../docs/API_REFERENCE.md), [Administration Guide](../../docs/ADMIN_GUIDE.md),
+and [backend map](../../backend_map.md) for route, security, binding, and live
+validation details.
 
-Wrangler Pages ignores `.assetsignore`. The deployment helper therefore packages
-only this directory's public HTML/CSS/JS/assets, `_headers`, and bundled `_worker.js`.
-It retains a temporary mirror for review; no repository/plugin files, environment
-files, backend source, or migration SQL enter the static upload. The source and
-logical output root remain `AIFRED_Official-/apps/website`; no separate runtime or
-Cloudflare project is created. Do not deploy the unfiltered directory directly.
-
-Preview uses the existing canonical `aifred-ops` D1 database so references are not
-duplicated. Preview requests create normal telemetry/admin session records there;
-tests must not insert fabricated reference records. Historical preview D1 is retained.
+Preview uses the existing canonical `aifred-ops` D1 database so references are
+not duplicated. Preview traffic creates normal telemetry/session records;
+tests must not insert fabricated reference records.

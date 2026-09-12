@@ -2,7 +2,8 @@ AIFRED Beta installation
 
 Download the Windows installer or Windows VST3 ZIP from the AIFRED Beta section.
 Close your DAW before installing. Run the installer, then rescan VST3 plugins
-in your DAW. For manual installation and release-specific instructions, see:
-https://github.com/kaeganscott26/AIFRED/releases/tag/v0.3.6-beta-stable
+in your DAW. For manual installation and release-specific instructions, use the
+verified download links on this website. The public button is backed by the
+Beta out/windows-x64/current package in the canonical R2 bucket.
 
 The source repository is https://github.com/kaeganscott26/AIFRED.

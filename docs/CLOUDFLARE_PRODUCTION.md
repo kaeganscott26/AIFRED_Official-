@@ -3,62 +3,83 @@
 ## Architecture
 
 ```text
-north3rnlight3r.com/* -> Cloudflare Pages project aifred-site
-                     -> apps/website/_worker.js
-                     -> dynamic routes or env.ASSETS.fetch(request)
+north3rnlight3r.com/* -> Pages project aifred-site -> apps/website/_worker.js
+                                      -> backend routes or env.ASSETS.fetch
 ```
 
-The site and backend are one Pages Advanced Mode deployment. `_worker.js` owns `/health`, `/v1/*`, `/api/*`, `/api/v1/*`, and `/ws/chat`; static requests fall through to `env.ASSETS`. A second Worker must not intercept `/api/*`.
+The site and application API are one Pages Advanced Mode deployment.
+`_worker.js` owns `/health`, `/v1/*`, `/api/*`, `/api/v1/*`, and `/ws/chat`;
+static requests fall through to `env.ASSETS`. No second Worker may intercept
+production `/api/*`.
 
-## Evidence boundary
+`aifred-api-staging` is an isolated Worker for smoke testing. Its current D1,
+KV, R2, Analytics, queue, and rate-limit configuration is preserved; matching
+the Pages storage bindings does not make it the production route owner.
 
-Current live state and acceptance evidence: [backend_map.md](../backend_map.md).
-The older deployment IDs below are historical rollback evidence, not current status.
+## Current control-plane state
 
-The current live rollback baseline is deployment `b2b33ea0-e74e-46a0-a6b5-53fb5c5d4b4e`, documented in [the recovery baseline](cloudflare/2026-09-10-live-recovery-baseline.md). At capture time, Pages Git integration still named the public Beta repository. Official becomes production source authority only after an Official preview passes, the unified deployment is promoted, the Git source is changed, and production is observed successfully. Source implementation or a preview alone does not establish production state.
+Pages Git source is `kaeganscott26/AIFRED_Official-`, branch `main`. The Pages
+build output directory is `apps/website`; the previous Git deployment failed
+because it used the repository-name-prefixed path
+`AIFRED_Official-\\apps\\website`. The last successful ad-hoc deployment is
+retained as rollback evidence until the corrected Git deployment succeeds.
 
-## Authoritative paths
+The apex custom domain is already registered but remains pending because its
+zone CNAME is missing. Existing `www` and Access configuration were not
+removed. The current Wrangler credential has `zone:read`, not DNS write, so
+adding that CNAME requires an authorized Cloudflare DNS administrator.
 
-| Responsibility | Path |
+## Authoritative paths and bindings
+
+| Responsibility | Path/resource |
 | --- | --- |
-| unified site/backend | `apps/website` |
+| unified website/backend | `apps/website` |
+| request router | `apps/website/_worker.js` |
 | Pages configuration | `apps/website/wrangler.toml` |
-| backend handlers | `apps/website/lib/backend` |
+| backend handlers/tools | `apps/website/lib/backend` |
 | release manifest | `apps/website/lib/release-manifest.js` |
-| preview D1 schema | `apps/website/migrations/0001_unified_runtime.sql` |
-| historical migration material | `infra/cloudflare/aifred-api` (not deployable authority) |
+| historical staging donor | `infra/cloudflare/aifred-api` |
 
-## Bindings
+Production Pages binds D1 `aifred-ops`, R2 `aifred-downloads` and
+`aifred-reference-pool`, KV `AIFRED_REFERENCE_POOL` and `AIFRED_SALES_LOG`, and
+Analytics Engine dataset `aifred_events`. The staging Worker uses the same
+storage resources, staging Analytics dataset, and its existing staging queue
+and rate-limit namespaces. Production Pages has no Queue dependency.
 
-| Binding | Responsibility |
-| --- | --- |
-| `AIFRED_OPS` | D1 operational state, sessions, idempotency, references, bounded activity, aggregates, request rollups |
-| `AIFRED_DOWNLOADS` | R2 immutable release objects |
-| `AIFRED_REFERENCE_BUCKET` | R2 licensed reference assets |
-| `AIFRED_REFERENCE_POOL` | historical/read-mostly KV compatibility |
-| `AIFRED_SALES_LOG` | historical/read-only KV compatibility; never the request-event firehose |
-| `AIFRED_ANALYTICS` | Analytics Engine request telemetry |
+## Release artifacts
 
-No Queue is required by the unified Pages path. D1 rate-limit rows provide the fallback where Pages cannot bind Workers Rate Limiting.
+The website advertises only the public Beta channel, and the download route
+reads the exact keys below from `AIFRED_DOWNLOADS`:
 
-## Secrets
+| Artifact | Source | Bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| `AIFRED-VST3-Setup.exe` | Beta `out/windows-x64/current` | 53,930,848 | `d0731bfa6afdf5af02e9429bd03a847d7d06df1e549760c04fe5548bb3ae3421` |
+| `AIFRED-VST3-windows.zip` | Beta `out/windows-x64/current` | 2,363,132 | `9cbcebbefe1928bbd7f5fd533abbc3136d7fcbcd6059ec72fbb3d108305a8d36` |
 
-Admin authentication requires `AIFRED_ADMIN_USERNAME`, `AIFRED_ADMIN_PASSWORD_SHA256`, and `AIFRED_ADMIN_SESSION_SECRET`. Mobile source administration additionally requires `GITHUB_TOKEN`, held by the runtime and never the APK. Provider credentials depend on the selected provider. Record names only; never print or commit values.
+The ZIP contains the VST3, `AifredIntelligenceHost`, channel/configuration
+files, and README from the verified Beta current artifact. Shared DSP is
+compiled into the VST3 and is not a separate runtime folder. The Official
+`out/windows-x64/current` alpha artifact has no public download route. If an
+R2 object is missing or its size differs, the API returns unavailable and does
+not redirect to an external or stale binary.
 
-## Validation and promotion
+## Secrets and validation
+
+Admin authentication requires `AIFRED_ADMIN_USERNAME`,
+`AIFRED_ADMIN_PASSWORD_SHA256`, and `AIFRED_ADMIN_SESSION_SECRET`.
+`GITHUB_TOKEN` supports only the approved Official text-file source controls.
+Provider credentials remain Worker-managed. Record names only; never print or
+commit values.
 
 ```powershell
 npm ci --prefix apps
 npm --prefix apps run website:check
+npm --prefix apps run website:preview
+npm --prefix apps run website:deploy
 ```
 
-Use `npm --prefix apps run website:preview` for a filtered, bundled Pages preview.
-The helper enforces the public asset list because Pages ignores `.assetsignore`.
-The preview uses the existing canonical D1 references and does not clone them.
-Validate static files, APIs, real references, downloads, admin and provider behavior
-before `npm --prefix apps run website:deploy`. Capture the production deployment ID
-again and retain rollback. No plugin build or release is part of website recovery.
-
-## Admin source control
-
-`/api/v1/admin/source/*` lists an exact allowlist, reads current text plus Git blob SHA, validates drafts, and updates an existing Official file with optimistic concurrency. It cannot create arbitrary paths, delete, or upload binaries. A returned commit SHA marks deployment verification false until the resulting Pages deployment is independently observed.
+After deployment, verify repository HEAD, Pages deployment ID, static assets,
+`/health`, `/api/health`, `/api/v1/reference/pool`, `/v1/models`, authenticated
+admin routes, download HEAD metadata and full artifact hashes. Wait five idle
+minutes before making idle-traffic claims. Treat source, automation, preview,
+production, installed APK, and manual plugin/DAW evidence as separate records.

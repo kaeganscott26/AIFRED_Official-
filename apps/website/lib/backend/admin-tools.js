@@ -181,9 +181,10 @@ function sanitizeChatSettings(input) {
   };
 }
 
-export async function chatSettingsPayload(request, env) {
+export async function chatSettingsPayload(request, env, includeSecret = false) {
   const stored = await readJsonValue(env, CHAT_SETTINGS_KEY, null);
   const settings = sanitizeChatSettings(stored || defaultChatSettings());
+  if (!includeSecret) settings.webhook.secret = "";
   const url = new URL(request.url);
   const websocketUrl = `${url.protocol === "https:" ? "wss:" : "ws:"}//${url.host}/ws/chat`;
   return { ok: true, settings, websocket_url: websocketUrl, persistence: stored ? "kv" : "defaults" };

@@ -19,7 +19,7 @@ Official contains the unified website/backend, Android Admin, desktop Admin, and
 north3rnlight3r.com/* -> Cloudflare Pages Advanced Mode -> backend routes or static assets
 ```
 
-The single Pages deployment remains a migration candidate until preview and production validation prove it. No second Worker may intercept `/api/*`. The public Beta repository remains intact as the current production-source fallback. See the [backend map](backend_map.md), [website map](website_map.md), [Cloudflare production guide](docs/CLOUDFLARE_PRODUCTION.md), and [migration checklist](docs/CLOUDFLARE_MIGRATION_CHECKLIST.md).
+The single Pages deployment is the production architecture; the corrected Git build and apex DNS still require live verification. No second Worker may intercept `/api/*`. The public Beta repository remains intact as the public client/release source, not as a competing website/API router. See the [backend map](backend_map.md), [website map](website_map.md), and [Cloudflare production guide](docs/CLOUDFLARE_PRODUCTION.md).
 
 ## Install dependencies and manage the plugin
 

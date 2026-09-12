@@ -1,5 +1,5 @@
 name = "aifred-site"
-pages_build_output_dir = "."
+pages_build_output_dir = "apps/website"
 compatibility_date = "2026-08-25"
 compatibility_flags = ["nodejs_compat"]
 

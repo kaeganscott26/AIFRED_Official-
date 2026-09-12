@@ -4,9 +4,12 @@ export const MAX_BODY = Object.freeze({
   analytics: 128 * 1024,
   analysis: 256 * 1024,
   chat: 192 * 1024,
+  command: 16 * 1024,
   inquiry: 16 * 1024,
+  provider: 16 * 1024,
   login: 4 * 1024,
   reference: 256 * 1024,
+  settings: 64 * 1024,
   source: 384 * 1024
 });
 
