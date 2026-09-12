@@ -4,7 +4,7 @@ Read workspace `AGENTS.md`, `docs/ARCHITECTURE.md`, `shared-dsp/README.md`, `doc
 
 ## Current machine ownership
 
-`aifred_engine -> EngineSnapshot -> BufferHunter -> ObservationSnapshot -> aifred_filter -> FilteredMixContext -> AifredIntelligenceHost`
+`shared DSP analyzer -> EngineSnapshot -> BufferHunter -> ObservationSnapshot -> aifred_filter -> FilteredMixContext -> AifredIntelligenceHost`
 
 Preserve DSP precision, realtime safety, frontend identity and plugin/state IDs. GUI positions are continuous float32; only text/model presentation rounds. No duplicate algorithm, raw snapshot model path, Python runtime or analyzer fallback.
 

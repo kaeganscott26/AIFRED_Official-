@@ -33,7 +33,7 @@ The sections below record the earlier DSP/release pass. They do not claim curren
 
 | Requirement | Starting classification | Evidence |
 |---|---|---|
-| `aifred_engine` authoritative measurements | DONE | CMake links one [engine library](../shared-dsp/CMakeLists.txt); plugin processors call Pipeline |
+| shared DSP analyzer authoritative measurements | DONE | CMake links one [shared DSP library](../shared-dsp/CMakeLists.txt); plugin processors call Pipeline |
 | EngineSnapshot, BufferHunter, ObservationSnapshot | DONE | shared contracts and processor-owned Pipeline |
 | `aifred_filter` to FilteredMixContext | DONE | deterministic Filter and serialized v1 context |
 | old duplicate C++ analyzers | DONE | removed in Git history; no current tracked references |

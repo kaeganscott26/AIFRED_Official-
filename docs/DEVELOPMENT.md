@@ -4,7 +4,7 @@ Read [Architecture](ARCHITECTURE.md), [DSP Configuration](DSP_CONFIGURATION.md),
 
 ## Source rules
 
-- Put measurements in `aifred_engine`, temporal statistics in BufferHunter, and deterministic interpretation in `aifred_filter`.
+- Put measurements in the shared DSP analyzer, temporal statistics in BufferHunter, and deterministic interpretation in `aifred_filter`.
 - Keep network, file, JSON, model, reference lookup, locks, and logging out of `processBlock`.
 - Preserve plugin/state IDs, frontend identity, physical units, and continuous float32 GUI targets.
 - Require a failing test or reproducible measurement before changing a DSP formula. Document the old formula, failure, correction, and rerun evidence.

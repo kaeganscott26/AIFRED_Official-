@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart TD
-    DAW[DAW audio] --> Engine[aifred_engine]
+    DAW[DAW audio] --> Engine[shared DSP analyzer]
     Engine --> ES[EngineSnapshot]
     ES --> Live[Live spectrum, correlation, width]
     ES --> BH[BufferHunter]
@@ -22,7 +22,7 @@ The solid path exists. The dotted intelligence and Babylon nodes do not.
 
 | Responsibility | Owner | Implementation |
 |---|---|---|
-| Authoritative measurements | `aifred_engine` | [Engine](../shared-dsp/src/Engine.cpp), [Spectrum](../shared-dsp/src/Spectrum.cpp), [Loudness](../shared-dsp/src/Loudness.cpp), [True Peak](../shared-dsp/include/aifred/TruePeak.h) |
+| Authoritative measurements | shared DSP analyzer | [Engine](../shared-dsp/src/Engine.cpp), [Spectrum](../shared-dsp/src/Spectrum.cpp), [Loudness](../shared-dsp/src/Loudness.cpp), [True Peak](../shared-dsp/include/aifred/TruePeak.h) |
 | Realtime publication | `EngineSnapshot` and bounded SPSC queue | [Contracts](../shared-dsp/include/aifred/Contracts.h), [Engine](../shared-dsp/include/aifred/Engine.h) |
 | Temporal observation | `BufferHunter` | [contract](../shared-dsp/include/aifred/BufferHunter.h), [implementation](../shared-dsp/src/BufferHunter.cpp) |
 | Deterministic semantic/reference state | `aifred_filter` | [contract](../shared-dsp/include/aifred/Filter.h), [implementation](../shared-dsp/src/Filter.cpp) |

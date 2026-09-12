@@ -3,7 +3,7 @@
 AIFRED Official is a transparent Windows x64 VST3 analyzer. The current source implements the measurement, observation, and deterministic filtering machine:
 
 ```text
-DAW audio -> aifred_engine -> EngineSnapshot -> BufferHunter
+DAW audio -> shared DSP analyzer -> EngineSnapshot -> BufferHunter
           -> ObservationSnapshot -> aifred_filter -> FilteredMixContext
 ```
 

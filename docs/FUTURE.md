@@ -10,7 +10,7 @@ The next project begins after the current machine is accepted:
 
 ```text
 DAW audio
-  -> aifred_engine
+  -> shared DSP analyzer
   -> EngineSnapshot
   -> BufferHunter
   -> ObservationSnapshot
