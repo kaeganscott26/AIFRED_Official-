@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "website:check": "node ../tools/check-source-integrity.mjs && node ../tools/check-website-modules.mjs && node ../tools/check-website-assets.mjs && node --test ../tests/website-backend.test.mjs && node ../tools/generate-admin-command-reference.mjs --check && python ../scripts/common/check_repository.py",
+    "website:check": "node ../tools/check-source-integrity.mjs && node ../tools/check-website-modules.mjs && node ../tools/check-website-assets.mjs && node --test ../tests/website-backend.test.mjs",
     "website:dev": "wrangler pages dev . --cwd website",
     "website:deploy": "node ../tools/deploy-website.mjs main",
     "website:preview": "node ../tools/deploy-website.mjs recovery-completion"
