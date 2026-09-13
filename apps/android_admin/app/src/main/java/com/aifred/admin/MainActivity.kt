@@ -63,7 +63,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -80,6 +79,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.UUID
 
@@ -100,7 +100,8 @@ enum class AdminTab {
 
 enum class UploadMode {
     CATALOG,
-    REFERENCE
+    REFERENCE,
+    WEBSITE_ASSET
 }
 
 data class ChatMessage(val role: String, val text: String)
@@ -125,18 +126,7 @@ data class ModelCatalog(
 
 data class RegisteredAction(
     val id: String,
-    val description: String,
-    val command: String = id,
-    val localOnly: Boolean = false
-)
-
-data class SiteActivityEvent(
-    val id: String,
-    val createdAt: String,
-    val eventType: String,
-    val title: String,
-    val path: String,
-    val message: String
+    val description: String
 )
 
 data class ChatWebhookSettings(
@@ -198,8 +188,12 @@ data class SoundPackMeta(
     val price: String
 )
 
-fun defaultPackPrice(@Suppress("UNUSED_PARAMETER") packType: String): String {
-    return "Free MP3 download; commercial licensing by inquiry"
+fun defaultPackPrice(packType: String): String {
+    return when (packType.trim().lowercase()) {
+        "single" -> "$2.99"
+        "soundpack", "midipack", "drumpack", "samplepack" -> "$19.99"
+        else -> "$19.99"
+    }
 }
 
 data class AdminLoginResult(
@@ -212,7 +206,6 @@ data class AdminLoginResult(
 data class AdminFileReadResult(
     val ok: Boolean,
     val content: String,
-    val sha: String = "",
     val message: String
 )
 
@@ -243,14 +236,17 @@ data class WebsitePathPreset(
 )
 
 private val WebsiteTextPresets = listOf(
-    WebsitePathPreset("Home HTML", "apps/website/index.html"),
-    WebsitePathPreset("Styles", "apps/website/styles.css"),
-    WebsitePathPreset("App JS", "apps/website/app.js"),
-    WebsitePathPreset("Config", "apps/website/config.js"),
-    WebsitePathPreset("Catalog JSON", "apps/website/assets/data/beat_catalog.json"),
-    WebsitePathPreset("Release Notes", "apps/website/assets/docs/aifred-release-notes.txt"),
-    WebsitePathPreset("Install Notes", "apps/website/assets/docs/aifred-installation.txt"),
-    WebsitePathPreset("System Requirements", "apps/website/assets/docs/aifred-system-requirements.md")
+    WebsitePathPreset("Home HTML", "website/index.html"),
+    WebsitePathPreset("Styles", "website/styles.css"),
+    WebsitePathPreset("App JS", "website/app.js"),
+    WebsitePathPreset("Config", "website/config.js"),
+    WebsitePathPreset("Catalog JSON", "website/assets/data/beat_catalog.json")
+)
+
+private val WebsiteAssetPresets = listOf(
+    WebsitePathPreset("Mascot", "website/assets/brand/aifred-mascot.jpg"),
+    WebsitePathPreset("Brand Art", "website/assets/brand/north3rnlight3r-brand.jpg"),
+    WebsitePathPreset("Background", "website/assets/brand/north3rnlight3r-background.jpg")
 )
 
 private val ReferenceGenres = listOf("rap", "hip-hop", "edm", "dubstep", "pop", "rock")
@@ -259,14 +255,10 @@ private const val ADMIN_NOTIFICATION_CHANNEL = "AIFRED_admin_status"
 private const val ADMIN_NOTIFICATION_ID = 2207
 private const val DEFAULT_ADMIN_USERNAME = "North3rnLight3r"
 private const val DEFAULT_ADMIN_PASSWORD = ""
+private const val DEFAULT_ADMIN_PASSWORD_SHA256 = "c5c5188f8c698dfa5f956f4883f878a212d882fef0c8aed7c49a12c41d9ad8c5"
 private const val ADMIN_PREFS_NAME = "AIFRED_admin_local_config"
 private const val ADMIN_PREF_USERNAME = "admin_username"
 private const val ADMIN_PREF_PASSWORD = "admin_password"
-private const val API_PREFS_NAME = "AIFRED_api_local_config"
-private const val API_PREF_PROVIDER = "provider"
-private const val API_PREF_BASE_URL = "base_url"
-private const val API_PREF_KEY = "api_key"
-private const val API_PREF_MODEL = "model"
 private val ChatTransportModes = listOf("websocket", "http")
 private val ChatTonePresets = listOf("direct", "calm", "technical", "executive", "creative")
 private val ChatReasoningEfforts = listOf("minimal", "low", "medium", "high")
@@ -300,42 +292,22 @@ private fun saveConfiguredAdminCredentials(context: Context, username: String, p
         .apply()
 }
 
-private fun loadApiConfiguration(context: Context): ApiConfiguration {
-    val prefs = context.getSharedPreferences(API_PREFS_NAME, Context.MODE_PRIVATE)
-    val provider = prefs.getString(API_PREF_PROVIDER, "website").orEmpty().ifBlank { "website" }
-    val defaults = apiProviderDefaults(provider, BuildConfig.AIFRED_BASE_URL)
-    return defaults.copy(
-        baseUrl = prefs.getString(API_PREF_BASE_URL, defaults.baseUrl).orEmpty().ifBlank { defaults.baseUrl },
-        apiKey = prefs.getString(API_PREF_KEY, defaults.apiKey).orEmpty(),
-        model = prefs.getString(API_PREF_MODEL, defaults.model).orEmpty().ifBlank { defaults.model }
-    )
+private fun sha256Hex(value: String): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+    return digest.joinToString("") { "%02x".format(it) }
 }
 
-private fun saveApiConfiguration(context: Context, configuration: ApiConfiguration) {
-    context.getSharedPreferences(API_PREFS_NAME, Context.MODE_PRIVATE)
-        .edit()
-        .putString(API_PREF_PROVIDER, configuration.provider)
-        .putString(API_PREF_BASE_URL, configuration.baseUrl.trimEnd('/'))
-        .putString(API_PREF_KEY, configuration.apiKey)
-        .putString(API_PREF_MODEL, configuration.model)
-        .apply()
-}
-
-private fun localAdminLogin(
-    username: String,
-    password: String,
-    expectedUsername: String,
-    expectedPassword: String
-): AdminLoginResult {
+private fun localAdminLogin(username: String, password: String): AdminLoginResult {
     val normalizedUser = username.trim()
-    val localUserOk = expectedUsername.isNotBlank() && normalizedUser == expectedUsername.trim()
-    val savedPasswordOk = expectedPassword.isNotEmpty() && password == expectedPassword
-    return if (localUserOk && savedPasswordOk) {
+    val localUserOk = normalizedUser == DEFAULT_ADMIN_USERNAME
+    val savedPasswordOk = password.isNotEmpty() && DEFAULT_ADMIN_PASSWORD.isNotEmpty() && password == DEFAULT_ADMIN_PASSWORD
+    val hashOk = sha256Hex(password) == DEFAULT_ADMIN_PASSWORD_SHA256
+    return if (localUserOk && (savedPasswordOk || hashOk)) {
         AdminLoginResult(
             ok = true,
             username = normalizedUser,
             sessionToken = "local-admin-${UUID.randomUUID()}",
-            message = "admin offline; local app access unlocked"
+            message = "admin offline"
         )
     } else {
         AdminLoginResult(ok = false, username = "", sessionToken = "", message = "invalid local admin credentials")
@@ -346,6 +318,7 @@ private fun uploadModeLabel(mode: UploadMode): String {
     return when (mode) {
         UploadMode.CATALOG -> "Catalog Audio"
         UploadMode.REFERENCE -> "Reference Audio"
+        UploadMode.WEBSITE_ASSET -> "Website Asset"
     }
 }
 
@@ -483,22 +456,21 @@ private fun parseTrackAnalysisMetrics(payload: JSONObject?, bpm: String): TrackA
         )
     }
 
-    val integratedLufs = metrics.optDouble("integrated_lufs", metrics.optDouble("rms_db", -14.0)).toFloat()
-    val shortTermLufs = metrics.optDouble("short_term_lufs", integratedLufs.toDouble()).toFloat()
-    val truePeakDbtp = metrics.optDouble("true_peak_dbtp", metrics.optDouble("peak_dbfs", -1.0)).toFloat()
+    val rmsDb = metrics.optDouble("rms_db", -14.0).toFloat()
+    val peakDbfs = metrics.optDouble("peak_dbfs", -1.0).toFloat()
     val crestDb = metrics.optDouble("crest_factor_db", 8.0).toFloat()
-    val correlation = metrics.optDouble("correlation", metrics.optDouble("stereo_width", 0.5)).toFloat()
-    val sideMidRatioDb = metrics.optDouble("side_mid_ratio_db", -9.0).toFloat()
-    val transientDensity = metrics.optDouble("transient_density_hz", metrics.optDouble("transient_density", 0.5)).toFloat()
-    val tilt = metrics.optDouble("spectral_tilt_db_per_oct", metrics.optDouble("spectral_tilt", 0.0)).toFloat()
+    val stereoWidth = metrics.optDouble("stereo_width", 0.5).toFloat()
+    val transientDensity = metrics.optDouble("transient_density", 0.5).toFloat()
+    val tilt = metrics.optDouble("spectral_tilt", 0.0).toFloat()
+    val brightness = metrics.optDouble("brightness", 0.5).toFloat()
     return TrackAnalysisMetrics(
-        loudness = clampMetric((shortTermLufs + 24f) / 18f),
+        loudness = clampMetric((rmsDb + 24f) / 24f),
         dynamics = clampMetric((crestDb - 3f) / 12f),
-        tone = clampMetric(0.5f + (tilt * 0.08f)),
-        stereo = clampMetric(((correlation + 1f) * 0.35f) + ((sideMidRatioDb + 18f) / 24f) * 0.65f),
-        transient = clampMetric(transientDensity / 12f),
+        tone = clampMetric(0.5f + (tilt * 0.08f) + ((brightness - 0.5f) * 0.4f)),
+        stereo = clampMetric(stereoWidth),
+        transient = clampMetric(transientDensity),
         bpmLabel = "BPM ${bpm.ifBlank { "N/A" }}",
-        summary = "LUFS-I ${"%.1f".format(integratedLufs)} • dBTP ${"%.1f".format(truePeakDbtp)} • Corr ${"%.2f".format(correlation)} • Tilt ${"%.2f".format(tilt)} dB/oct"
+        summary = "Peak ${"%.1f".format(peakDbfs)} dBFS • RMS ${"%.1f".format(rmsDb)} dB • Crest ${"%.1f".format(crestDb)} dB"
     )
 }
 
@@ -595,10 +567,9 @@ private fun renderDashboardSummary(raw: String): String {
     lines += "Audio plays: ${traffic?.optInt("media_streams", 0) ?: 0}"
     lines += "Downloads: ${traffic?.optInt("downloads", 0) ?: 0}"
     lines += "Open inquiries: ${inquiries?.optInt("count", 0) ?: 0}"
-    lines += "Historical sales records: ${sales?.optInt("count", 0) ?: 0}"
+    lines += "Recorded sales: ${sales?.optInt("count", 0) ?: 0}"
     val latestTrafficLine = recentTraffic?.optJSONObject(0)?.let { item ->
-        val kind = item.optString("event_type", item.optString("kind", "event"))
-        "Latest traffic: ${kind.replace('_', ' ').replace('.', ' ')} on ${item.optString("path", item.optString("page", "/"))}"
+        "Latest traffic: ${item.optString("kind", "event").replace('_', ' ')} on ${item.optString("path", "/")}"
     }
     val latestEventLine = latestEvents?.optJSONObject(0)?.let { item ->
         "Latest site event: ${item.optString("event_type", "event").replace('.', ' ')}"
@@ -610,7 +581,7 @@ private fun renderDashboardSummary(raw: String): String {
         "Latest inquiry: ${item.optString("name", "Someone")} asked about ${item.optString("message", "a message").take(90)}"
     }
     val latestSaleLine = latestSale?.let { item ->
-        "Latest historical sale: ${item.optString("item_name", "item")} for ${item.optString("amount", "0.00")} ${item.optString("currency", "USD")}"
+        "Latest sale: ${item.optString("item_name", "item")} for ${item.optString("amount", "0.00")} ${item.optString("currency", "USD")}"
     }
     if (!latestTrafficLine.isNullOrBlank()) {
         lines += latestTrafficLine
@@ -628,82 +599,6 @@ private fun renderDashboardSummary(raw: String): String {
         lines += latestAdminLine
     }
     return lines.joinToString("\n")
-}
-
-private fun parseActivityEvents(raw: String): List<SiteActivityEvent> {
-    val payload = runCatching { JSONObject(raw) }.getOrNull() ?: return emptyList()
-    val records = mutableListOf<JSONObject>()
-    val topLogs = payload.optJSONArray("logs")
-    if (topLogs != null) {
-        for (i in 0 until topLogs.length()) {
-            topLogs.optJSONObject(i)?.let(records::add)
-        }
-    } else {
-        val logs = payload.optJSONObject("logs")
-        val events = logs?.optJSONArray("events")
-        val adminlog = logs?.optJSONArray("adminlog")
-        if (events != null) {
-            for (i in 0 until events.length()) {
-                events.optJSONObject(i)?.let(records::add)
-            }
-        }
-        if (adminlog != null) {
-            for (i in 0 until adminlog.length()) {
-                adminlog.optJSONObject(i)?.let(records::add)
-            }
-        }
-    }
-
-    return records.map { item ->
-        SiteActivityEvent(
-            id = item.optString("event_id", item.optString("id", item.optString("txn_id", item.optString("order_id", item.optString("timestamp", item.optString("created_at", "")))))).ifBlank { "${item.optString("event_type", "event")}-${item.optString("timestamp", item.optString("created_at", UUID.randomUUID().toString()))}" },
-            createdAt = item.optString("timestamp", item.optString("created_at", "")),
-            eventType = item.optString("event_type", item.optString("kind", "site.event")),
-            title = item.optString("title", item.optString("item_name", item.optString("path", ""))),
-            path = item.optString("path", item.optString("page", "")),
-            message = item.optString("message", item.optString("status", ""))
-        )
-    }.sortedByDescending { it.createdAt }
-}
-
-private fun activityNotificationText(event: SiteActivityEvent): String {
-    val kind = event.eventType.lowercase()
-    return when {
-        kind.contains("paypal.order.captured") || kind.contains("paypal.sale.completed") || kind.contains("sale") ->
-            "Sale completed: ${event.title.ifBlank { "AIFRED download" }} ${event.message}".trim()
-        kind.contains("paypal.buy.clicked") || kind.contains("paypal.order.create.requested") ->
-            "Buy button clicked: ${event.title.ifBlank { "AIFRED download" }}"
-        kind.contains("plugin.download") ->
-            "Plugin download: ${event.title.ifBlank { "AIFRED release" }}"
-        kind.contains("catalog.download") ->
-            "Catalog download: ${event.title.ifBlank { "track" }}"
-        kind.contains("catalog.play.clicked") ->
-            "Catalog play: ${event.title.ifBlank { "track" }}"
-        kind.contains("website.inquiry") ->
-            "Website inquiry submitted"
-        kind.contains("website.analysis") ->
-            "Analysis submitted"
-        kind.contains("admin.catalog.upload") ->
-            "Catalog sync uploaded: ${event.title.ifBlank { "track" }}"
-        kind.contains("admin.file.upload") ->
-            "Website file uploaded: ${event.path.ifBlank { "asset" }}"
-        else ->
-            "${event.eventType.replace('.', ' ')} ${event.title}".trim()
-    }
-}
-
-private fun isImportantActivity(eventType: String): Boolean {
-    val kind = eventType.lowercase()
-    return kind.contains("paypal.buy.clicked") ||
-        kind.contains("paypal.order.captured") ||
-        kind.contains("paypal.sale.completed") ||
-        kind.contains("plugin.download") ||
-        kind.contains("catalog.download") ||
-        kind.contains("website.inquiry") ||
-        kind.contains("website.analysis") ||
-        kind.contains("catalog.play.clicked") ||
-        kind.contains("admin.catalog.upload") ||
-        kind.contains("admin.file.upload")
 }
 
 private fun hasFullFileAccessPermission(): Boolean {
@@ -753,11 +648,7 @@ private fun postAdminNotification(context: Context, title: String, text: String)
         .setPriority(NotificationCompat.PRIORITY_DEFAULT)
         .setAutoCancel(true)
         .build()
-    try {
-        NotificationManagerCompat.from(context).notify(ADMIN_NOTIFICATION_ID, notification)
-    } catch (_: SecurityException) {
-        // Permission can be revoked between the explicit check and notification dispatch.
-    }
+    NotificationManagerCompat.from(context).notify(ADMIN_NOTIFICATION_ID, notification)
 }
 
 private fun openFullFileAccessSettings(context: Context) {
@@ -790,17 +681,10 @@ private val aifredBrandColors = darkColorScheme(
 fun AIFREDAdminApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val client = remember { ApiClient(BuildConfig.AIFRED_BASE_URL, BuildConfig.AIFRED_API_TOKEN) }
     val mainExecutor = remember { ContextCompat.getMainExecutor(context) }
     val configuredAdminUser = remember(context) { loadConfiguredAdminUsername(context) }
     val configuredAdminPassword = remember(context) { loadConfiguredAdminPassword(context) }
-    val initialApiConfiguration = remember(context) { loadApiConfiguration(context) }
-    var apiConfiguration by remember { mutableStateOf(initialApiConfiguration) }
-    var activeApiConfiguration by remember { mutableStateOf(initialApiConfiguration) }
-    var apiConfigurationStatus by remember { mutableStateOf("API profile ready") }
-    val client = remember { ApiClient(BuildConfig.AIFRED_BASE_URL, BuildConfig.AIFRED_API_TOKEN) }
-    val chatClient = remember(activeApiConfiguration.baseUrl, activeApiConfiguration.apiKey, activeApiConfiguration.provider) {
-        ApiClient(activeApiConfiguration.baseUrl, activeApiConfiguration.apiKey, activeApiConfiguration.provider)
-    }
     val mediaPlayer = remember {
         MediaPlayer().apply {
             setAudioAttributes(
@@ -821,16 +705,14 @@ fun AIFREDAdminApp() {
     val chatMessages = remember { mutableStateListOf<ChatMessage>() }
     val chatSessionId = remember { "android-admin-${UUID.randomUUID()}" }
     var chatInput by remember { mutableStateOf("") }
-    var chatRequestInFlight by remember { mutableStateOf(false) }
     var chatModels by remember {
         mutableStateOf(
             listOf(
-                "aifred:latest",
-                "gpt-5.6-luna"
+                "gpt-5.2"
             )
         )
     }
-    var selectedChatModel by remember { mutableStateOf(initialApiConfiguration.model) }
+    var selectedChatModel by remember { mutableStateOf(chatModels.first()) }
     var chatSettings by remember { mutableStateOf(ChatSettings()) }
     var chatSettingsExpanded by remember { mutableStateOf(false) }
     var chatWebsocketUrl by remember { mutableStateOf("") }
@@ -840,8 +722,6 @@ fun AIFREDAdminApp() {
     var uploadUri by remember { mutableStateOf<Uri?>(null) }
     var adminUser by remember(configuredAdminUser) { mutableStateOf(configuredAdminUser) }
     var adminPassword by remember(configuredAdminPassword) { mutableStateOf(configuredAdminPassword) }
-    var savedAdminUser by remember(configuredAdminUser) { mutableStateOf(configuredAdminUser) }
-    var savedAdminPassword by remember(configuredAdminPassword) { mutableStateOf(configuredAdminPassword) }
     var adminSessionToken by remember { mutableStateOf("") }
 
     var uploadMode by remember { mutableStateOf(UploadMode.CATALOG) }
@@ -853,14 +733,19 @@ fun AIFREDAdminApp() {
     var soundPackTempo by remember { mutableStateOf("") }
     var soundPackPrice by remember { mutableStateOf(defaultPackPrice("soundpack")) }
     var referenceGenre by remember { mutableStateOf("rap") }
-    var commandInput by remember { mutableStateOf("curl -s https://north3rnlight3r.com/api/health") }
+    var websiteAssetPath by remember {
+        mutableStateOf("website/assets/brand/aifred-mascot.jpg")
+    }
+
+    var commandInput by remember { mutableStateOf("curl -s https://www.north3rnlight3r.com/api/v1/health") }
     var commandOutput by remember { mutableStateOf("") }
-    var websiteFilePath by remember { mutableStateOf("apps/website/index.html") }
+    var websiteFilePath by remember { mutableStateOf("website/index.html") }
     var websiteFileContent by remember { mutableStateOf("") }
-    var websiteFileSha by remember { mutableStateOf("") }
     var websiteAdminOutput by remember { mutableStateOf("") }
+    var saleItemName by remember { mutableStateOf("AIFRED VST3 Plugin") }
+    var saleAmount by remember { mutableStateOf("29.99") }
+    var saleCustomerEmail by remember { mutableStateOf("") }
     var siteDashboardSummary by remember { mutableStateOf("Admin login required for live site data.") }
-    var lastActivityEventId by remember { mutableStateOf("") }
     var catalogTracks by remember { mutableStateOf(listOf<CatalogTrack>()) }
     var selectedTrack by remember { mutableStateOf<CatalogTrack?>(null) }
     var playerStatus by remember { mutableStateOf("player idle") }
@@ -879,28 +764,6 @@ fun AIFREDAdminApp() {
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uploadUri = uri
-        if (uri != null) {
-            val selectedName = buildUploadFileName(context.contentResolver, uri, "upload")
-            val selectedStem = selectedName.substringBeforeLast('.').ifBlank { selectedName }
-            when (uploadMode) {
-                UploadMode.CATALOG -> {
-                    if (soundPackTitle.isBlank()) {
-                        soundPackTitle = selectedStem
-                    }
-                    if (soundPackType.isBlank()) {
-                        soundPackType = "soundpack"
-                    }
-                    if (soundPackPrice.isBlank()) {
-                        soundPackPrice = defaultPackPrice(soundPackType)
-                    }
-                }
-                UploadMode.REFERENCE -> {
-                    if (soundPackTitle.isBlank()) {
-                        soundPackTitle = selectedStem
-                    }
-                }
-            }
-        }
         status = if (uri != null) "file selected" else "no file selected"
     }
 
@@ -914,6 +777,23 @@ fun AIFREDAdminApp() {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        val catalog = withContext(Dispatchers.IO) { client.listModels() }
+        if (catalog.models.isNotEmpty()) {
+            chatModels = catalog.models
+            selectedChatModel = if (catalog.activeModel.isNotBlank()) {
+                catalog.activeModel
+            } else {
+                catalog.models.first()
+            }
+        }
+        val chatSettingsResult = withContext(Dispatchers.IO) { client.getChatSettings() }
+        if (chatSettingsResult.ok) {
+            chatSettings = chatSettingsResult.settings
+            chatWebsocketUrl = chatSettingsResult.websocketUrl
+            chatSettingsPersistence = chatSettingsResult.persistence
+        } else if (chatSettingsResult.message.isNotBlank()) {
+            status = chatSettingsResult.message
+        }
         registeredActions = withContext(Dispatchers.IO) { client.listActions() }
         catalogTracks = withContext(Dispatchers.IO) { client.listCatalogTracks() }
         if (selectedTrack == null && catalogTracks.isNotEmpty()) {
@@ -923,7 +803,7 @@ fun AIFREDAdminApp() {
 
         if (configuredAdminUser.isNotEmpty() && configuredAdminPassword.isNotEmpty()) {
             val result = withContext(Dispatchers.IO) {
-                client.adminLogin(configuredAdminUser, configuredAdminPassword, configuredAdminUser, configuredAdminPassword)
+                client.adminLogin(configuredAdminUser, configuredAdminPassword)
             }
             if (result.ok) {
                 adminUser = result.username
@@ -934,28 +814,23 @@ fun AIFREDAdminApp() {
             }
         }
 
-    }
-
-    LaunchedEffect(chatClient) {
-        val catalog = withContext(Dispatchers.IO) { chatClient.listModels() }
-        if (catalog.models.isNotEmpty()) {
-            chatModels = catalog.models
-            selectedChatModel = activeApiConfiguration.model.takeIf { it in catalog.models }
-                ?: catalog.activeModel.takeIf { it.isNotBlank() }
-                ?: catalog.models.first()
-        }
-        chatSettings = chatSettings.copy(transportMode = "http")
-        chatSettingsPersistence = "request-driven"
-    }
-
-    LaunchedEffect(adminSessionToken) {
-        if (adminSessionToken.isBlank() || adminSessionToken.startsWith("local-admin-")) return@LaunchedEffect
-        val result = withContext(Dispatchers.IO) { chatClient.getChatSettings(adminSessionToken) }
-        if (result.ok) {
-            chatSettings = result.settings
-            chatWebsocketUrl = result.websocketUrl
-            chatSettingsPersistence = result.persistence
-        }
+        client.connectChat(
+            sessionId = chatSessionId,
+            onReady = { provider ->
+                chatMessages.appendSessionChatMessage(ChatMessage("system", "connected: $provider"))
+                postAdminNotification(context, "AIFRED Admin", "Chat provider: $provider")
+            },
+            onToken = { token ->
+                chatMessages.appendAssistantToken(token)
+            },
+            onIssue = { issue ->
+                chatMessages.appendSessionChatMessage(ChatMessage("system", "issue: $issue"))
+            },
+            onError = { error ->
+                chatMessages.appendSessionChatMessage(ChatMessage("system", "error: $error"))
+                postAdminNotification(context, "AIFRED Admin Error", error)
+            }
+        )
     }
 
     DisposableEffect(Unit) {
@@ -966,6 +841,7 @@ fun AIFREDAdminApp() {
         }
         onDispose {
             visualizer?.release()
+            client.closeChat(chatSessionId)
             chatMessages.clear()
             mediaPlayer.release()
         }
@@ -987,28 +863,12 @@ fun AIFREDAdminApp() {
     LaunchedEffect(adminSessionToken) {
         if (adminSessionToken.isBlank()) {
             siteDashboardSummary = "Admin login required for live site data."
-            lastActivityEventId = ""
             return@LaunchedEffect
         }
-        val lifecycle = (context as ComponentActivity).lifecycle
         while (adminSessionToken.isNotBlank()) {
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                val raw = withContext(Dispatchers.IO) { client.adminDashboardState(adminSessionToken) }
-                siteDashboardSummary = renderDashboardSummary(raw)
-                val latestEvents = parseActivityEvents(raw)
-                if (latestEvents.isNotEmpty()) {
-                    if (lastActivityEventId.isNotBlank()) {
-                        val freshEvents = latestEvents.takeWhile { it.id != lastActivityEventId }
-                        freshEvents.asReversed().forEach { event ->
-                            if (isImportantActivity(event.eventType)) {
-                                postAdminNotification(context, "AIFRED Activity", activityNotificationText(event))
-                            }
-                        }
-                    }
-                    lastActivityEventId = latestEvents.first().id
-                }
-            }
-            kotlinx.coroutines.delay(60_000)
+            val raw = withContext(Dispatchers.IO) { client.adminDashboardState(adminSessionToken) }
+            siteDashboardSummary = renderDashboardSummary(raw)
+            kotlinx.coroutines.delay(15000)
         }
     }
 
@@ -1257,89 +1117,7 @@ fun AIFREDAdminApp() {
                             messages = chatMessages,
                             availableModels = chatModels,
                             selectedModel = selectedChatModel,
-                            onModelSelect = {
-                                val updated = activeApiConfiguration.copy(model = it)
-                                selectedChatModel = it
-                                apiConfiguration = apiConfiguration.copy(model = it)
-                                activeApiConfiguration = updated
-                                saveApiConfiguration(context, updated)
-                            },
-                            apiConfiguration = apiConfiguration,
-                            apiConfigurationStatus = apiConfigurationStatus,
-                            websiteBaseUrl = BuildConfig.AIFRED_BASE_URL,
-                            onApiConfigurationChange = { apiConfiguration = it },
-                            onApplyApiConfiguration = {
-                                val normalized = apiConfiguration.copy(
-                                    baseUrl = apiConfiguration.baseUrl.trim().trimEnd('/'),
-                                    model = apiConfiguration.model.trim()
-                                )
-                                val endpointError = validateApiEndpoint(normalized.baseUrl)
-                                if (normalized.baseUrl.isBlank() || normalized.model.isBlank()) {
-                                    apiConfigurationStatus = "Endpoint and model are required"
-                                } else if (endpointError != null) {
-                                    apiConfigurationStatus = endpointError
-                                } else {
-                                    saveApiConfiguration(context, normalized)
-                                    apiConfiguration = normalized
-                                    activeApiConfiguration = normalized
-                                    selectedChatModel = normalized.model
-                                    apiConfigurationStatus = "${normalized.provider} profile applied"
-                                }
-                            },
-                            onTestApiConfiguration = {
-                                val draft = apiConfiguration.copy(
-                                    baseUrl = apiConfiguration.baseUrl.trim().trimEnd('/'),
-                                    model = apiConfiguration.model.trim()
-                                )
-                                val endpointError = validateApiEndpoint(draft.baseUrl)
-                                if (endpointError != null) {
-                                    apiConfigurationStatus = endpointError
-                                } else {
-                                    scope.launch {
-                                        apiConfigurationStatus = "testing ${draft.provider}"
-                                        val result = withContext(Dispatchers.IO) {
-                                            ApiClient(draft.baseUrl, draft.apiKey, draft.provider).testApiConnection()
-                                        }
-                                        apiConfigurationStatus = result.message
-                                        if (result.ok && result.models.isNotEmpty()) {
-                                            chatModels = result.models
-                                        }
-                                    }
-                                }
-                            },
-                            onSaveWebsiteApiConfiguration = {
-                                if (adminSessionToken.isBlank()) {
-                                    apiConfigurationStatus = "Online admin login is required"
-                                } else {
-                                    val draft = apiConfiguration.copy(
-                                        baseUrl = apiConfiguration.baseUrl.trim().trimEnd('/'),
-                                        model = apiConfiguration.model.trim()
-                                    )
-                                    scope.launch {
-                                        apiConfigurationStatus = "saving website ${draft.provider} route"
-                                        val result = withContext(Dispatchers.IO) {
-                                            client.saveWebsiteApiConfiguration(adminSessionToken, draft)
-                                        }
-                                        apiConfigurationStatus = result.message
-                                    }
-                                }
-                            },
-                            onTestWebsiteApiConfiguration = {
-                                if (adminSessionToken.isBlank()) {
-                                    apiConfigurationStatus = "Online admin login is required"
-                                } else {
-                                    scope.launch {
-                                        apiConfigurationStatus = "testing website ${apiConfiguration.provider} route"
-                                        val result = withContext(Dispatchers.IO) {
-                                            client.testWebsiteApiConfiguration(adminSessionToken, apiConfiguration.provider)
-                                        }
-                                        apiConfigurationStatus = result.message
-                                        if (result.ok && result.models.isNotEmpty()) {
-                                            chatModels = result.models
-                                        }
-                                    }
-                                }
-                            },
+                            onModelSelect = { selectedChatModel = it },
                             chatSettings = chatSettings,
                             chatWebsocketUrl = chatWebsocketUrl,
                             chatSettingsPersistence = chatSettingsPersistence,
@@ -1376,18 +1154,17 @@ fun AIFREDAdminApp() {
                             onInput = { chatInput = it },
                             onSend = {
                                 val prompt = chatInput.trim()
-                                if (prompt.isNotEmpty() && !chatRequestInFlight) {
-                                    chatRequestInFlight = true
+                                if (prompt.isNotEmpty()) {
                                     chatMessages.appendSessionChatMessage(ChatMessage("user", prompt))
                                     chatInput = ""
-                                    scope.launch {
-                                        try {
+                                    val shouldUseWebSocket = chatSettings.transportMode == "websocket"
+                                    val sent = shouldUseWebSocket && client.sendChat(prompt, chatSessionId, selectedChatModel)
+                                    if (!sent) {
+                                        scope.launch {
                                             val directReply = withContext(Dispatchers.IO) {
-                                                chatClient.askChat(prompt, chatSessionId, selectedChatModel, adminSessionToken)
+                                                client.askChat(prompt, chatSessionId, selectedChatModel)
                                             }
                                             chatMessages.appendSessionChatMessage(ChatMessage("assistant", directReply))
-                                        } finally {
-                                            chatRequestInFlight = false
                                         }
                                     }
                                 }
@@ -1409,6 +1186,7 @@ fun AIFREDAdminApp() {
                             soundPackTempo = soundPackTempo,
                             soundPackPrice = soundPackPrice,
                             referenceGenre = referenceGenre,
+                            websiteAssetPath = websiteAssetPath,
                             onAdminUser = { adminUser = it },
                             onAdminPassword = { adminPassword = it },
                             onUploadMode = { uploadMode = it },
@@ -1423,6 +1201,7 @@ fun AIFREDAdminApp() {
                             onSoundPackTempo = { soundPackTempo = it },
                             onSoundPackPrice = { soundPackPrice = it },
                             onReferenceGenre = { referenceGenre = it },
+                            onWebsiteAssetPath = { websiteAssetPath = it },
                             onPick = {
                                 fullFileAccess = hasFullFileAccessPermission()
                                 if (!fullFileAccess) {
@@ -1441,8 +1220,6 @@ fun AIFREDAdminApp() {
                                 }
 
                                 saveConfiguredAdminCredentials(context, username, password)
-                                savedAdminUser = username
-                                savedAdminPassword = password
                                 status = "admin credentials saved locally"
                                 postAdminNotification(context, "Admin Credentials Saved", "Saved locally for $username")
                             },
@@ -1457,7 +1234,7 @@ fun AIFREDAdminApp() {
                                 scope.launch {
                                     status = "admin login"
                                     val result = withContext(Dispatchers.IO) {
-                                        client.adminLogin(username, password, savedAdminUser, savedAdminPassword)
+                                        client.adminLogin(username, password)
                                     }
                                     if (result.ok) {
                                         adminSessionToken = result.sessionToken
@@ -1516,6 +1293,14 @@ fun AIFREDAdminApp() {
                                                         title = soundPackTitle.trim()
                                                     )
                                                 }
+                                                UploadMode.WEBSITE_ASSET -> {
+                                                    client.adminUploadFile(
+                                                        contentResolver = context.contentResolver,
+                                                        uri = uri,
+                                                        adminSessionToken = adminSessionToken,
+                                                        targetPath = websiteAssetPath.trim()
+                                                    )
+                                                }
                                             }
                                         }
                                         status = result
@@ -1535,10 +1320,16 @@ fun AIFREDAdminApp() {
                             adminSessionToken = adminSessionToken,
                             websiteFilePath = websiteFilePath,
                             websiteFileContent = websiteFileContent,
-                            websiteFileSha = websiteFileSha,
                             websiteOutput = websiteAdminOutput,
                             siteDashboardSummary = siteDashboardSummary,
+                            saleItemName = saleItemName,
+                            saleAmount = saleAmount,
+                            saleCustomerEmail = saleCustomerEmail,
+                            onWebsiteFilePath = { websiteFilePath = it },
                             onWebsiteFileContent = { websiteFileContent = it },
+                            onSaleItemName = { saleItemName = it },
+                            onSaleAmount = { saleAmount = it },
+                            onSaleCustomerEmail = { saleCustomerEmail = it },
                             onRun = {
                                 val cmd = commandInput.trim()
                                 if (cmd.isNotEmpty()) {
@@ -1595,26 +1386,10 @@ fun AIFREDAdminApp() {
                                     websiteAdminOutput = result.message
                                     if (result.ok) {
                                         websiteFileContent = result.content
-                                        websiteFileSha = result.sha
                                         status = "loaded $path"
                                     } else {
-                                        websiteFileSha = ""
                                         status = result.message
                                     }
-                                }
-                            },
-                            onValidateFile = {
-                                if (adminSessionToken.isBlank()) {
-                                    status = "admin login required"
-                                    websiteAdminOutput = "admin login required"
-                                    return@CommandScreen
-                                }
-                                scope.launch {
-                                    status = "validating website source"
-                                    websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminValidateFile(adminSessionToken, websiteFilePath, websiteFileContent)
-                                    }
-                                    status = "validation request complete"
                                 }
                             },
                             onSaveFile = {
@@ -1624,38 +1399,56 @@ fun AIFREDAdminApp() {
                                     return@CommandScreen
                                 }
                                 val path = websiteFilePath.trim()
-                                if (websiteFileSha.isBlank()) {
-                                    status = "load current source before saving"
-                                    websiteAdminOutput = "Load the current approved file before committing an edit."
+                                if (path.isEmpty()) {
+                                    status = "file path required"
+                                    websiteAdminOutput = "file path required"
                                     return@CommandScreen
                                 }
                                 scope.launch {
-                                    status = "committing website source"
+                                    status = "saving and deploying website file"
                                     websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminWriteFile(adminSessionToken, path, websiteFileContent, websiteFileSha)
+                                        client.adminWriteFile(adminSessionToken, path, websiteFileContent)
                                     }
-                                    websiteFileSha = ""
-                                    status = "source commit request complete; reload to verify"
+                                    status = "saved $path and requested deploy"
                                 }
                             },
-                            onSourceStatus = {
+                            onDeletePath = {
                                 if (adminSessionToken.isBlank()) {
                                     status = "admin login required"
                                     websiteAdminOutput = "admin login required"
                                     return@CommandScreen
                                 }
+                                val path = websiteFilePath.trim()
+                                if (path.isEmpty()) {
+                                    status = "path required"
+                                    websiteAdminOutput = "path required"
+                                    return@CommandScreen
+                                }
                                 scope.launch {
-                                    status = "checking source-control status"
+                                    status = "deleting path"
                                     websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminSourceStatus(adminSessionToken)
+                                        client.adminDeletePath(adminSessionToken, path)
                                     }
-                                    status = "source-control status loaded"
+                                    status = "deleted $path"
+                                }
+                            },
+                            onListDir = {
+                                if (adminSessionToken.isBlank()) {
+                                    status = "admin login required"
+                                    websiteAdminOutput = "admin login required"
+                                    return@CommandScreen
+                                }
+                                val path = websiteFilePath.trim().ifBlank { "website" }
+                                scope.launch {
+                                    status = "listing files"
+                                    websiteAdminOutput = withContext(Dispatchers.IO) {
+                                        client.adminListFiles(adminSessionToken, path)
+                                    }
+                                    status = "listed $path"
                                 }
                             },
                             onUsePreset = { presetPath ->
                                 websiteFilePath = presetPath
-                                websiteFileContent = ""
-                                websiteFileSha = ""
                             },
                             onLoadCatalog = {
                                 if (adminSessionToken.isBlank()) {
@@ -1726,69 +1519,30 @@ fun AIFREDAdminApp() {
                                     return@CommandScreen
                                 }
                                 scope.launch {
-                                    status = "loading historical sales"
+                                    status = "loading sales"
                                     websiteAdminOutput = withContext(Dispatchers.IO) {
                                         client.adminSalesList(adminSessionToken)
                                     }
-                                    status = "historical sales loaded"
+                                    status = "sales loaded"
                                 }
                             },
-                            onLoadReferences = {
+                            onRecordSale = {
                                 if (adminSessionToken.isBlank()) {
                                     status = "admin login required"
                                     websiteAdminOutput = "admin login required"
                                     return@CommandScreen
                                 }
                                 scope.launch {
-                                    status = "loading reference pool"
+                                    status = "recording sale"
                                     websiteAdminOutput = withContext(Dispatchers.IO) {
-                                        client.adminReferenceLog(adminSessionToken)
+                                        client.adminRecordSale(
+                                            adminSessionToken,
+                                            saleItemName.trim(),
+                                            saleAmount.trim(),
+                                            saleCustomerEmail.trim()
+                                        )
                                     }
-                                    status = "reference pool loaded"
-                                }
-                            },
-                            onExportSiteData = {
-                                if (adminSessionToken.isBlank() || adminSessionToken.startsWith("local-admin-")) {
-                                    status = "online admin login required"
-                                    websiteAdminOutput = "Online admin login is required for production exports."
-                                    return@CommandScreen
-                                }
-                                scope.launch {
-                                    status = "exporting site data"
-                                    val result = withContext(Dispatchers.IO) { client.adminExport(adminSessionToken, "site") }
-                                    if (result.ok) {
-                                        val target = withContext(Dispatchers.IO) {
-                                            File(context.filesDir, "exports").apply { mkdirs() }
-                                                .resolve(result.filename).apply { writeText(result.content) }
-                                        }
-                                        websiteAdminOutput = "Exported ${result.filename}\n${target.absolutePath}"
-                                        status = "site export complete"
-                                    } else {
-                                        websiteAdminOutput = result.message
-                                        status = result.message
-                                    }
-                                }
-                            },
-                            onExportTrackAnalysis = {
-                                if (adminSessionToken.isBlank() || adminSessionToken.startsWith("local-admin-")) {
-                                    status = "online admin login required"
-                                    websiteAdminOutput = "Online admin login is required for production exports."
-                                    return@CommandScreen
-                                }
-                                scope.launch {
-                                    status = "exporting track analysis"
-                                    val result = withContext(Dispatchers.IO) { client.adminExport(adminSessionToken, "tracks") }
-                                    if (result.ok) {
-                                        val target = withContext(Dispatchers.IO) {
-                                            File(context.filesDir, "exports").apply { mkdirs() }
-                                                .resolve(result.filename).apply { writeText(result.content) }
-                                        }
-                                        websiteAdminOutput = "Exported ${result.filename}\n${target.absolutePath}"
-                                        status = "track analysis export complete"
-                                    } else {
-                                        websiteAdminOutput = result.message
-                                        status = result.message
-                                    }
+                                    status = "sale recorded"
                                 }
                             },
                             onRefreshDashboard = {
@@ -1895,14 +1649,6 @@ fun ChatScreen(
     availableModels: List<String>,
     selectedModel: String,
     onModelSelect: (String) -> Unit,
-    apiConfiguration: ApiConfiguration,
-    apiConfigurationStatus: String,
-    websiteBaseUrl: String,
-    onApiConfigurationChange: (ApiConfiguration) -> Unit,
-    onApplyApiConfiguration: () -> Unit,
-    onTestApiConfiguration: () -> Unit,
-    onSaveWebsiteApiConfiguration: () -> Unit,
-    onTestWebsiteApiConfiguration: () -> Unit,
     chatSettings: ChatSettings,
     chatWebsocketUrl: String,
     chatSettingsPersistence: String,
@@ -2001,54 +1747,7 @@ fun ChatScreen(
             }
         }
 
-        Text(text = "API Configuration", color = Color(0xFFE8F3FF), fontWeight = FontWeight.Bold)
-        ChoiceButtonGroup(
-            label = "Provider",
-            options = ApiProviders,
-            selected = apiConfiguration.provider,
-            onSelect = { provider ->
-                onApiConfigurationChange(
-                    apiProviderDefaults(
-                        provider = provider,
-                        websiteBaseUrl = websiteBaseUrl,
-                        existingApiKey = if (provider == "openai") apiConfiguration.apiKey else ""
-                    )
-                )
-            }
-        )
-        OutlinedTextField(
-            value = apiConfiguration.baseUrl,
-            onValueChange = { onApiConfigurationChange(apiConfiguration.copy(baseUrl = it)) },
-            label = { Text("API Endpoint") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = apiConfiguration.model,
-            onValueChange = { onApiConfigurationChange(apiConfiguration.copy(model = it)) },
-            label = { Text("Model") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = apiConfiguration.apiKey,
-            onValueChange = { onApiConfigurationChange(apiConfiguration.copy(apiKey = it)) },
-            label = { Text("API Key / Bearer Token") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(onClick = onTestApiConfiguration, modifier = Modifier.weight(1f)) { Text("Test API") }
-            Button(onClick = onApplyApiConfiguration, modifier = Modifier.weight(1f)) { Text("Apply + Save") }
-        }
-        Text(text = apiConfigurationStatus, color = Color(0xFF8DB0C8))
-        Text(
-            text = "Apply + Save updates this phone only. Production provider configuration is source-controlled and deployed with Worker secrets. Cloudflare Ollama requires the authenticated HTTPS tunnel; direct phone-to-Ollama may use loopback or a trusted private LAN address.",
-            color = Color(0xFF8DB0C8)
-        )
-
-        Text(text = "Discovered Models", color = Color(0xFF9CD0EF))
+        Text(text = "Model", color = Color(0xFF9CD0EF))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -2085,8 +1784,16 @@ fun ChatScreen(
             Text("Send")
         }
 
-        Button(onClick = onToggleSettings, modifier = Modifier.fillMaxWidth()) {
-            Text(if (settingsExpanded) "Hide Local Chat Settings" else "Show Local Chat Settings")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(onClick = onToggleSettings, modifier = Modifier.weight(1f)) {
+                Text(if (settingsExpanded) "Hide Chat Settings" else "Show Chat Settings")
+            }
+            Button(onClick = onSaveSettings, modifier = Modifier.weight(1f)) {
+                Text("Save Settings")
+            }
         }
 
         if (settingsExpanded) {
@@ -2329,6 +2036,7 @@ fun UploadScreen(
     soundPackTempo: String,
     soundPackPrice: String,
     referenceGenre: String,
+    websiteAssetPath: String,
     onAdminUser: (String) -> Unit,
     onAdminPassword: (String) -> Unit,
     onUploadMode: (UploadMode) -> Unit,
@@ -2340,6 +2048,7 @@ fun UploadScreen(
     onSoundPackTempo: (String) -> Unit,
     onSoundPackPrice: (String) -> Unit,
     onReferenceGenre: (String) -> Unit,
+    onWebsiteAssetPath: (String) -> Unit,
     onPick: () -> Unit,
     onSaveAdminCredentials: () -> Unit,
     onLogin: () -> Unit,
@@ -2404,6 +2113,17 @@ fun UploadScreen(
             ) {
                 Text("Reference")
             }
+            Button(
+                onClick = { onUploadMode(UploadMode.WEBSITE_ASSET) },
+                modifier = Modifier.weight(1f),
+                colors = if (uploadMode == UploadMode.WEBSITE_ASSET) {
+                    ButtonDefaults.buttonColors(containerColor = Color(0xFF18D2E7), contentColor = Color(0xFF001116))
+                } else {
+                    ButtonDefaults.buttonColors()
+                }
+            ) {
+                Text("Website")
+            }
         }
 
         Text(text = selected?.toString() ?: "No file selected", color = Color(0xFF8DB0C8))
@@ -2458,7 +2178,7 @@ fun UploadScreen(
                 OutlinedTextField(
                     value = soundPackPrice,
                     onValueChange = onSoundPackPrice,
-                    label = { Text("Distribution / licensing") },
+                    label = { Text("Price") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -2496,6 +2216,29 @@ fun UploadScreen(
                     color = Color(0xFF8DB0C8)
                 )
             }
+            UploadMode.WEBSITE_ASSET -> {
+                Text(text = "Website Asset Target", color = Color(0xFF8DB0C8))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    WebsiteAssetPresets.forEach { preset ->
+                        Button(
+                            onClick = { onWebsiteAssetPath(preset.path) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(preset.label)
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = websiteAssetPath,
+                    onValueChange = onWebsiteAssetPath,
+                    label = { Text("Repo-relative target path") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "Use this for album art, banners, hero images, and any website photo replacement.",
+                    color = Color(0xFF8DB0C8)
+                )
+            }
         }
 
         Button(onClick = onUpload, modifier = Modifier.fillMaxWidth()) {
@@ -2513,25 +2256,29 @@ fun CommandScreen(
     adminSessionToken: String,
     websiteFilePath: String,
     websiteFileContent: String,
-    websiteFileSha: String,
     websiteOutput: String,
     siteDashboardSummary: String,
+    saleItemName: String,
+    saleAmount: String,
+    saleCustomerEmail: String,
+    onWebsiteFilePath: (String) -> Unit,
     onWebsiteFileContent: (String) -> Unit,
+    onSaleItemName: (String) -> Unit,
+    onSaleAmount: (String) -> Unit,
+    onSaleCustomerEmail: (String) -> Unit,
     onRun: () -> Unit,
     onQuick: (String) -> Unit,
     onLoadFile: () -> Unit,
-    onValidateFile: () -> Unit,
     onSaveFile: () -> Unit,
-    onSourceStatus: () -> Unit,
+    onDeletePath: () -> Unit,
+    onListDir: () -> Unit,
     onUsePreset: (String) -> Unit,
     onLoadCatalog: () -> Unit,
     onRemoveTrackByKey: () -> Unit,
     onLoadInquiries: () -> Unit,
     onLoadLogs: () -> Unit,
     onLoadSales: () -> Unit,
-    onLoadReferences: () -> Unit,
-    onExportSiteData: () -> Unit,
-    onExportTrackAnalysis: () -> Unit,
+    onRecordSale: () -> Unit,
     onRefreshDashboard: () -> Unit
 ) {
     Column(
@@ -2562,11 +2309,6 @@ fun CommandScreen(
                 .padding(8.dp)
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = onExportSiteData, modifier = Modifier.weight(1f)) { Text("Export Site Data") }
-            Button(onClick = onExportTrackAnalysis, modifier = Modifier.weight(1f)) { Text("Export Track Analysis") }
-        }
-
         registeredActions.forEach { action ->
             Button(onClick = { onQuick("action:${action.id}") }, modifier = Modifier.fillMaxWidth()) {
                 Text("${action.id} — ${action.description}")
@@ -2574,7 +2316,7 @@ fun CommandScreen(
         }
 
         Text(
-            text = "Local registry actions are read-only, non-root Linux/Termux/Android commands and run on this phone. Backend actions remain server allowlisted.",
+            text = "Local shell works after offline admin login. Useful commands: pwd, ls, ls /sdcard, id, getprop ro.build.version.release, df -h, pm list packages, input keyevent 3.",
             color = Color(0xFF8DB0C8)
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -2605,71 +2347,94 @@ fun CommandScreen(
         )
 
         Text(
-            text = if (adminSessionToken.isBlank()) "Admin login required for website source control." else "Authenticated Official source control is available.",
+            text = if (adminSessionToken.isBlank()) "Admin login required for website control." else "Website admin session active.",
             color = if (adminSessionToken.isBlank()) Color(0xFFEAA4A4) else Color(0xFF8FE0C9)
         )
 
-        Text(text = "Approved Website Source", color = Color(0xFF8DB0C8))
-        WebsiteTextPresets.chunked(4).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                row.forEach { preset ->
-                    Button(
-                        onClick = { onUsePreset(preset.path) },
-                        enabled = adminSessionToken.isNotBlank(),
-                        modifier = Modifier.weight(1f)
-                    ) { Text(preset.label) }
+        Text(text = "Website File Control", color = Color(0xFF8DB0C8))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            WebsiteTextPresets.take(3).forEach { preset ->
+                Button(onClick = { onUsePreset(preset.path) }, modifier = Modifier.weight(1f)) {
+                    Text(preset.label)
                 }
             }
         }
-        Text(text = websiteFilePath, color = Color(0xFFE8F3FF))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-                onClick = onLoadFile,
-                enabled = adminSessionToken.isNotBlank(),
-                modifier = Modifier.weight(1f)
-            ) { Text("Load") }
-            Button(
-                onClick = onValidateFile,
-                enabled = adminSessionToken.isNotBlank() && websiteFileContent.isNotEmpty(),
-                modifier = Modifier.weight(1f)
-            ) { Text("Validate") }
+            WebsiteTextPresets.drop(3).forEach { preset ->
+                Button(onClick = { onUsePreset(preset.path) }, modifier = Modifier.weight(1f)) {
+                    Text(preset.label)
+                }
+            }
         }
+
+        OutlinedTextField(
+            value = websiteFilePath,
+            onValueChange = onWebsiteFilePath,
+            label = { Text("File Path / Track Key") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onLoadFile, modifier = Modifier.weight(1f)) { Text("Load File") }
+            Button(onClick = onSaveFile, modifier = Modifier.weight(1f)) { Text("Save + Deploy") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = onListDir, modifier = Modifier.weight(1f)) { Text("List Dir") }
+            Button(onClick = onDeletePath, modifier = Modifier.weight(1f)) { Text("Delete Path") }
+        }
+        Button(
+            onClick = { onQuick("action:deploy:site") },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Deploy Site Now")
+        }
+
         OutlinedTextField(
             value = websiteFileContent,
             onValueChange = onWebsiteFileContent,
-            enabled = adminSessionToken.isNotBlank(),
             label = { Text("File Content") },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(240.dp)
         )
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-                onClick = onSaveFile,
-                enabled = adminSessionToken.isNotBlank() && websiteFileSha.isNotBlank() && websiteFileContent.isNotEmpty(),
-                modifier = Modifier.weight(1f)
-            ) { Text("Commit Source") }
-            Button(
-                onClick = onSourceStatus,
-                enabled = adminSessionToken.isNotBlank(),
-                modifier = Modifier.weight(1f)
-            ) { Text("Source Status") }
+            Button(onClick = onLoadCatalog, modifier = Modifier.weight(1f)) { Text("List Tracks") }
+            Button(onClick = onRemoveTrackByKey, modifier = Modifier.weight(1f)) { Text("Remove Track Key") }
         }
-        Text(
-            text = "The backend accepts these files only and requires the SHA from Load. A commit can trigger Pages after Official becomes the Pages source; confirm deployment before treating the edit as published.",
-            color = Color(0xFF8DB0C8)
-        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(onClick = onLoadInquiries, modifier = Modifier.weight(1f)) { Text("Inquiries") }
             Button(onClick = onLoadLogs, modifier = Modifier.weight(1f)) { Text("ADMINLOG") }
+            Button(onClick = onLoadSales, modifier = Modifier.weight(1f)) { Text("Sales") }
         }
-        Button(onClick = onLoadReferences, modifier = Modifier.fillMaxWidth()) {
-            Text("Reference Pool Log")
+
+        OutlinedTextField(
+            value = saleItemName,
+            onValueChange = onSaleItemName,
+            label = { Text("Sale Item") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = saleAmount,
+                onValueChange = onSaleAmount,
+                label = { Text("Amount") },
+                modifier = Modifier.weight(1f)
+            )
+            OutlinedTextField(
+                value = saleCustomerEmail,
+                onValueChange = onSaleCustomerEmail,
+                label = { Text("Customer Email") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Button(onClick = onRecordSale, modifier = Modifier.fillMaxWidth()) {
+            Text("Record Sale + Receipt")
         }
 
         Text(
-            text = websiteOutput.ifBlank { "Source-control and production admin results will appear here." },
+            text = websiteOutput.ifBlank { "Website admin results will appear here." },
             color = Color(0xFF9CD0EF),
             modifier = Modifier
                 .fillMaxWidth()
@@ -2681,41 +2446,21 @@ fun CommandScreen(
     }
 }
 
-class ApiClient(
-    private val baseUrl: String,
-    private val token: String,
-    private val provider: String = ""
-) {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .callTimeout(90, TimeUnit.SECONDS)
-        .build()
+class ApiClient(private val baseUrl: String, private val token: String) {
+    private val client = OkHttpClient.Builder().build()
     private var ws: WebSocket? = null
 
     private fun endpoint(path: String): String {
-        val root = if (isDirectOllama() || isDirectOpenAI()) baseUrl.trimEnd('/') else normalizeWebsiteOrigin(baseUrl)
-        return "$root${if (path.startsWith('/')) path else "/$path"}"
-    }
-
-    private fun v1Endpoint(path: String): String {
-        val root = if (isDirectOllama() || isDirectOpenAI()) {
-            baseUrl.trimEnd('/').let { if (it.endsWith("/v1")) it else "$it/v1" }
-        } else {
-            "${normalizeWebsiteOrigin(baseUrl)}/v1"
-        }
-        return "$root${if (path.startsWith('/')) path else "/$path"}"
+        return "${baseUrl.trimEnd('/')}$path"
     }
 
     private fun isDirectOllama(): Boolean {
         val normalized = baseUrl.lowercase().trimEnd('/')
-        return provider.equals("ollama", ignoreCase = true) || normalized.contains(":11434") ||
-            (normalized.contains("ollama") && normalized.endsWith("/api"))
+        return normalized.contains(":11434") || (normalized.contains("ollama") && normalized.endsWith("/api"))
     }
 
     private fun isDirectOpenAI(): Boolean {
-        return provider.equals("openai", ignoreCase = true) || baseUrl.lowercase().contains("api.openai.com")
+        return baseUrl.lowercase().contains("api.openai.com")
     }
 
     fun connectChat(
@@ -2803,7 +2548,7 @@ class ApiClient(
         return ws?.send(payload.toString()) == true
     }
 
-    fun askChat(prompt: String, sessionId: String, model: String = "", authorizationToken: String = ""): String {
+    fun askChat(prompt: String, sessionId: String, model: String = ""): String {
         if (isDirectOllama()) {
             return askOllamaDirect(prompt, model)
         }
@@ -2813,23 +2558,17 @@ class ApiClient(
 
         return try {
             val body = JSONObject()
-                .put("messages", JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
+                .put("prompt", prompt)
                 .put("session_id", sessionId)
                 .put("model", model)
                 .toString()
 
             val request = Request.Builder()
-                .url(v1Endpoint("/chat/completions"))
+                .url(endpoint("/api/v1/chat/ask"))
                 .addHeader("Content-Type", "application/json")
-                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
-                .addHeader("X-AIFRED-Client", sessionId)
-                .addHeader("X-AIFRED-Product", "android-admin")
-                .addHeader("X-AIFRED-Platform", "android")
-                .addHeader("X-AIFRED-Purpose", "user-chat")
                 .apply {
-                    val selectedToken = authorizationToken.ifBlank { token }
-                    if (selectedToken.isNotBlank()) {
-                        addHeader("Authorization", "Bearer $selectedToken")
+                    if (token.isNotBlank()) {
+                        addHeader("Authorization", "Bearer $token")
                     }
                 }
                 .post(body.toRequestBody("application/json".toMediaType()))
@@ -2838,10 +2577,10 @@ class ApiClient(
             client.newCall(request).execute().use { response ->
                 val raw = response.body?.string().orEmpty()
                 val payload = runCatching { JSONObject(raw) }.getOrNull()
-                if (response.isSuccessful && payload != null) {
-                    (payload.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content")
-                        ?.ifBlank { payload.optString("answer") }
-                        ?: raw).ifBlank { "ok" }
+                if (response.isSuccessful && payload?.optBoolean("ok") == true) {
+                    payload.optString("summary")
+                        .ifBlank { payload.optString("answer") }
+                        .ifBlank { raw.ifEmpty { "ok" } }
                 } else {
                     payload?.optString("error", "chat request failed") ?: raw.ifEmpty { "chat request failed" }
                 }
@@ -2854,7 +2593,7 @@ class ApiClient(
     private fun askOllamaDirect(prompt: String, model: String): String {
         return try {
             val body = JSONObject()
-                .put("model", model.ifBlank { "aifred" })
+                .put("model", model.ifBlank { "llama3.1" })
                 .put("stream", false)
                 .put(
                     "messages",
@@ -2896,16 +2635,16 @@ class ApiClient(
         }
         return try {
             val body = JSONObject()
-                .put("model", model.ifBlank { "gpt-5.6-luna" })
+                .put("model", model.ifBlank { "gpt-5.2" })
                 .put(
-                    "input",
+                    "messages",
                     JSONArray()
                         .put(JSONObject().put("role", "system").put("content", "You are AIFRED, the North3rnLight3r admin assistant. Be direct, technical, and useful."))
                         .put(JSONObject().put("role", "user").put("content", prompt))
                 )
                 .toString()
             val request = Request.Builder()
-                .url("${baseUrl.trimEnd('/')}/responses")
+                .url("${baseUrl.trimEnd('/')}/chat/completions")
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer $token")
                 .post(body.toRequestBody("application/json".toMediaType()))
@@ -2914,9 +2653,12 @@ class ApiClient(
                 val raw = response.body?.string().orEmpty()
                 val payload = runCatching { JSONObject(raw) }.getOrNull()
                 if (response.isSuccessful && payload != null) {
-                    payload.optString("output_text")
-                        .ifBlank { extractResponsesOutputText(payload) }
-                        .ifBlank { raw }
+                    payload.optJSONArray("choices")
+                        ?.optJSONObject(0)
+                        ?.optJSONObject("message")
+                        ?.optString("content")
+                        ?.ifBlank { raw }
+                        ?: raw
                 } else {
                     payload?.optJSONObject("error")?.optString("message") ?: raw.ifBlank { "OpenAI request failed" }
                 }
@@ -2938,124 +2680,6 @@ class ApiClient(
         )
     }
 
-    private fun extractResponsesOutputText(payload: JSONObject): String {
-        val output = payload.optJSONArray("output") ?: return ""
-        val parts = mutableListOf<String>()
-        for (outputIndex in 0 until output.length()) {
-            val content = output.optJSONObject(outputIndex)?.optJSONArray("content") ?: continue
-            for (contentIndex in 0 until content.length()) {
-                val text = content.optJSONObject(contentIndex)?.optString("text").orEmpty()
-                if (text.isNotBlank()) parts.add(text)
-            }
-        }
-        return parts.joinToString("").trim()
-    }
-
-    fun testApiConnection(): ApiConnectionResult {
-        if (baseUrl.isBlank()) {
-            return ApiConnectionResult(false, "API endpoint is required")
-        }
-        if (isDirectOpenAI() && token.isBlank()) {
-            return ApiConnectionResult(false, "OpenAI API key is required")
-        }
-        return try {
-            val requestUrl = when {
-                isDirectOllama() -> "${baseUrl.trimEnd('/')}/api/tags"
-                isDirectOpenAI() -> "${baseUrl.trimEnd('/')}/models"
-                else -> v1Endpoint("/models")
-            }
-            val request = Request.Builder()
-                .url(requestUrl)
-                .apply {
-                    if (token.isNotBlank()) {
-                        addHeader("Authorization", "Bearer $token")
-                    }
-                }
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@use ApiConnectionResult(false, "API test failed with HTTP ${response.code}")
-                }
-                val payload = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
-                val models = buildList {
-                    val items = payload?.optJSONArray(if (isDirectOllama()) "models" else "data")
-                    if (items != null) {
-                        for (index in 0 until items.length()) {
-                            val item = items.optJSONObject(index) ?: continue
-                            val model = item.optString(if (isDirectOllama()) "name" else "id").trim()
-                            if (model.isNotBlank()) add(model)
-                        }
-                    }
-                }
-                ApiConnectionResult(true, "API connected; ${models.size} model(s) discovered", models)
-            }
-        } catch (error: Exception) {
-            ApiConnectionResult(false, "API test failed: ${error.message ?: "network error"}")
-        }
-    }
-
-    fun saveWebsiteApiConfiguration(adminSessionToken: String, configuration: ApiConfiguration): ApiConnectionResult {
-        if (adminSessionToken.isBlank() || adminSessionToken.startsWith("local-admin-")) {
-            return ApiConnectionResult(false, "Online admin login is required")
-        }
-        val body = JSONObject().put("provider", configuration.provider)
-        when (configuration.provider) {
-            "ollama" -> body
-                .put("ollama_base_url", configuration.baseUrl.trimEnd('/'))
-                .put("ollama_model", configuration.model)
-            "openai" -> body.put("openai_model", configuration.model)
-        }
-        return adminApiConfigurationRequest(
-            path = "/api/v1/admin/api/config",
-            adminSessionToken = adminSessionToken,
-            body = body
-        )
-    }
-
-    fun testWebsiteApiConfiguration(adminSessionToken: String, provider: String): ApiConnectionResult {
-        if (adminSessionToken.isBlank() || adminSessionToken.startsWith("local-admin-")) {
-            return ApiConnectionResult(false, "Online admin login is required")
-        }
-        return adminApiConfigurationRequest(
-            path = "/api/v1/admin/api/test",
-            adminSessionToken = adminSessionToken,
-            body = JSONObject().put("provider", provider)
-        )
-    }
-
-    private fun adminApiConfigurationRequest(
-        path: String,
-        adminSessionToken: String,
-        body: JSONObject
-    ): ApiConnectionResult {
-        return try {
-            val request = Request.Builder()
-                .url(endpoint(path))
-                .addHeader("Authorization", "Bearer $adminSessionToken")
-                .addHeader("Content-Type", "application/json")
-                .post(body.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-            client.newCall(request).execute().use { response ->
-                val payload = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrElse { JSONObject() }
-                val models = buildList {
-                    val items = payload.optJSONArray("models")
-                    if (items != null) {
-                        for (index in 0 until items.length()) {
-                            items.optString(index).trim().takeIf { it.isNotBlank() }?.let(::add)
-                        }
-                    }
-                }
-                val message = payload.optString(
-                    if (response.isSuccessful) "message" else "error",
-                    if (response.isSuccessful) "Website API configuration updated" else "Website API request failed with HTTP ${response.code}"
-                )
-                ApiConnectionResult(response.isSuccessful && payload.optBoolean("ok", false), message, models)
-            }
-        } catch (error: Exception) {
-            ApiConnectionResult(false, "Website API request failed: ${error.message ?: "network error"}")
-        }
-    }
-
     fun listModels(): ModelCatalog {
         if (isDirectOllama()) {
             return try {
@@ -3071,11 +2695,11 @@ class ApiClient(
                                 if (name.isNotBlank()) add(name)
                             }
                         }
-                    }.ifEmpty { listOf("aifred:latest") }
+                    }.ifEmpty { listOf("llama3.1") }
                     ModelCatalog(models, models.first())
                 }
             } catch (_error: Exception) {
-                ModelCatalog(listOf("aifred:latest"), "aifred:latest")
+                ModelCatalog(listOf("llama3.1"), "llama3.1")
             }
         }
         if (isDirectOpenAI()) {
@@ -3095,17 +2719,17 @@ class ApiClient(
                                 if (id.isNotBlank() && id.startsWith("gpt")) add(id)
                             }
                         }
-                    }.ifEmpty { listOf("gpt-5.6-luna") }
+                    }.ifEmpty { listOf("gpt-5.2") }
                     ModelCatalog(models, models.first())
                 }
             } catch (_error: Exception) {
-                ModelCatalog(listOf("gpt-5.6-luna"), "gpt-5.6-luna")
+                ModelCatalog(listOf("gpt-5.2"), "gpt-5.2")
             }
         }
 
         return try {
             val request = Request.Builder()
-                .url(v1Endpoint("/models"))
+                .url(endpoint("/api/v1/models/list"))
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("Authorization", "Bearer $token")
@@ -3115,32 +2739,27 @@ class ApiClient(
             client.newCall(request).execute().use { response ->
                 val raw = response.body?.string().orEmpty()
                 val payload = runCatching { JSONObject(raw.ifEmpty { "{}" }) }.getOrNull()
-                val models = buildList {
-                    val items = payload?.optJSONArray("data")
-                    if (items != null) for (index in 0 until items.length()) items.optJSONObject(index)?.optString("id")?.takeIf { it.isNotBlank() }?.let(::add)
-                }
-                if (response.isSuccessful && models.isNotEmpty()) {
+                val models = jsonStringList(payload?.optJSONArray("models"))
+                if (response.isSuccessful && payload?.optBoolean("ok") == true && models.isNotEmpty()) {
                     ModelCatalog(
                         models = models,
-                        activeModel = payload?.optString("active_model", models.first()) ?: models.first()
+                        activeModel = payload.optString("active_model", models.first())
                     )
                 } else {
-                    ModelCatalog(listOf("aifred:latest", "gpt-5.6-luna"), "aifred:latest")
+                    ModelCatalog(listOf("gpt-5.2"), "gpt-5.2")
                 }
             }
         } catch (_error: Exception) {
-            ModelCatalog(listOf("aifred:latest", "gpt-5.6-luna"), "aifred:latest")
+            ModelCatalog(listOf("gpt-5.2"), "gpt-5.2")
         }
     }
 
-    fun getChatSettings(adminSessionToken: String = ""): ChatSettingsResult {
+    fun getChatSettings(): ChatSettingsResult {
         return try {
             val request = Request.Builder()
-                .url(endpoint(if (adminSessionToken.isBlank()) "/api/v1/chat/settings" else "/api/v1/admin/chat/settings"))
+                .url(endpoint("/api/v1/chat/settings"))
                 .apply {
-                    if (adminSessionToken.isNotBlank()) {
-                        addHeader("Authorization", "Bearer $adminSessionToken")
-                    } else if (token.isNotBlank()) {
+                    if (token.isNotBlank()) {
                         addHeader("Authorization", "Bearer $token")
                     }
                 }
@@ -3253,8 +2872,8 @@ class ApiClient(
                                     bpm = bpm,
                                     genre = item.optString("genre").trim(),
                                     durationLabel = item.optString("duration_label").trim(),
-                                    streamUrl = resolveCatalogAssetUrl(baseUrl, streamUrl),
-                                    artworkUrl = resolveCatalogAssetUrl(baseUrl, item.optString("artwork_url").trim()),
+                                    streamUrl = streamUrl,
+                                    artworkUrl = item.optString("artwork_url").trim(),
                                     analysisMetrics = parseTrackAnalysisMetrics(item, bpm)
                                 )
                             )
@@ -3268,43 +2887,37 @@ class ApiClient(
     }
 
     fun listActions(): List<RegisteredAction> {
-        val remote = runCatching {
+        return try {
             val request = Request.Builder()
                 .url(endpoint("/api/v1/registry/actions"))
-                .get()
                 .build()
             client.newCall(request).execute().use { response ->
-                val payload = runCatching { JSONObject(response.body?.string().orEmpty()) }.getOrNull()
-                val items = payload?.optJSONArray("actions") ?: return@use emptyList()
-                buildList {
-                    for (index in 0 until items.length()) {
-                        val item = items.optJSONObject(index) ?: continue
-                        val id = item.optString("id").trim()
-                        val command = item.optString("command", id).trim()
-                        if (response.isSuccessful && id.isNotBlank() && command.isNotBlank()) {
-                            add(RegisteredAction(id, item.optString("description", id), command, localOnly = false))
+                val raw = response.body?.string().orEmpty()
+                val payload = JSONObject(raw.ifEmpty { "{}" })
+                val items = payload.optJSONArray("actions")
+                if (!response.isSuccessful || items == null) {
+                    emptyList()
+                } else {
+                    buildList {
+                        for (index in 0 until items.length()) {
+                            val item = items.optJSONObject(index) ?: continue
+                            val id = item.optString("id").trim()
+                            val description = item.optString("description").trim()
+                            if (id.isNotEmpty()) {
+                                add(RegisteredAction(id, description))
+                            }
                         }
                     }
                 }
             }
-        }.getOrDefault(emptyList())
-        return (remote + LocalShellActions).distinctBy { it.id }
+        } catch (_error: Exception) {
+            emptyList()
+        }
     }
 
     fun runCommand(adminSessionToken: String, command: String): String {
-        val normalized = command.trim()
-        if (normalized.startsWith("action:")) {
-            val actionId = normalized.removePrefix("action:").trim()
-            val localAction = LocalShellActions.firstOrNull { it.id == actionId }
-            if (localAction != null) {
-                return runLocalShellCommand(localAction.command)
-            }
-            if (adminSessionToken.startsWith("local-admin-")) {
-                return "backend action requires an online admin session"
-            }
-        }
         if (adminSessionToken.startsWith("local-admin-")) {
-            return runLocalShellCommand(normalized)
+            return runLocalShellCommand(command)
         }
 
         return try {
@@ -3356,13 +2969,8 @@ class ApiClient(
         }
     }
 
-    fun adminLogin(
-        username: String,
-        password: String,
-        expectedLocalUsername: String = "",
-        expectedLocalPassword: String = ""
-    ): AdminLoginResult {
-        val local = localAdminLogin(username, password, expectedLocalUsername, expectedLocalPassword)
+    fun adminLogin(username: String, password: String): AdminLoginResult {
+        val local = localAdminLogin(username, password)
         return try {
             val body = JSONObject()
                 .put("username", username)
@@ -3397,7 +3005,7 @@ class ApiClient(
                     username = local.username,
                     sessionToken = local.sessionToken,
                     message = if (local.ok) {
-                        "admin offline; local app access unlocked"
+                        "admin offline; website control requires online login"
                     } else {
                         payload?.optString("error", "login failed") ?: "login failed"
                     }
@@ -3455,7 +3063,6 @@ class ApiClient(
                 .url(endpoint(route))
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer $adminSessionToken")
-                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("X-Api-Token", token)
@@ -3496,7 +3103,7 @@ class ApiClient(
     fun adminReadFile(adminSessionToken: String, relPath: String): AdminFileReadResult {
         val (ok, rendered) = adminJsonPost(
             adminSessionToken,
-            "/api/v1/admin/source/read",
+            "/api/v1/admin/files/read",
             JSONObject().put("path", relPath)
         )
         return if (!ok) {
@@ -3504,50 +3111,34 @@ class ApiClient(
         } else {
             val payload = runCatching { JSONObject(rendered) }.getOrNull()
             if (payload != null && payload.optBoolean("ok")) {
-                AdminFileReadResult(
-                    ok = true,
-                    content = payload.optString("content", ""),
-                    sha = payload.optString("sha", ""),
-                    message = "Loaded ${payload.optString("path", relPath)} from ${payload.optString("repository", "Official")}."
-                )
+                AdminFileReadResult(ok = true, content = payload.optString("content", ""), message = "file loaded")
             } else {
                 AdminFileReadResult(ok = false, content = "", message = rendered)
             }
         }
     }
 
-    fun adminValidateFile(adminSessionToken: String, relPath: String, content: String): String {
+    fun adminWriteFile(adminSessionToken: String, relPath: String, content: String): String {
         val (_ok, rendered) = adminJsonPost(
             adminSessionToken,
-            "/api/v1/admin/source/validate",
-            JSONObject().put("path", relPath).put("content", content)
+            "/api/v1/admin/files/write",
+            JSONObject().put("path", relPath).put("content", content).put("deploy", true)
         )
         return rendered
     }
 
-    fun adminWriteFile(adminSessionToken: String, relPath: String, content: String, expectedSha: String): String {
-        return try {
-            val body = JSONObject()
-                .put("path", relPath)
-                .put("content", content)
-                .put("expected_sha", expectedSha)
-            val request = Request.Builder()
-                .url(endpoint("/api/v1/admin/source/save"))
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer $adminSessionToken")
-                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
-                .post(body.toString().toRequestBody("application/json".toMediaType()))
-                .build()
-            client.newCall(request).execute().use { response ->
-                renderApiResult(response, response.body?.string().orEmpty())
-            }
-        } catch (error: Exception) {
-            "source commit error: ${error.message ?: "unknown error"}"
-        }
+    fun adminDeletePath(adminSessionToken: String, relPath: String): String {
+        val (_ok, rendered) = adminJsonPost(
+            adminSessionToken,
+            "/api/v1/admin/files/delete",
+            JSONObject().put("path", relPath)
+        )
+        return rendered
     }
 
-    fun adminSourceStatus(adminSessionToken: String): String {
-        val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/source/status")
+    fun adminListFiles(adminSessionToken: String, relPath: String): String {
+        val safePath = android.net.Uri.encode(relPath)
+        val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/files/list?path=$safePath")
         return rendered
     }
 
@@ -3566,85 +3157,39 @@ class ApiClient(
     }
 
     fun adminInquiriesList(adminSessionToken: String): String {
-        if (adminSessionToken.startsWith("local-admin-")) {
-            return offlineAdminLog("inquiries")
-        }
         val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/inquiries/list")
         return rendered
     }
 
     fun adminLogsList(adminSessionToken: String): String {
-        if (adminSessionToken.startsWith("local-admin-")) {
-            return offlineAdminLog("admin logs")
-        }
         val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/logs/list?limit=300")
         return rendered
     }
 
     fun adminSalesList(adminSessionToken: String): String {
-        if (adminSessionToken.startsWith("local-admin-")) {
-            return offlineAdminLog("sales")
-        }
         val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/sales/list")
         return rendered
     }
 
     fun adminDashboardState(adminSessionToken: String): String {
-        if (adminSessionToken.startsWith("local-admin-")) {
-            return JSONObject()
-                .put("ok", true)
-                .put("mode", "offline")
-                .put("message", "Local admin session is active. Live website sales, reference, and inquiry logs require internet.")
-                .toString(2)
-        }
         val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/dashboard/state")
         return rendered
     }
 
-    fun adminReferenceLog(adminSessionToken: String): String {
-        if (adminSessionToken.startsWith("local-admin-")) {
-            return offlineAdminLog("reference pool")
-        }
-        val (_ok, rendered) = adminGet(adminSessionToken, "/api/v1/admin/reference/list")
+    fun adminRecordSale(
+        adminSessionToken: String,
+        itemName: String,
+        amount: String,
+        customerEmail: String
+    ): String {
+        val body = JSONObject()
+            .put("item_name", itemName)
+            .put("amount", amount)
+            .put("currency", "USD")
+            .put("payment_provider", "paypal")
+            .put("customer_email", customerEmail)
+        val (_ok, rendered) = adminJsonPost(adminSessionToken, "/api/v1/admin/sales/record", body)
         return rendered
-    }
-
-    fun adminExport(adminSessionToken: String, kind: String): AdminExportResult {
-        val route = when (kind) {
-            "site" -> "/api/v1/admin/export/site"
-            "tracks" -> "/api/v1/admin/export/tracks"
-            else -> return AdminExportResult(false, message = "unsupported export type")
-        }
-        return try {
-            val request = Request.Builder()
-                .url(endpoint(route))
-                .addHeader("Authorization", "Bearer $adminSessionToken")
-                .get()
-                .build()
-            client.newCall(request).execute().use { response ->
-                val content = response.body?.string().orEmpty()
-                val filename = response.header("Content-Disposition")
-                    ?.substringAfter("filename=", "")
-                    ?.trim()
-                    ?.trim('"')
-                    .orEmpty()
-                    .ifBlank { "aifred-$kind-export-${System.currentTimeMillis()}.json" }
-                if (response.isSuccessful) AdminExportResult(true, filename, content, "export ready")
-                else AdminExportResult(false, message = runCatching { JSONObject(content).optString("error") }.getOrDefault("export failed (${response.code})"))
-            }
-        } catch (error: Exception) {
-            AdminExportResult(false, message = "export failed: ${error.message ?: "network error"}")
-        }
-    }
-
-    private fun offlineAdminLog(name: String): String {
-        return JSONObject()
-            .put("ok", true)
-            .put("mode", "offline")
-            .put("log", name)
-            .put("items", JSONArray())
-            .put("message", "Offline admin access is active. $name sync requires internet and an online admin session.")
-            .toString(2)
     }
 
     private fun copyUriToTempFile(
@@ -3665,6 +3210,49 @@ class ApiClient(
             }
         }
         return Pair(tempFile, uploadName)
+    }
+
+    fun adminUploadFile(
+        contentResolver: android.content.ContentResolver,
+        uri: Uri,
+        adminSessionToken: String,
+        targetPath: String
+    ): String {
+        return try {
+            val copied = copyUriToTempFile(contentResolver, uri, "AIFRED_asset_upload")
+                ?: return "cannot open file"
+            val (tempFile, uploadName) = copied
+            val mime = contentResolver.getType(uri).orEmpty().ifBlank { "application/octet-stream" }
+            val fileBody = tempFile.asRequestBody(mime.toMediaType())
+            val multipart = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("path", targetPath)
+                .addFormDataPart("file", uploadName, fileBody)
+                .build()
+
+            val request = Request.Builder()
+                .url(endpoint("/api/v1/admin/files/upload"))
+                .addHeader("Authorization", "Bearer $adminSessionToken")
+                .apply {
+                    if (token.isNotBlank()) {
+                        addHeader("X-Api-Token", token)
+                    }
+                }
+                .post(multipart)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val raw = response.body?.string().orEmpty()
+                tempFile.delete()
+                if (response.isSuccessful) {
+                    "Uploaded ${targetPath.trim()} from $uploadName"
+                } else {
+                    "upload failed: ${raw.ifEmpty { "unknown error" }}"
+                }
+            }
+        } catch (error: Exception) {
+            "upload network error: ${error.message ?: "unknown error"}"
+        }
     }
 
     fun uploadReferenceTrack(
@@ -3690,7 +3278,6 @@ class ApiClient(
             val request = Request.Builder()
                 .url(endpoint("/api/v1/admin/reference/upload"))
                 .addHeader("Authorization", "Bearer $adminSessionToken")
-                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("X-Api-Token", token)
@@ -3742,7 +3329,6 @@ class ApiClient(
             val request = Request.Builder()
                 .url(endpoint("/api/v1/admin/catalog/upload"))
                 .addHeader("Authorization", "Bearer $adminSessionToken")
-                .addHeader("Idempotency-Key", UUID.randomUUID().toString())
                 .apply {
                     if (token.isNotBlank()) {
                         addHeader("X-Api-Token", token)

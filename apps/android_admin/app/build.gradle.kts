@@ -21,17 +21,16 @@ android {
         applicationId = "com.aifred.admin"
         minSdk = 29
         targetSdk = 35
-        versionCode = 243
+        versionCode = 230
         versionName = "2.3.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         val configuredBaseUrl = (project.findProperty("AIFRED_BASE_URL") as String?)
             ?.trim()
-            ?.ifEmpty { "https://north3rnlight3r.com" }
+            ?.ifEmpty { "https://www.north3rnlight3r.com" }
             ?: localProps.getProperty("aifredBaseUrl")
                 ?.trim()
-                ?.ifEmpty { "https://north3rnlight3r.com" }
-            ?: "https://north3rnlight3r.com"
+                ?.ifEmpty { "https://www.north3rnlight3r.com" }
+            ?: "https://www.north3rnlight3r.com"
 
         val configuredToken = (project.findProperty("AIFRED_API_TOKEN") as String?)
             ?.trim()
@@ -67,13 +66,6 @@ android {
         buildConfig = true
     }
 
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -106,8 +98,4 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test:runner:1.6.2")
-    androidTestImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
