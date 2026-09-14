@@ -6,6 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 
 
 [vars]
+AIFRED_ADMIN_USERNAME = "North3rnLight3r"
+AIFRED_ADMIN_PASSWORD = ""
+AIFRED_ADMIN_PASSWORD_SHA256 = "a82a47b7c18616ff0420d53b4f46b1015f173e38b5d2718c992bee7fc826ddb3"
+AIFRED_ADMIN_SESSION_SECRET = "supersecretadminsessionkey"
 AIFRED_PUBLIC_ORIGIN = "https://north3rnlight3r.com"
 AIFRED_API_BASE_URL = "https://north3rnlight3r.com"
 AIFRED_GITHUB_REPO = "kaeganscott26/AIFRED_Official-"
