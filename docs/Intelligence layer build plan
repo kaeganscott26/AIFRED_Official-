@@ -1,0 +1,1575 @@
+# AIFRED Intelligence Layer — Build Plan
+
+[AIFRED GitHub repository](https://github.com/kaeganscott26/AIFRED?utm_source=chatgpt.com)
+
+First: understand what you're actually building
+
+The architecture already defines this pipeline:
+
+DAW audio
+    ↓
+shared DSP analyzer
+    ↓
+EngineSnapshot
+    ↓
+BufferHunter
+    ↓
+ObservationSnapshot
+    ↓
+aifred_filter
+    ↓
+FilteredMixContext
+    ↓
+=============================
+      INTELLIGENCE LAYER
+=============================
+    ↓
+IntelligenceCore
+    ↓
+context assembly
+    ↓
+read-only tools
+    ↓
+evidence/policy
+    ↓
+provider
+    ↓
+structured response
+    ↓
+validated user-facing answer
+
+That boundary is very important.
+
+The intelligence layer does not analyze raw audio.
+
+It does not calculate LUFS.
+
+It does not calculate crest factor.
+
+It does not invent DSP measurements.
+
+It receives FilteredMixContext and reasons about what the existing DSP system already measured. That's explicitly the architecture law in the repo.
+
+So your first mental model should be:
+
+> DSP tells AIFRED what is happening. Intelligence figures out what that means.
+
+
+
+That's the whole game.
+
+
+---
+
+PHASE 1 — THIS IS WHERE YOU START
+
+The repo calls Phase 1:
+
+> Grounded conversational intelligence
+
+
+
+The question it is supposed to answer is:
+
+> "What is happening in the mix?"
+
+
+
+Phase 1 consists of:
+
+1. IntelligenceCore
+
+
+2. contracts
+
+
+3. context builder
+
+
+4. read-only tools
+
+
+5. evidence policy
+
+
+6. provider interface/router
+
+
+7. structured response validation
+
+
+8. tests
+
+
+
+And nothing else yet.
+
+Do NOT start SQLite.
+
+Do NOT start ten-session memory.
+
+Do NOT start DAW topology.
+
+Do NOT start autonomous agents.
+
+Do NOT start GUI work.
+
+Those are Phase 2–4.
+
+
+---
+
+STEP 0 — Make a branch
+
+Before touching anything:
+
+git checkout main
+git pull
+git checkout -b intelligence/phase-1
+
+Then verify:
+
+git status
+
+You want:
+
+On branch intelligence/phase-1
+nothing to commit, working tree clean
+
+Commit after every meaningful piece.
+
+I would use commits like:
+
+intelligence: define phase 1 contracts
+intelligence: implement context packet builder
+intelligence: implement read-only mix tools
+intelligence: implement evidence policy
+intelligence: implement provider boundary
+intelligence: implement intelligence core
+intelligence: validate response plans
+intelligence: add phase 1 contract tests
+
+This will make debugging WAY easier without Codex.
+
+
+---
+
+STEP 1 — Inspect the existing DSP boundary FIRST
+
+Before writing intelligence code, open:
+
+shared-dsp/include/aifred/Filter.h
+shared-dsp/src/Filter.cpp
+docs/AIFRED_FILTER.md
+
+FilteredMixContext is the official boundary.
+
+The repo's existing implementation shows:
+
+FilteredMixContext Filter::apply(
+    const ObservationSnapshot& o,
+    const ReferenceDistribution* reference
+)
+
+and the context contains the observation data plus reference compatibility information.
+
+Your job here
+
+Do not change the DSP.
+
+Read the actual structure and make yourself a little map:
+
+FilteredMixContext
+├── observation
+├── referenceCompatibility
+├── ...
+
+Then inspect exactly what:
+
+ObservationSnapshot
+
+contains.
+
+You need to know what facts AIFRED already possesses.
+
+For example, you may find things corresponding to:
+
+LUFS
+true peak
+RMS
+crest factor
+dynamic range
+stereo width
+correlation
+spectral bands
+tone balance
+reference relationship
+profile
+validity
+freshness
+
+But don't assume those names.
+
+Use the actual structs.
+
+This is your source of truth.
+
+
+---
+
+STEP 2 — Build the contracts
+
+Go into:
+
+models/aifred/intelligence/contracts/
+
+The repo already specifies the contract families:
+
+IntelligenceRequest
+IntelligenceResponse
+
+EvidenceRef
+Claim
+ClaimConfidence
+
+ToolRequest
+ToolResult
+
+SessionEvent
+SessionSummary
+
+MemoryRecord
+
+DawContext
+
+MaintenanceReport
+
+For Phase 1, however, you don't need all of those.
+
+Start with:
+
+IntelligenceRequest
+IntelligenceResponse
+EvidenceRef
+Claim
+ToolRequest
+ToolResult
+
+Leave:
+
+SessionEvent
+SessionSummary
+MemoryRecord
+DawContext
+MaintenanceReport
+
+for later.
+
+
+---
+
+STEP 3 — Define IntelligenceRequest
+
+Think of this as:
+
+> "A user asked AIFRED a question about this particular mix state."
+
+
+
+Something conceptually like:
+
+struct IntelligenceRequest
+{
+    RequestId requestId;
+
+    std::string question;
+
+    ProfileId profileId;
+
+    ObservationIdentity observationIdentity;
+
+    ReferenceState reference;
+
+    FilteredMixContext context;
+
+    ConversationTurn conversation;
+};
+
+The exact types should follow whatever identity types already exist in AIFRED.
+
+Do not invent a second identity system.
+
+That's one of the architectural rules:
+
+> every contract needs enough identity to reject stale/incompatible data.
+
+
+
+
+---
+
+STEP 4 — Define evidence
+
+This is one of the most important pieces of the entire system.
+
+AIFRED needs to know:
+
+> "Why am I allowed to say this?"
+
+
+
+So create something conceptually like:
+
+enum class ClaimClass
+{
+    fact,
+    supportedInference,
+    possibleExplanation,
+    unknown
+};
+
+Those four categories are explicitly defined by the architecture.
+
+Then:
+
+struct EvidenceRef
+{
+    std::string source;
+    std::string field;
+    std::string observationId;
+};
+
+And:
+
+struct Claim
+{
+    ClaimClass classification;
+    std::string text;
+
+    std::vector<EvidenceRef> evidence;
+
+    float confidence;
+};
+
+Now AIFRED can distinguish:
+
+Fact
+
+The mix has a low stereo correlation value.
+
+Directly measured.
+
+Supported inference
+
+This suggests the stereo image may have reduced mono compatibility.
+
+Reasonable interpretation.
+
+Possible explanation
+
+A wide chorus, phase rotation, or other stereo processing could contribute.
+
+Possible, but not proven.
+
+Unknown
+
+AIFRED cannot determine which plugin caused this behavior from the available data.
+
+That's exactly the kind of honesty you want.
+
+
+---
+
+STEP 5 — Build the context packet
+
+Go into:
+
+models/aifred/intelligence/context/
+
+The architecture is very explicit here:
+
+> The context builder chooses the smallest relevant valid packet.
+
+
+
+It does NOT dump everything into the LLM.
+
+Think:
+
+User question
+      ↓
+What information is relevant?
+      ↓
+retrieve only that
+      ↓
+validate freshness
+      ↓
+validate identity
+      ↓
+check reference compatibility
+      ↓
+build context packet
+
+For example:
+
+User:
+
+Why does my mix feel thin?
+
+You don't necessarily need:
+
+every metric
+every historical session
+every spectrum bin
+every reference
+every conversation
+
+You might need:
+
+low/mid/high balance
+spectral distribution
+dynamics
+reference relationship
+profile
+observation validity
+
+
+---
+
+STEP 6 — Give yourself a ContextBuilder
+
+Conceptually:
+
+class ContextBuilder
+{
+public:
+
+    ContextPacket build(
+        const IntelligenceRequest& request
+    );
+};
+
+Internally it should do something like:
+
+receive request
+    ↓
+validate observation
+    ↓
+validate profile
+    ↓
+validate reference
+    ↓
+determine relevant evidence
+    ↓
+select fields
+    ↓
+attach provenance
+    ↓
+enforce size budget
+    ↓
+return ContextPacket
+
+Critical rule
+
+The context builder does not interpret.
+
+It selects.
+
+That's important.
+
+Bad:
+
+if (bassIsWeak)
+    packet.problem = "weak bass";
+
+Good:
+
+packet.add(
+    EvidenceRef{
+        "FilteredMixContext",
+        "lowFrequencyEnergy",
+        observationId
+    }
+);
+
+Let policy/reasoning determine what that means.
+
+
+---
+
+STEP 7 — Build the Phase 1 tools
+
+Go into:
+
+models/aifred/intelligence/tools/
+
+The scaffolding already specifies the initial tool families.
+
+Start with five.
+
+Tool 1 — Current mix state
+
+get_current_mix_state
+
+Returns the validated current mix context.
+
+
+---
+
+Tool 2 — Metric detail
+
+get_metric_detail
+
+Example:
+
+metric = "loudness"
+metric = "dynamics"
+metric = "stereo"
+metric = "correlation"
+
+
+---
+
+Tool 3 — Spectrum detail
+
+get_spectrum_region
+
+For example:
+
+20–60 Hz
+60–120 Hz
+120–250 Hz
+250–500 Hz
+500 Hz–1 kHz
+1–2 kHz
+2–5 kHz
+5–10 kHz
+10–20 kHz
+
+Again: use the actual existing AIFRED representation, don't invent a competing analyzer.
+
+
+---
+
+Tool 4 — Reference relationship
+
+get_reference_status
+
+This must understand:
+
+no reference
+compatible reference
+incompatible reference
+reference unavailable
+
+Because the architecture explicitly forbids making reference claims when the reference is incompatible.
+
+
+---
+
+Tool 5 — Observation/profile status
+
+get_observation_status
+
+This answers:
+
+Is the observation valid?
+
+Is it fresh?
+
+What profile produced it?
+
+What data is unavailable?
+
+
+---
+
+STEP 8 — Make the tools READ ONLY
+
+This is a hard wall.
+
+The tool layer explicitly says the model may request facts but may not create facts.
+
+So Phase 1 tools can:
+
+READ
+READ
+READ
+READ
+
+They cannot:
+
+change EQ
+change compressor
+change gain
+change routing
+change plugin parameters
+mute
+solo
+automate
+
+And absolutely don't give the LLM generic:
+
+shell
+filesystem
+network
+
+access.
+
+The architecture specifically forbids that without a separately approved architecture change.
+
+
+---
+
+STEP 9 — Build Policy
+
+Now:
+
+models/aifred/intelligence/policy/
+
+This is where AIFRED determines:
+
+> "What am I actually allowed to conclude?"
+
+
+
+The four claim classes become your backbone.
+
+Your policy engine should answer things like:
+
+canMakeClaim(...)
+canCompareReference(...)
+isObservationFresh(...)
+isEvidenceSufficient(...)
+canRecommend(...)
+
+For example:
+
+Observation says:
+correlation = -0.4
+
+Allowed:
+"Stereo correlation is relatively low."
+
+Potentially allowed:
+"This may reduce mono compatibility."
+
+NOT allowed:
+"Your chorus plugin is causing phase cancellation."
+
+Because AIFRED doesn't know that.
+
+That distinction is the heart of the intelligence layer.
+
+
+---
+
+STEP 10 — Implement "no change indicated"
+
+This is actually a huge deal.
+
+You don't want AIFRED to become:
+
+> "AI that always finds something wrong."
+
+
+
+The repo explicitly says AIFRED must be able to conclude that the mix is behaving well and no correction is indicated.
+
+So make this a first-class response state:
+
+enum class RecommendationState
+{
+    investigate,
+    recommendation,
+    noChangeIndicated,
+    insufficientEvidence
+};
+
+This is better than forcing every response into:
+
+PROBLEM → FIX
+
+
+---
+
+STEP 11 — Build the provider boundary
+
+Go into:
+
+models/aifred/intelligence/providers/
+
+The model should be a replaceable reasoning engine.
+
+That's one of the strongest architectural decisions in this repo.
+
+Conceptually:
+
+class IIntelligenceProvider
+{
+public:
+
+    virtual ProviderResponse reason(
+        const ProviderRequest&
+    ) = 0;
+
+    virtual ~IIntelligenceProvider() = default;
+};
+
+Then:
+
+OpenAIProvider
+OllamaProvider
+MockProvider
+
+can all implement it.
+
+Your IntelligenceCore should NOT care which one is running.
+
+
+---
+
+STEP 12 — Make a MOCK provider FIRST
+
+This is extremely important since you're building without Codex/Plus.
+
+Before you even connect a real model, create:
+
+MockIntelligenceProvider
+
+It returns deterministic responses.
+
+Example:
+
+{
+  "claims": [
+    {
+      "class": "fact",
+      "text": "The current observation shows elevated high-frequency energy.",
+      "evidence": ["spectral.high"]
+    }
+  ],
+  "recommendationState": "investigate"
+}
+
+Now you can test your entire architecture without:
+
+OpenAI
+Ollama
+internet
+API keys
+
+That is much easier.
+
+
+---
+
+STEP 13 — Build IntelligenceCore
+
+Now finally:
+
+models/aifred/intelligence/core/
+
+This is the conductor.
+
+The README gives its intended responsibilities very clearly.
+
+Your flow should be:
+
+IntelligenceRequest
+        ↓
+IntelligenceCore
+        ↓
+validate request
+        ↓
+ContextBuilder
+        ↓
+ToolRegistry
+        ↓
+Policy
+        ↓
+Provider
+        ↓
+ProviderResponse
+        ↓
+ResponseValidator
+        ↓
+IntelligenceResponse
+
+In pseudocode:
+
+IntelligenceResponse IntelligenceCore::answer(
+    const IntelligenceRequest& request)
+{
+    validateRequest(request);
+
+    auto context =
+        contextBuilder.build(request);
+
+    auto availableTools =
+        tools.describeAvailable(context);
+
+    auto policy =
+        policyEngine.buildPolicy(context);
+
+    auto providerRequest =
+        promptBuilder.build(
+            request,
+            context,
+            availableTools,
+            policy
+        );
+
+    auto providerResponse =
+        provider.reason(providerRequest);
+
+    auto validated =
+        responseValidator.validate(
+            providerResponse,
+            context,
+            policy
+        );
+
+    return validated;
+}
+
+That is the centerpiece.
+
+
+---
+
+STEP 14 — The response validator is your hallucination firewall
+
+This is probably the most important component after IntelligenceCore.
+
+The repo literally describes response/ as the:
+
+> hallucination firewall between model output and user-visible guidance.
+
+
+
+The model says:
+
+Your low end is weak because your kick is masking your bass.
+
+The validator asks:
+
+Do we have evidence that:
+    low end is weak?
+        YES
+
+Do we have evidence that:
+    kick is masking bass?
+        NO
+
+Therefore:
+    reject/rewrite causal claim.
+
+That's the architecture you want.
+
+The model is not trusted.
+
+The model proposes reasoning.
+
+AIFRED validates it.
+
+
+---
+
+STEP 15 — Structure the response
+
+Don't let the model return arbitrary prose as its authoritative result.
+
+Have it produce something conceptually like:
+
+struct IntelligenceResponse
+{
+    std::string answer;
+
+    std::vector<Claim> findings;
+
+    RecommendationState recommendation;
+
+    std::vector<EvidenceRef> evidence;
+
+    std::vector<std::string> unknowns;
+
+    std::vector<std::string> investigationAreas;
+};
+
+Then:
+
+model output
+     ↓
+parse
+     ↓
+validate claims
+     ↓
+validate evidence
+     ↓
+validate uncertainty
+     ↓
+construct response plan
+     ↓
+personality renderer
+     ↓
+user
+
+The personality layer gets to make it sound like AIFRED.
+
+It does not get to invent additional facts.
+
+
+---
+
+STEP 16 — Only THEN connect OpenAI/Ollama
+
+Once the mock provider works:
+
+MockProvider
+     ↓
+works
+     ↓
+OpenAIProvider
+     ↓
+works
+     ↓
+OllamaProvider
+
+The provider adapter handles:
+
+HTTP
+serialization
+timeouts
+cancellation
+token limits
+tool-call normalization
+errors
+
+The rest of AIFRED shouldn't know any of that.
+
+The provider README explicitly says provider-specific transport/protocol details belong behind that boundary.
+
+
+---
+
+STEP 17 — Connect it to AifredIntelligenceHost
+
+This is the existing transport layer.
+
+The repo explicitly says:
+
+> Existing AifredIntelligenceHost remains lifecycle/HTTP/settings transport.
+
+
+
+The new providers/ layer becomes the reasoning boundary behind it.
+
+So don't rip out the host.
+
+Think:
+
+GUI
+ ↓
+AifredIntelligenceHost
+ ↓
+IntelligenceCore
+ ↓
+Provider
+ ↓
+OpenAI/Ollama
+
+
+---
+
+STEP 18 — Your FIRST end-to-end test
+
+Don't start with some huge intelligent conversation.
+
+Make one dumb test:
+
+User
+
+Why is my mix so bright?
+
+DSP
+
+Produces:
+
+FilteredMixContext
+
+with actual measurements.
+
+ContextBuilder
+
+Selects:
+
+spectral information
+profile
+observation freshness
+reference state
+
+Tools
+
+Expose those facts.
+
+Provider
+
+Reasons:
+
+The current observation shows elevated high-frequency energy.
+
+Validator
+
+Checks:
+
+Is that supported?
+YES.
+
+Does it claim a specific plugin?
+NO.
+
+Does it claim causation?
+NO.
+
+AIFRED
+
+Outputs:
+
+The current mix is showing elevated high-frequency energy, which can contribute to a brighter tonal balance.
+
+I can't determine from the available evidence whether a specific plugin or track is responsible.
+
+That is your first successful intelligence system.
+
+Not fancy.
+
+But architecturally correct.
+
+
+---
+
+STEP 19 — Then build the failure tests
+
+This is where I'd spend a LOT of time.
+
+Test:
+
+No observation
+
+"I don't have enough valid observation data to assess that."
+
+Stale observation
+
+"The available measurement is stale, so I can't make a reliable current-mix claim."
+
+Incompatible reference
+
+"I can't make a reference comparison from the current reference state."
+
+Unknown plugin cause
+
+"I can identify the measured behavior, but not which plugin caused it."
+
+No problem
+
+"The available evidence doesn't indicate a correction is needed."
+
+Model hallucination
+
+Provider says:
+
+Your Pro-Q 3 at 3.2 kHz is causing the harshness.
+
+but no plugin data exists.
+
+Validator should kill that claim.
+
+
+---
+
+STEP 20 — Phase 1 is DONE when...
+
+Don't judge completion by:
+
+> "The AI sounds smart."
+
+
+
+Judge it by the actual gate.
+
+Phase 1 is complete when:
+
+✓ no unsupported claims
+✓ no invalid reference claims
+✓ stale observations acknowledged
+✓ insufficient evidence acknowledged
+✓ "no correction indicated" works
+✓ providers behave equivalently
+✓ model cannot mutate the mix
+✓ response claims have evidence
+✓ intelligence never runs in processBlock
+✓ provider failure doesn't break DSP
+
+Those are substantially more important than the UI.
+
+
+---
+
+THEN Phase 2
+
+Only after Phase 1 is solid.
+
+You add:
+
+Session
+   ↓
+SessionReducer
+   ↓
+meaningful events
+   ↓
+SessionSummary
+   ↓
+SQLite
+   ↓
+Memory
+
+The memory rule is:
+
+CURRENT SESSION
+      +
+PREVIOUS 9 SESSIONS
+      =
+10 ACTIVE SESSIONS MAX
+
+Session 11 comes in:
+
+11
+ ↓
+evict oldest
+ ↓
+10 active
+
+That's explicitly specified in the architecture.
+
+And do not store every DSP frame.
+
+The repo specifically says long-term memory should contain meaningful session information rather than high-frequency DSP publications.
+
+
+---
+
+THEN Phase 3
+
+Only then:
+
+DAW
+ ↓
+read-only adapter
+ ↓
+DawContext
+ ↓
+IntelligenceCore
+
+AIFRED could eventually know:
+
+Track: Vocals
+Bus: Vocal Bus
+Plugin: Compressor
+Plugin: EQ
+Automation available: yes
+
+But only if the DAW actually exposes that information.
+
+Unknown means:
+
+UNKNOWN
+
+not:
+
+I guess it's probably the vocal compressor.
+
+And still no mutation.
+
+No:
+
+move fader
+change EQ
+bypass plugin
+mute track
+change routing
+
+The Phase 3 contract explicitly forbids those.
+
+
+---
+
+THEN Phase 4
+
+This is where your "agent" idea actually comes in.
+
+Not:
+
+AI agent controls DAW
+
+Instead:
+
+AIFRED maintenance agent
+       ↓
+checks its own state
+       ↓
+detects stale context
+       ↓
+deduplicates
+       ↓
+compacts sessions
+       ↓
+rotates memory
+       ↓
+retrieves relevant context
+       ↓
+builds context packet
+
+The architecture calls this the only agentic phase by default.
+
+That's a really good design.
+
+
+---
+
+Your actual folder roadmap
+
+I'd mentally turn the scaffolding into this:
+
+models/aifred/intelligence/
+│
+├── contracts/
+│   ├── IntelligenceRequest.*
+│   ├── IntelligenceResponse.*
+│   ├── Evidence.*
+│   ├── Claims.*
+│   └── Tools.*
+│
+├── context/
+│   ├── ContextBuilder.*
+│   └── ContextPacket.*
+│
+├── tools/
+│   ├── ToolRegistry.*
+│   ├── MixStateTool.*
+│   ├── MetricTool.*
+│   ├── SpectrumTool.*
+│   ├── ReferenceTool.*
+│   └── ObservationStatusTool.*
+│
+├── policy/
+│   ├── EvidencePolicy.*
+│   ├── ClaimValidator.*
+│   └── RecommendationPolicy.*
+│
+├── providers/
+│   ├── IIntelligenceProvider.*
+│   ├── MockProvider.*
+│   ├── OpenAIProvider.*
+│   └── OllamaProvider.*
+│
+├── prompts/
+│   └── PromptBuilder.*
+│
+├── response/
+│   ├── ResponseValidator.*
+│   └── ResponsePlan.*
+│
+└── core/
+    └── IntelligenceCore.*
+
+That's your Phase 1 battlefield.
+
+Don't touch:
+
+memory/
+session/
+storage/
+daw/
+maintenance/
+
+yet.
+
+They are already architecturally reserved for later phases.
+
+
+---
+
+How I want you to work without Codex
+
+This is actually important.
+
+Do not try to replace Codex by asking me for 2,000 lines of code and pasting the whole thing in.
+
+That's how you end up with a giant debugging mess.
+
+Instead, use me as your architecture navigator / pair programmer.
+
+Your loop should be:
+
+1. Pick ONE component.
+
+2. Show me the actual existing types/files involved.
+
+3. I explain what that component owns.
+
+4. We write ONE small implementation.
+
+5. You compile.
+
+6. You paste the error if it fails.
+
+7. We fix it.
+
+8. Commit.
+
+9. Move to next component.
+
+That fits how this project is structured much better.
+
+
+---
+
+Your first 10 work sessions
+
+If I were sitting beside you, I'd literally give you these tickets:
+
+Session 1
+
+Map the existing DSP boundary
+
+Read:
+
+Filter.h
+Filter.cpp
+AIFRED_FILTER.md
+ObservationSnapshot
+EngineSnapshot
+
+No code changes.
+
+
+---
+
+Session 2
+
+Implement Phase 1 contracts
+
+Create:
+
+IntelligenceRequest
+EvidenceRef
+Claim
+ToolRequest
+ToolResult
+IntelligenceResponse
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 3
+
+Implement ContextPacket
+
+Input:
+
+IntelligenceRequest
+FilteredMixContext
+
+Output:
+
+bounded ContextPacket
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 4
+
+Implement ToolRegistry
+
+Register:
+
+current_mix
+metric_detail
+spectrum_region
+reference_status
+observation_status
+
+Everything read-only.
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 5
+
+Implement EvidencePolicy
+
+Implement:
+
+fact
+supported inference
+possible explanation
+unknown
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 6
+
+Implement MockProvider
+
+No network.
+
+No OpenAI.
+
+No Ollama.
+
+Deterministic responses.
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 7
+
+Implement ResponseValidator
+
+Make it reject:
+
+unsupported claims
+fake evidence
+invalid reference claims
+unsupported causality
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 8
+
+Implement IntelligenceCore
+
+Wire:
+
+request
+ ↓
+context
+ ↓
+tools
+ ↓
+policy
+ ↓
+mock provider
+ ↓
+validator
+ ↓
+response
+
+Compile.
+
+Commit.
+
+
+---
+
+Session 9
+
+Build adversarial tests
+
+Try to make AIFRED lie.
+
+Seriously.
+
+Feed the mock provider bullshit.
+
+Make sure the validator catches it.
+
+
+---
+
+Session 10
+
+Connect the real provider
+
+Only now:
+
+AifredIntelligenceHost
+ ↓
+IntelligenceCore
+ ↓
+OpenAI/Ollama provider
+
+
+---
+
+And here's the big thing I found
+
+The scaffolding is actually much more mature than "some README files waiting for implementation."
+
+You already have the architectural philosophy encoded:
+
+DSP = truth
+Intelligence = interpretation
+Provider = replaceable reasoning
+Policy = what may be claimed
+Tools = what may be observed
+Context = what is relevant
+Response validator = what reaches the user
+Memory = bounded AIFRED-owned state
+DAW adapters = read-only
+Agent = maintains AIFRED's own knowledge
+
+That's a real system design.
+
+The repo explicitly establishes FilteredMixContext as the sole observation boundary and says intelligence must never redefine DSP truth.
+
+So don't redesign the architecture right now.
+
+Your job is to turn the contracts into executable code one layer at a time.
+
+And because you don't have Plus/Codex right now, I'd actually lean into that workflow: you and me building it manually, one compile-sized piece at a time.
+
+Start here tonight
+
+Open:
+
+shared-dsp/include/aifred/Filter.h
+
+Find the complete:
+
+struct FilteredMixContext
+
+and then find:
+
+struct ObservationSnapshot
+
+Paste those definitions here.
+
+That should be our first implementation step. Once I see the actual structs, I can map the Phase 1 contracts directly onto your real AIFRED types instead of giving you generic C++ architecture pseudocode.
