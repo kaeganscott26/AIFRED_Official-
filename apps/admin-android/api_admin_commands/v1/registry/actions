@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "actions": [
+    { "id": "help", "description": "List the current backend command allowlist", "command": "help" }
+    { "id": "health", "description": "Check live website API health", "command": "health" },
+    { "id": "catalog list", "description": "Count beat catalog tracks", "command": "catalog -list" },
+    { "id": "models list", "description": "Show configured OpenAI and Ollama model routes", "command": "models -list" },
+    { "id": "reference stats", "description": "Show analyzer reference-pool status", "command": "reference --stats" },
+    { "id": "deploy status", "description": "Show Cloudflare Pages deployment status", "command": "deploy --status" },
+    { "id": "sales list", "description": "Show historical beta sales", "command": "sale --list" },
+    { "id": "inquiries list", "description": "Show recorded contact inquiries", "command": "inquiries --list" }
+    { "id": "export site", "description": "Show the authenticated site export rout", "command": "export --site" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+    { "": "", "": "" "": "" }
+  ]
+}
