@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>North3rnLight3r.Com</title>
+    <title>AIFRED | North3rnLight3r</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@300;500&family=Space+Grotesk:wght@400;600;100&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./aifred-architecture.css" />
     <script src="./config.js" defer></script>
     <script src="./app.js" defer></script>
   </head>
@@ -24,6 +25,8 @@
       <nav>
         <a href="#beats">Beats</a>
         <a href="#vst">AIFRED</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#analyzer">Analyzer</a>
         <a href="ops.html">OPS</a>
       </nav>
     </header>
@@ -31,32 +34,13 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <h1>Software at the cutting edge</h1>
-          <h2>AI | Audio-Engineering | Computer-Science</h2>
-          <p>
-            AI that leaves the decisions up to you.
-            North3rnLight3r is where those ideas turn into working software.
-          </p>
-
+          <p class="eyebrow">AIFRED VST3 · Intelligent Mix Analysis</p>
+          <h1>Stop guessing what your mix is doing.</h1>
+          <h2>Measure it. Understand it. Make the decision yourself.</h2>
+          <p>AIFRED is a real-time mix analysis system built around measured audio evidence, not AI guesswork.</p>
           <div class="actions">
-            <p>
-            <strong>🚨 AIFRED VST — FINAL BETA GUI REVEAL 🚨></strong>
-            <p 9 months of development></p>
-            <a>AIFRED VST | FINAL BETA RELEASE | FREE</a>
-            <a class="button" href="#vst">DOWNLOAD</a>
-
-Before I built AIFRED, I was just a bedroom producer who had spent 16 years inside FL Studio.
-I could make music.
-I could mix.
-But I could never answer one question:
-“Why does their record sound professional…"
-So eventually, I got tired of guessing.
-I started learning.
-I started breaking down what was actually happening inside a professional  mix.
-And somewhere along the way, I realized something:
-🔥 The biggest difference wasn’t another plugin.
-It was FEEDBACK.
             <a class="btn" href="#vst">See AIFRED</a>
+            <a class="btn ghost" href="#architecture">How it works</a>
             <a class="btn ghost" href="#beats">Browse the Catalog</a>
           </div>
         </div>
@@ -68,92 +52,145 @@ It was FEEDBACK.
       <section id="vst" class="split">
         <div>
           <img src="assets/showcase/aifred_vst2.jpg" alt="AIFRED VST3 interface" />
-
           <p class="eyebrow">AIFRED VST 3.6-Beta</p>
-
-          <h2>
-            A real-time mix analysis tool built to help you understand what your mix is actually doing while you're working on it.
-          </h2>
-
-          <p>
-            AIFRED isn't a one-click mix generator, and it isn't here to throw presets at your track and pretend that fixed something.
-            It measures the audio that's actually coming through the plugin, breaks down what it's seeing, and gives you useful
-            information so you can decide what needs to change.
-          </p>
-
-          <p>
-            The Halo gives you a quick visual fingerprint of the mix — tone, stereo width, loudness, punch, dynamics, and how
-            everything lines up against a reference. The meters are built around real DSP measurements instead of bouncing
-            numbers around just to look active.
-          </p>
-
-          <p>With AIFRED, you can look at:</p>
-
-          <ul>
-            <li>tonal balance</li>
-            <li>stereo width and mono compatibility</li>
-            <li>loudness, peaks, and dynamics</li>
-            <li>punch and density</li>
-            <li>reference alignment</li>
-            <li>A/B comparison between your mix and a target</li>
+          <h2>A production tool built to show you what your mix is actually doing.</h2>
+          <p>AIFRED measures the signal coming through the plugin, organizes those measurements, and turns them into a usable picture of the mix.</p>
+          <p>The Halo is the fast visual read. Behind it is a real DSP pipeline tracking tone, stereo behavior, loudness, dynamics, peaks, punch, density, and reference relationships.</p>
+          <p>No magic “sounds good” button. No fake meter movement. No AI pretending it heard something it never measured.</p>
+          <ul class="architecture-links">
+            <li><a href="#engine">What is the DSP Engine?</a></li>
+            <li><a href="#bufferhunter">What is BufferHunter?</a></li>
+            <li><a href="#filter">What does the Filter do?</a></li>
+            <li><a href="#context">What reaches the AI?</a></li>
+            <li><a href="#intelligence">How does the AI work?</a></li>
+            <li><a href="#boundaries">What can the AI NOT do?</a></li>
           </ul>
-
-          <p>
-            The whole point is to stop bouncing between five different meters trying to figure out what they're all telling you.
-            AIFRED pulls that information together, gives you the bigger picture, and helps you figure out where to look next.
-          </p>
-
-          <p>Less guessing. Better decisions. Better mixes.</p>
         </div>
 
         <div>
           <div class="feature-grid">
-            <article><strong>Real-time Halo-based analysis</strong></article>
-            <article><strong>Reference and compare workflow</strong></article>
-            <article><strong>Visual feedback for tone, width, loudness, and punch</strong></article>
-            <article><strong>Fast mix translation checks</strong></article>
-            <article><strong>Built for real production decisions</strong></article>
+            <article><strong>Measured DSP</strong><span>Audio measurements come from the analysis engine, not the language model.</span></article>
+            <article><strong>Time-aware observations</strong><span>AIFRED works from observed mix behavior instead of one instant snapshot.</span></article>
+            <article><strong>Reference-aware context</strong><span>Your mix can be evaluated against actual reference relationships.</span></article>
+            <article><strong>Evidence-first AI</strong><span>The model interprets structured measurements instead of inventing them.</span></article>
+            <article><strong>Replaceable providers</strong><span>The intelligence layer can use compatible hosted or local model providers.</span></article>
           </div>
-
           <div class="release-panel">
             <strong>AIFRED 3.6 Beta — FREE DOWNLOAD</strong>
-            <div class="pricing-copy" aria-label="AIFRED Beta release">
-              <p>Download the free Windows Beta below.</p>
-            </div>
+            <div class="pricing-copy" aria-label="AIFRED Beta release"><p>Download the free Windows Beta below.</p></div>
             <p class="distribution-status" id="aifred-distribution-status" role="status" aria-live="polite"></p>
-            <div class="download-strip" id="aifred-downloads" aria-label="AIFRED downloads">
-              <a href="https://github.com/kaeganscott26/AIFRED">README</a>
-            </div>
+            <div class="download-strip" id="aifred-downloads" aria-label="AIFRED downloads"><a href="https://github.com/kaeganscott26/AIFRED">README</a></div>
           </div>
-
           <figure class="aifred-product-shot">
-            <img
-              src="assets/showcase/aifred-vst-beta-showcase.png"
-              alt="AIFRED 3.6 Beta running in FL Studio"
-              width="1536"
-              height="864"
-              loading="lazy"
-            />
+            <img src="assets/showcase/aifred-vst-beta-showcase.png" alt="AIFRED 3.6 Beta running in FL Studio" width="1536" height="864" loading="lazy" />
           </figure>
         </div>
       </section>
 
+      <section id="architecture" class="architecture-section">
+        <p class="eyebrow">Inside AIFRED</p>
+        <h2>A real system behind the interface.</h2>
+        <p class="architecture-lead">AIFRED is deliberately split into layers. Each layer has one job, and the AI sits at the end of the evidence pipeline—not at the beginning.</p>
+        <div class="architecture-map" aria-label="AIFRED architecture flow">
+          <a href="#engine"><span>01</span><strong>Audio / DSP Engine</strong><small>Measures the signal</small></a>
+          <a href="#bufferhunter"><span>02</span><strong>BufferHunter</strong><small>Collects observations over time</small></a>
+          <a href="#filter"><span>03</span><strong>Filter</strong><small>Selects relevant evidence</small></a>
+          <a href="#context"><span>04</span><strong>Filtered Mix Context</strong><small>Creates the machine contract</small></a>
+          <a href="#intelligence"><span>05</span><strong>Intelligence Host</strong><small>Validates and orchestrates</small></a>
+          <a href="#provider"><span>06</span><strong>AI Provider</strong><small>Interprets the evidence</small></a>
+        </div>
+      </section>
+
+      <section id="engine" class="learn-page">
+        <p class="eyebrow">01 · DSP Engine</p>
+        <h2>The part that actually measures the audio.</h2>
+        <p><strong>Producer version:</strong> This is where AIFRED gets its numbers.</p>
+        <p>The DSP layer analyzes the audio passing through the plugin and produces the authoritative measurements used by the rest of AIFRED.</p>
+        <div class="learn-grid">
+          <article><strong>Loudness</strong><span>How much overall energy the mix is carrying.</span></article>
+          <article><strong>True Peak</strong><span>How high the reconstructed waveform can actually reach.</span></article>
+          <article><strong>RMS / Crest</strong><span>Sustained energy versus peak behavior—useful for understanding density and punch.</span></article>
+          <article><strong>Stereo / M-S</strong><span>What is happening in the center, the sides, and the relationship between channels.</span></article>
+          <article><strong>Width / Correlation</strong><span>How wide the image is and how safely the channels relate.</span></article>
+          <article><strong>Spectrum</strong><span>Where the mix is putting its energy across frequency.</span></article>
+        </div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
+      <section id="bufferhunter" class="learn-page">
+        <p class="eyebrow">02 · BufferHunter</p>
+        <h2>The bridge between realtime audio and intelligent analysis.</h2>
+        <p><strong>Producer version:</strong> AIFRED cannot stop the audio engine every time the AI wants to ask a question.</p>
+        <p>BufferHunter safely collects rolling observations from the realtime DSP path and makes those observations available to the non-realtime intelligence pipeline.</p>
+        <p>That separation matters. Audio processing stays focused on audio. Analysis and AI can take their time without blocking the plugin's realtime work.</p>
+        <div class="callout">Realtime audio stays realtime. Intelligence gets evidence after the fact.</div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
+      <section id="filter" class="learn-page">
+        <p class="eyebrow">03 · Filter</p>
+        <h2>Not every measurement belongs in every answer.</h2>
+        <p><strong>Producer version:</strong> AIFRED doesn't dump the entire analyzer into an AI prompt.</p>
+        <p>The Filter organizes and smooths the observations, applies the relevant profile and reference context, and selects the evidence that matters to the current question.</p>
+        <p>That keeps the intelligence layer focused, bounded, and tied to what AIFRED actually knows.</p>
+        <div class="callout">The AI gets the useful picture—not a warehouse of raw numbers.</div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
+      <section id="context" class="learn-page">
+        <p class="eyebrow">04 · Filtered Mix Context</p>
+        <h2>The contract between audio analysis and AI.</h2>
+        <p><strong>Producer version:</strong> Think of this as AIFRED's evidence packet.</p>
+        <p>The context contains structured information about the measured mix: identity, session state, timestamps, profile, reference information, metrics, spectrum bands, and relevant session context.</p>
+        <p>The important part is that the AI receives a defined structure instead of having to guess what a pile of numbers means.</p>
+        <div class="callout">DSP truth → structured context → intelligence.</div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
+      <section id="intelligence" class="learn-page">
+        <p class="eyebrow">05 · Intelligence Host</p>
+        <h2>The AI lives outside the realtime audio path.</h2>
+        <p><strong>Producer version:</strong> This is the part that turns measurements into an explanation.</p>
+        <p>AIFRED's intelligence host is a separate .NET process. It receives the structured context, validates the contract, builds an evidence-focused prompt, and routes the request to the configured model provider.</p>
+        <p>The model is told to use the supplied measurements exactly. It is not supposed to recalculate DSP, invent missing values, or claim it listened to raw audio.</p>
+        <div class="callout">AIFRED measures. The model interprets.</div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
+      <section id="provider" class="learn-page">
+        <p class="eyebrow">06 · AI Provider</p>
+        <h2>The brain is replaceable. The evidence is not.</h2>
+        <p><strong>Producer version:</strong> AIFRED is not built around one magic model.</p>
+        <p>The provider layer is separated from the audio and intelligence contracts, so compatible hosted or local providers can be used without rebuilding the DSP system.</p>
+        <p>That means the model can change while AIFRED's measurements remain the authority.</p>
+        <div class="callout">Swap the model. Keep the measurements.</div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
+      <section id="boundaries" class="learn-page">
+        <p class="eyebrow">System Boundaries</p>
+        <h2>What the AI does not control.</h2>
+        <div class="boundary-grid">
+          <article><strong>It does not measure the audio.</strong><span>The DSP engine is authoritative.</span></article>
+          <article><strong>It does not invent missing evidence.</strong><span>Unknown stays unknown.</span></article>
+          <article><strong>It does not alter your mix.</strong><span>No faders, routing, automation, mute, solo, bypass, or plugin-parameter control.</span></article>
+          <article><strong>It does not run inside processBlock.</strong><span>Network, model calls, filesystem work, and heavy reasoning stay out of the realtime audio path.</span></article>
+          <article><strong>It does not pretend to hear.</strong><span>Its answers are grounded in the context AIFRED supplies.</span></article>
+          <article><strong>It does not own the truth.</strong><span>The model interprets AIFRED's evidence; it does not redefine it.</span></article>
+        </div>
+        <a class="back-link" href="#architecture">← Back to architecture</a>
+      </section>
+
       <section id="why">
         <p class="eyebrow">Why AIFRED Exists</p>
-        <h2>Why AIFRED Exists</h2>
-        <p>A lot of tools give you numbers. That doesn't always mean they give you clarity.</p>
-        <p>
-          When you're deep in a session, the hardest part usually is not finding a plugin to throw on
-          the chain. It's figuring out what actually needs attention first.
-        </p>
-        <p>AIFRED helps you answer questions like:</p>
-        <ul>
-          <li>Is this mix too narrow?</li>
-          <li>Is the top end pushing too hard?</li>
-          <li>Is it loud enough or just crushed?</li>
-          <li>Is it actually punching or just dense?</li>
-          <li>How far off is it from the reference?</li>
-          <li>What needs to be fixed first?</li>
+        <h2>Feedback beats guessing.</h2>
+        <p>Professional mixing is full of decisions. The hard part is often knowing what deserves attention first.</p>
+        <p>AIFRED was built to make that feedback visible: measured signal behavior, reference relationships, and an intelligence layer that can explain what the measurements mean.</p>
+        <ul class="architecture-links">
+          <li><a href="#engine">Is the low end carrying too much energy?</a></li>
+          <li><a href="#engine">Is the stereo image behaving safely?</a></li>
+          <li><a href="#context">What evidence supports the answer?</a></li>
+          <li><a href="#intelligence">What should I investigate next?</a></li>
         </ul>
       </section>
 
@@ -161,33 +198,20 @@ It was FEEDBACK.
         <div class="section-head">
           <div>
             <p class="eyebrow">Free Online Mix Analyzer</p>
-            <h2>Upload a file and get a quick read before you ever open the full plugin.</h2>
-            <p>
-              The online analyzer is a simple first-pass tool for checking where your mix is landing.
-            </p>
-            <p>It helps you get a quick outside read on:</p>
+            <h2>Get a quick read before you open the full plugin.</h2>
+            <p>The browser analyzer is a first-pass direction check. It is not a replacement for AIFRED's native DSP pipeline.</p>
             <ul>
               <li>loudness</li>
               <li>tonal balance</li>
               <li>stereo behavior</li>
               <li>general mix translation</li>
             </ul>
-            <p>
-              It is not meant to replace the plugin. It is there to give you a quick direction check
-              and help you catch obvious issues earlier.
-            </p>
-            <p>Drop in a file, run the analysis, and get a quick read on where your mix stands.</p>
             <p id="reference-pool-status" class="reference-pool-status" role="status" aria-live="polite">Connecting to the reference pool…</p>
           </div>
-          <label class="btn">
-            Upload a Mix
-            <input id="analysis-upload" class="hidden-input" type="file" accept="audio/*" />
-          </label>
+          <label class="btn">Upload a Mix<input id="analysis-upload" class="hidden-input" type="file" accept="audio/*" /></label>
         </div>
         <div class="analyzer-grid">
-          <div class="visualizer-shell">
-            <canvas id="spectral-canvas" width="920" height="320" aria-label="Mix analyzer visualizer"></canvas>
-          </div>
+          <div class="visualizer-shell"><canvas id="spectral-canvas" width="920" height="320" aria-label="Mix analyzer visualizer"></canvas></div>
           <div class="analysis-readout">
             <h3 id="analysis-title">No mix loaded</h3>
             <p id="analysis-status">Drop in a file, run the analysis, and get a quick read on where your mix stands.</p>
@@ -198,90 +222,46 @@ It was FEEDBACK.
         </div>
       </section>
 
-       <section id="beats">
+      <section id="beats">
         <div class="section-head">
-          <div>
-            <p class="eyebrow">North3rnLight3r Beat Catalog</p>
-            <h2>Preview the catalog. License the record-ready ideas.</h2>
-            <p>The player uses the audio already packaged with this site. No dead buttons, no ghost catalog.</p>
-          </div>
-          <div class="catalog-controls">
-            <button class="btn" id="catalog-toggle" type="button" aria-expanded="false" aria-controls="catalog-list">Show catalog</button>
-            <button class="btn" id="catalog-refresh" type="btn-ghost">Refresh catalog</button>
-          </div>
+          <div><p class="eyebrow">North3rnLight3r Beat Catalog</p><h2>Preview the catalog. License the record-ready ideas.</h2><p>The player uses the audio already packaged with this site.</p></div>
+          <div class="catalog-controls"><button class="btn" id="catalog-toggle" type="button" aria-expanded="false" aria-controls="catalog-list">Show catalog</button><button class="btn" id="catalog-refresh" type="button">Refresh catalog</button></div>
         </div>
-        <div class="player">
-          <div>
-            <p class="eyebrow">Now playing</p>
-            <h3 id="now-title">Select a beat</h3>
-            <p id="now-meta">BPM and style will appear here.</p>
-          </div>
-          <audio id="audio-player" controls preload="metadata"></audio>
-        </div>
+        <div class="player"><div><p class="eyebrow">Now playing</p><h3 id="now-title">Select a beat</h3><p id="now-meta">BPM and style will appear here.</p></div><audio id="audio-player" controls preload="metadata"></audio></div>
         <div id="catalog-list" class="catalog-grid" aria-live="polite" hidden></div>
       </section>
 
       <section id="offerings">
-        <p class="eyebrow">Everything I Got To Offer</p>
-        <h2>Everything I Got To Offer</h2>
-        <p>This platform is built around the music, the tools, and the work behind both.</p>
+        <p class="eyebrow">North3rnLight3r</p>
+        <h2>Software, music, and production.</h2>
         <div class="feature-grid">
-          <article>
-            <strong>AIFRED VST</strong>
-            <span>A visual mix tool that helps you understand what your mix is doing in real time.</span>
-          </article>
-          <article>
-            <strong>Beat Licensing</strong>
-            <span>Download catalog MP3s free, then contact North3rnLight3r for commercial licensing or custom production.</span>
-          </article>
-          <article>
-            <strong>Mixing and Mastering</strong>
-            <span>Project-based mixing and mastering work built around quality, not rushing the clock.</span>
-          </article>
-          <article>
-            <strong>Beat Services</strong>
-            <span>Custom beat work and production inquiries handled directly through contact.</span>
-          </article>
+          <article><strong>AIFRED VST</strong><span>Measured mix analysis with an evidence-first intelligence layer.</span></article>
+          <article><strong>Beat Licensing</strong><span>Browse the catalog and contact North3rnLight3r for commercial licensing.</span></article>
+          <article><strong>Mixing and Mastering</strong><span>Project-based production work built around the record, not the clock.</span></article>
+          <article><strong>Beat Services</strong><span>Custom production and beat requests handled directly.</span></article>
         </div>
       </section>
 
       <section id="mixing">
         <p class="eyebrow">Mixing and Mastering</p>
         <h2>Pay for quality, not for time.</h2>
-        <p>Mixing and mastering services are charged by the project, not by the hour.</p>
-        <p>
-          The goal is not to drag a session out and run a clock on you. The goal is to get the
-          record where it needs to be and make sure the final result actually sounds right.
-        </p>
-        <p>For project pricing and inquiries, use the contact tab.</p>
+        <p>Mixing and mastering services are charged by the project, with the goal of getting the record where it needs to be.</p>
         <a class="btn" href="#contact">Send an Inquiry</a>
       </section>
 
       <section id="contact" class="contact">
-        <p class="eyebrow">Contact</p>
-        <h2>Contact</h2>
-        <p>
-          For exclusive beat licenses, mixing and mastering inquiries, beat service requests, or
-          general questions, reach out here.
-        </p>
-        <p>
-          This is the place for serious inquiries about the work, the music, and anything on the
-          site that needs a direct response.
-        </p>
+        <p class="eyebrow">Contact</p><h2>Contact North3rnLight3r.</h2>
+        <p>For AIFRED, beat licensing, mixing, mastering, production, or general inquiries.</p>
         <form id="contact-form">
           <input id="contact-name" placeholder="Name" autocomplete="name" required />
           <input id="contact-email" type="email" placeholder="Email" autocomplete="email" required />
           <textarea id="contact-message" rows="5" placeholder="Tell me what you need." required></textarea>
-          <button class="btn" type="submit">Contact North3rnLight3r</button>
+          <button class="btn" type="submit">Send Inquiry</button>
         </form>
         <p id="contact-status"></p>
       </section>
     </main>
 
-    <footer>
-      <span>North3rnLight3r</span>
-      <span>AIFRED VST3 | Beat Catalog | Mixing and Mastering | Beat Services</span>
-      <span>© <span id="year"></span></span>
-    </footer>
+    <footer><span>North3rnLight3r</span><span>AIFRED VST3 | Architecture | Analyzer | Beat Catalog</span><span>© <span id="year"></span></span></footer>
   </body>
 </html>
