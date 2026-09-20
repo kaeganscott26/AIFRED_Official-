@@ -73,7 +73,7 @@ juce_add_binary_data(AifredVisualizationAssets
 set(AIFRED_COMPARISON_SOURCES plugin/src/CaptureComparison.cpp)
 set(AIFRED_INTEGRATION_SOURCES plugin/src/ReferencePoolClient.cpp)
 enable_testing()
-add_subdirectory(shared-dsp)
+
 
 juce_add_plugin(Aifred
     COMPANY_NAME "AIFRED"
@@ -101,7 +101,7 @@ target_sources(Aifred PRIVATE
     plugin/src/PluginProcessor.cpp
     plugin/src/PluginEditor.cpp
     plugin/src/CaptureComparison.cpp
-    plugin/src/MixMemoryIndex
+    plugin/src/MixMemoryIndex.cpp
     ${AIFRED_COMPARISON_SOURCES}
     ${AIFRED_INTEGRATION_SOURCES}
 )
