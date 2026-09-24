@@ -45,7 +45,10 @@ prepare_origin_source() {
 assert_owned_path() {
   local target="$1" parent="$2"
   case "$target" in "$parent"/*) ;; *) echo "Install target escaped owner: $target" >&2; exit 1 ;; esac
-  [[ -L "$target" ]] && { echo "Refusing symlink install target: $target" >&2; exit 1; }
+  if [[ -L "$target" ]]; then
+    echo "Refusing symlink install target: $target" >&2
+    exit 1
+  fi
 }
 
 install_owned_tree() {
