@@ -48,8 +48,9 @@ def recycle(path, parent):
         command = "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory($env:AIFRED_RECYCLE_TARGET, [Microsoft.VisualBasic.FileIO.UIOption]::OnlyErrorDialogs, [Microsoft.VisualBasic.FileIO.RecycleOption]::SendToRecycleBin, [Microsoft.VisualBasic.FileIO.UICancelOption]::ThrowException)"
         subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', command], env=env, check=True)
     elif sys.platform == 'darwin':
-        script = 'on run argv\ntell application "Finder" to delete POSIX file (item 1 of argv)\nend run'
-        subprocess.run(['osascript', '-e', script, str(path)], check=True)
+        trash=Path.home()/'.Trash'
+        trash.mkdir(exist_ok=True)
+        shutil.move(str(path),str(trash/(path.name+'-'+uuid.uuid4().hex)))
     elif shutil.which('gio'):
         subprocess.run(['gio','trash',str(path)],check=True)
     else:
