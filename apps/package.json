@@ -10,10 +10,12 @@
   "dependencies": {
     "esbuild": "0.28.2",
     "workerd": "1.20260829.1",
-    "wrangler": "4.127.1"
+    "wrangler": "4.137.0"
   },
   "allowScripts": {
+    "esbuild@0.28.1": true,
     "esbuild@0.28.2": true,
-    "workerd@1.20260829.1": true
+    "workerd@1.20260829.1": true,
+    "workerd@1.20260921.1": true
   }
 }
