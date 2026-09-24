@@ -3,7 +3,7 @@ import { extname, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const listed = spawnSync("git", ["ls-files", "-co", "--exclude-standard", "-z"], { cwd: root, encoding: "utf8" });
 if (listed.status !== 0) {
   throw new Error(listed.stderr || "git ls-files failed");

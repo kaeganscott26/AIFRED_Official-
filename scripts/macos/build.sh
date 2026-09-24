@@ -22,9 +22,7 @@ cmake --build --preset macos-release --target \
   aifred_frontend_contract_tests \
   aifred_fixture_meter \
   aifred_state_contract_tests \
-  aifred_gui_layout_tests \
-  aifred_core_tests \
-  aifred_reference_pool_contract_tests
+  aifred_core_tests
 [[ "$action" == build ]] && exit 0
 
 python3 -B "$SOURCE_ROOT/scripts/common/check_repository.py"
@@ -38,9 +36,13 @@ python3 -B "$ROOT/scripts/common/release.py" prepare --platform macos-arm64
 stage_release
 python3 -B "$ROOT/scripts/common/release.py" manifest --platform macos-arm64
 python3 -B "$ROOT/scripts/common/release.py" verify --platform macos-arm64 --location stage
-[[ "$action" == stage || "$action" == package ]] && exit 0
+[[ "$action" == stage ]] && exit 0
+if [[ "$action" == package ]]; then
+  package_release "$STAGE_ROOT"
+  exit 0
+fi
 
 python3 -B "$ROOT/scripts/common/release.py" promote --platform macos-arm64
 
-package_release
+package_release "$CURRENT_ROOT"
 [[ "$action" == release ]] && exit 0

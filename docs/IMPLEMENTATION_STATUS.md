@@ -1,103 +1,46 @@
 # Implementation status
 
-> Website/backend status below is current as of 2026-09-12. Use [backend_map.md](../backend_map.md)
-> for the detailed live evidence. The DSP history remains unchanged.
+This file separates working product code from scaffolding and future architecture. A source file or README is not proof that a capability is active.
 
-## Repository/backend migration supplement
+## Implemented and validated
 
-The Official working tree contains one Pages Advanced Mode website/backend, Android and desktop administration clients, and `/ops`. `apps/website/_worker.js` owns static fallthrough and all backend routes; the abandoned `aifred-api` experiment is not the production architecture.
+| Capability | State | Evidence boundary |
+| --- | --- | --- |
+| Shared DSP, `EngineSnapshot`, BufferHunter, `ObservationSnapshot`, `aifred_filter`, `FilteredMixContext` | Implemented | Native contract tests pass on macOS arm64; prior Windows validation is recorded in Git history |
+| Four DSP profiles, spectrum presentation, metric detail, state compatibility | Implemented | Core, frontend, fixture, and state tests pass |
+| Official VST3 | Implemented | macOS arm64 compiles, packages, verifies, and installs; Windows uses the same CMake targets and mirrored release layout |
+| `AifredIntelligenceHost` transport | Implemented | Accepts only filtered context, validates the contract, routes replaceable providers, and passes .NET contract tests |
+| Unified Pages website/backend and `/ops` | Implemented | Local website/backend integrity and module checks pass; live deployment is separate evidence |
+| Android Admin | Implemented | JDK 17/SDK 35 unit tests and debug APK build pass; device installation is separate evidence |
+| Windows Desktop Admin | Implemented | PowerShell/WinForms source and installer are canonical; Windows runtime validation requires Windows |
+| macOS Desktop Admin | Implemented | Swift/AppKit/WebKit application compiles and installs to `~/Applications/AIFRED Admin.app` |
+| Local archive and FORGE export bridge | Implemented | Archive lifecycle tests pass; bounded search/restore and verified-delete ordering are enforced |
+| Shared-source pinning | Implemented | `shared-core.lock.json` pins normalized hashes and the verifier passes |
 
-Current evidence boundaries:
+## Present but not a product capability
 
-| Capability | Status |
-| --- | --- |
-| Unified Pages website/backend source and bindings | IMPLEMENTED; Git deployment `db7d9cf9` from `bba3238` active |
-| Source integrity, module graph, and backend contracts | VALIDATED LOCALLY in the current working tree |
-| Android admin surface | RESTORED Upload tab, server registry/commands, settings/provider controls, catalog/reference/sales/admin routes; APK build/device validation separate |
-| Pages runtime | Healthy on `aifred-site.pages.dev`; existing production secrets/bindings preserved |
-| Current Beta artifacts in R2 | VERIFIED from Beta `out/windows-x64/current`; manifest hashes and R2 keys updated |
-| Unified production deployment | Pages deployment VERIFIED; apex DNS still pending CNAME |
-| Pages source move from Beta to Official | VERIFIED in live Pages source configuration |
-| Beta production retirement | NOT APPLICABLE; Beta remains the public client/release channel |
+| Area | Classification | Meaning |
+| --- | --- | --- |
+| `tools/AifredIntelligenceHost/intelligence/` | Phase 1 design scaffold | Prompt and design material support the existing transport; there is no general `IntelligenceCore`, tool router, session memory, or autonomy |
+| Linux preset | Build scaffold | A preset exists, but Linux compilation, packaging, installation, and host validation have not been performed |
+| macOS distribution signing/notarization | Deployment work | Local unsigned build/install is validated; Developer ID signing and notarization are not implemented |
 
-The sections below record the earlier DSP/release pass. They do not claim current Cloudflare deployment state.
+## Planned and intentionally not implemented
 
-## Task identity
+The fixed intelligence order remains:
 
-- Starting Official HEAD: `2fd2577ffe0e075b301992465643c0e9bf42923f`
-- Starting Beta HEAD: `c19689e213bc012c036aa5d649b2abe671f40fdf`
-- Scope: finish and prove DSP configuration, observation, filtering, adapters, Windows release/install, and documentation
-- Stop gate: no new intelligence layer and no Babylon GUI
+1. grounded conversational intelligence;
+2. current-session context plus nine retained sessions;
+3. read-only DAW/session awareness;
+4. maintenance-only autonomy for AIFRED-owned state.
 
-## Reconstructed starting state
+Phases 2–4, Babylon, DAW mutation, mixer control, audio changes, routing changes, automation, and plugin-parameter control are not implemented. Later intelligence phases cannot be built ahead of their acceptance gates, and mutation capabilities are permanently prohibited.
 
-| Requirement | Starting classification | Evidence |
-|---|---|---|
-| shared DSP analyzer authoritative measurements | DONE | CMake links one [shared DSP library](../shared-dsp/CMakeLists.txt); plugin processors call Pipeline |
-| EngineSnapshot, BufferHunter, ObservationSnapshot | DONE | shared contracts and processor-owned Pipeline |
-| `aifred_filter` to FilteredMixContext | DONE | deterministic Filter and serialized v1 context |
-| old duplicate C++ analyzers | DONE | removed in Git history; no current tracked references |
-| raw AnalysisSnapshot model path | DONE | no current source path; host requires FilteredMixContext |
-| Python brain/bridge runtime | DONE | removed; Python remains release/test tooling only |
-| `.NET AifredEngine` runtime | DONE | removed; AifredIntelligenceHost remains transport |
-| Official/Beta channel ownership | DONE | separate IDs, ports, install/runtime roots |
-| four profile selection/state | PARTIAL | stable names and basic parameters existed; typed separation and full metadata did not |
-| professional spectrum viewport | BROKEN | native and WebView renderers still clamped to `-24..0`; WebView label claimed `-96..0` |
-| click-ready metric metadata | NOT DONE | no unified metric detail contract |
-| stale scaffold cleanup | PARTIAL | old analyzers were gone; unused Official shell directories and legacy local output remained |
-| Windows current artifact | STALE | manifest described Official commit `80a0ffb`, behind starting HEAD |
-| Official installed runtime | NOT DONE | channel VST3 and host were absent at task start |
-| canonical documentation graph | PARTIAL | several required documents were missing and `-24` wording was stale |
+## Evidence still required
 
-## Implemented in this pass
+- DAW scan/load, audio pass-through, state recall, UI, and simultaneous Beta/Official validation on each supported host.
+- Physical Android device installation and authenticated production workflows.
+- Windows compilation on a Windows x64 machine, including installer and startup-host validation.
+- macOS signing/notarization, complete EBU/proprietary-meter comparison, and realtime CPU profiling.
 
-- Shared core 1.2.0 and profile schema 2 with explicit measurement, observation, presentation, metric-policy, CPU, reaction, and stable identity fields
-- four profile acceptance tests that check settings and observable FFT, observation-window, loudness, and live stereo behavior
-- profile-independent `-120/-96/-72/-48 dBFS` presentation range with `-96..0` default and plugin-state persistence
-- presentation changes that retain the current measurement epoch
-- current average and peak full-resolution spectrum feeds in both frontends
-- click-ready metric metadata with raw current value, observed statistics, trend, source, profile identity, and emphasized profile
-- explicit observation and reference-compatibility states in FilteredMixContext
-- removal of unused Official scaffold/update shells and Beta's obsolete global CMake install/CPack path
-- replacement of Beta's composite A/B match score with factual per-metric deltas
-- canonical linked documentation set
-
-## DSP algorithm changes
-
-None. The pass did not change FFT normalization, window coefficients, power integration, RMS, crest, loudness, LRA, true-peak reconstruction, correlation, M/S, balance, width, or BufferHunter statistics. Existing tests supplied no reproducible reason for a formula change.
-
-## Validation record
-
-- Official Windows build and complete non-DAW pipeline: PASS
-- Beta Windows build and complete non-DAW pipeline: PASS
-- native DSP, profile, BufferHunter, filter, Pipeline, frontend, state, pass-through, and SPSC checks: PASS (`100117` core assertions plus contract executables)
-- Official and Beta release-safety suites: PASS (`8` tests per channel)
-- AifredIntelligenceHost transport contracts: PASS in both channels
-- Beta backend/archive suite: PASS (`52` tests)
-- Beta website/API suite: PASS (`35` tests); generated admin references and documentation links synchronized
-- shared-core 1.2.0 inventory and cross-channel parity: PASS (`27` pinned files)
-- independent FFmpeg 9.0 EBU R128 fixture: PASS; AIFRED/FFmpeg results were `-22.5897/-22.6 LUFS`, `-20.0000/-20.0 dBTP`, and `10/10 LU`
-- Official clean committed Windows release and current promotion: PASS (`9` hashed files)
-- Beta clean committed Windows release and current promotion: PASS (`15` hashed files)
-- Official installed VST3 inventory and companion-host inventory versus canonical current: exact match
-- Official host startup registration and `http://127.0.0.1:8788/health`: PASS
-
-The canonical current manifest records the exact final Git SHA and file hashes. The final task report records the VST3 binary hash and confirms repository HEAD, manifest, current artifact, and installed artifact equality.
-
-## Remaining manual validation
-
-See [Testing](TESTING.md). FL Studio, proprietary meter comparisons, the full EBU set, realtime CPU profiling, macOS, and Linux remain manual or platform-specific work.
-
-## Next architecture gate
-
-Complete and stabilize the backend/site ownership migration. The intelligence layer follows that gate; Babylon remains later.
-
-## Related
-
-- [Documentation Hub](README.md)
-- [Repository Map](REPOSITORY_MAP.md)
-- [Cloudflare Migration Checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md)
-- [Architecture](ARCHITECTURE.md)
-- [DSP Configuration](DSP_CONFIGURATION.md)
-- [Testing](TESTING.md)
-- [Future](FUTURE.md)
+See [Build](BUILD.md), [Testing](TESTING.md), [Archive Guide](ARCHIVE_GUIDE.md), and [Future](FUTURE.md).

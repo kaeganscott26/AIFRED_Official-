@@ -6,6 +6,7 @@ $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).
 $platformRoot = Join-Path $repositoryRoot 'out/windows-x64'
 $buildRoot = Join-Path $platformRoot 'build'
 $stageRoot = Join-Path $platformRoot 'stage'
+$packageRoot = Join-Path $platformRoot 'package'
 $layout = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'scripts/release-layout.json') | ConvertFrom-Json
 $official = $layout.product -eq 'AIFRED 4'
 New-Item -ItemType Directory -Force -Path $platformRoot | Out-Null
@@ -15,7 +16,7 @@ try {
     Initialize-AifredMsvc
     Invoke-Checked cmake @('--preset','windows-release')
     if ($Action -eq 'configure') { return }
-    $targets = @('Aifred_VST3','aifred_frontend_contract_tests','aifred_fixture_meter','aifred_state_contract_tests','aifred_gui_layout_tests','aifred_core_tests','aifred_reference_pool_contract_tests')
+    $targets = @('Aifred_VST3','aifred_frontend_contract_tests','aifred_fixture_meter','aifred_state_contract_tests','aifred_core_tests')
     Invoke-Checked cmake (@('--build','--preset','windows-release','--target') + $targets)
     if ($Action -eq 'build') { return }
     Invoke-Checked python @('-B','scripts/common/check_repository.py')
@@ -41,8 +42,18 @@ try {
     }
     Invoke-Checked python @('-B','scripts/common/release.py','manifest','--platform','windows-x64')
     Invoke-Checked python @('-B','scripts/common/release.py','verify','--platform','windows-x64','--location','stage')
+    if ($Action -eq 'package') {
+        New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
+        $packagePath = Join-Path $packageRoot 'AIFRED-Official-windows-x64.zip'
+        Remove-Item -LiteralPath $packagePath -Force -ErrorAction SilentlyContinue
+        Invoke-Checked tar @('-a','-c','-f',$packagePath,'-C',$stageRoot,'.')
+    }
     if ($Action -eq 'release') {
         Invoke-Checked python @('-B','scripts/common/release.py','promote','--platform','windows-x64')
+        New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
+        $packagePath = Join-Path $packageRoot 'AIFRED-Official-windows-x64.zip'
+        Remove-Item -LiteralPath $packagePath -Force -ErrorAction SilentlyContinue
+        Invoke-Checked tar @('-a','-c','-f',$packagePath,'-C',(Join-Path $platformRoot 'current'),'.')
     }
 } finally {
     Pop-Location

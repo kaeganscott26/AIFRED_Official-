@@ -1,4 +1,4 @@
-# AIFRED â†” FORGE Integration
+# AIFRED ↔ FORGE Integration
 
 FORGE is not the long-term raw AIFRED log archive. It retains bounded current operational context and lightweight pointers; Desktop Admin/local AIFRED storage owns history.
 

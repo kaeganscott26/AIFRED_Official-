@@ -1,0 +1,4 @@
+# Copy to local.properties and set only values needed on this machine.
+sdk.dir=
+aifred.admin.username=
+aifred.admin.password=

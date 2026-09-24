@@ -1,7 +1,7 @@
 {
   "status": "IMPLEMENTED",
-  "runtimeChannel": "beta",
-  "hostPort": 8787,
+  "runtimeChannel": "official",
+  "hostPort": 8788,
   "contextSchema": "aifred.filtered-mix.v1",
   "preserveCurrentPluginIds": true,
   "requiredHandshakeFields": [

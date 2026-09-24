@@ -7,17 +7,17 @@ BUILD_ROOT="$OUT_ROOT/build"
 STAGE_ROOT="$OUT_ROOT/stage"
 PACKAGE_ROOT="$OUT_ROOT/package"
 CURRENT_ROOT="$OUT_ROOT/current"
-PLUGIN_BUILD="$BUILD_ROOT/plugin-aifred/Aifred_artefacts/Release/VST3/Aifred.vst3"
+PLUGIN_BUILD="$BUILD_ROOT/Aifred_artefacts/Release/VST3/Aifred.vst3"
 
-channel="beta"
-display_channel="Beta"
+channel="official"
+display_channel="Official"
 PLUGIN_PARENT="$HOME/Library/Audio/Plug-Ins/VST3/AIFRED $display_channel"
 DATA_PARENT="$HOME/Library/Application Support/Aifred/$channel"
 PLUGIN_TARGET="$PLUGIN_PARENT/Aifred.vst3"
 SHARED_DSP_TARGET="$PLUGIN_PARENT/shared-dsp"
 HOST_TARGET="$DATA_PARENT/IntelligenceHost"
 HOST_EXECUTABLE="$HOST_TARGET/AifredIntelligenceHost"
-HOST_LABEL="com.north3rnlight3r.aifred-intelligence-host"
+HOST_LABEL="com.north3rnlight3r.aifred-official-intelligence-host"
 LAUNCH_AGENT="$HOME/Library/LaunchAgents/$HOST_LABEL.plist"
 
 require_macos() {
@@ -39,7 +39,6 @@ prepare_origin_source() {
   local lock_dir="$OUT_ROOT/pipeline.lock.d"
   mkdir "$lock_dir" 2>/dev/null || { echo "Another AIFRED macOS pipeline is running." >&2; exit 1; }
   trap 'rmdir "$OUT_ROOT/pipeline.lock.d" 2>/dev/null || true' EXIT
-  rm -rf "$BUILD_ROOT" "$STAGE_ROOT" "$PACKAGE_ROOT" "$OUT_ROOT/current" "$OUT_ROOT/previous"
   printf '%s\n' "$(git -C "$ROOT" rev-parse HEAD)" > "$OUT_ROOT/commit.txt"
 }
 
@@ -79,23 +78,19 @@ stage_release() {
   mkdir -p "$STAGE_ROOT"
   cp -R "$PLUGIN_BUILD" "$STAGE_ROOT/Aifred.vst3"
   cp -R "$SOURCE_ROOT/shared-dsp" "$STAGE_ROOT/shared-dsp"
-  cp -R "$SOURCE_ROOT/models/aifred" "$STAGE_ROOT/model"
-  cp -R "$SOURCE_ROOT/tools/AifredIntelligenceHost/intelligence" "$STAGE_ROOT/intelligence"
   dotnet publish "$SOURCE_ROOT/tools/AifredIntelligenceHost/AifredIntelligenceHost.csproj" \
     -c Release -r osx-arm64 --self-contained true \
     -p:PublishSingleFile=false -p:IncludeNativeLibrariesForSelfExtract=true \
     -o "$STAGE_ROOT/IntelligenceHost"
-  printf '{"channel":"beta","commit":"%s"}\n' "$(cat "$OUT_ROOT/commit.txt")" > "$STAGE_ROOT/IntelligenceHost/channel.json"
-  cp "$SOURCE_ROOT/config/distribution/aifred-settings.example.json" "$STAGE_ROOT/aifred-settings.example.json"
-  cp "$SOURCE_ROOT/README.md" "$STAGE_ROOT/README.md"
+  printf '{"channel":"official","commit":"%s"}\n' "$(cat "$OUT_ROOT/commit.txt")" > "$STAGE_ROOT/IntelligenceHost/channel.json"
   find "$STAGE_ROOT" \( -name '._*' -o -name '.DS_Store' \) -delete
 }
 
 package_release() {
-  local package_source="$STAGE_ROOT"
-  [[ -d "$CURRENT_ROOT" ]] && package_source="$CURRENT_ROOT"
+  local package_source="${1:-$STAGE_ROOT}"
+  [[ -d "$package_source" ]] || { echo "Package source is missing: $package_source" >&2; exit 1; }
   mkdir -p "$PACKAGE_ROOT"
-  COPYFILE_DISABLE=1 tar -czf "$PACKAGE_ROOT/AIFRED-Beta-macos-arm64.tar.gz" -C "$package_source" .
+  COPYFILE_DISABLE=1 tar -czf "$PACKAGE_ROOT/AIFRED-Official-macos-arm64.tar.gz" -C "$package_source" .
   cp "$OUT_ROOT/commit.txt" "$PACKAGE_ROOT/commit.txt"
-  echo "Created $PACKAGE_ROOT/AIFRED-Beta-macos-arm64.tar.gz"
+  echo "Created $PACKAGE_ROOT/AIFRED-Official-macos-arm64.tar.gz"
 }

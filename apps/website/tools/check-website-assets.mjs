@@ -1,7 +1,7 @@
 import {readFileSync, statSync, readdirSync} from 'node:fs';
 import {resolve, dirname, relative} from 'node:path';
 import {fileURLToPath} from 'node:url';
-const root=resolve(dirname(fileURLToPath(import.meta.url)), '../apps/website');
+const root=resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const catalog=JSON.parse(readFileSync(resolve(root,'assets/data/beat_catalog.json'),'utf8'));
 const references=new Set();
 function add(value) {

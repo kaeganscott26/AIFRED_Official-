@@ -10,7 +10,7 @@
 | Intelligence transport | [`tools/AifredIntelligenceHost`](../tools/AifredIntelligenceHost) |
 | Unified Pages website, backend, and `/ops` | [`apps/website`](../apps/website) |
 | Android and desktop administration | [`apps/admin-android`](../apps/admin-android), [`apps/admin-desktop`](../apps/admin-desktop) |
-| Historical backend migration material | [`infra/cloudflare/aifred-api`](../infra/cloudflare/aifred-api) (not a deploy target) |
+| Retained Cloudflare helper | [`infra/cloudflare/cloudflare`](../infra/cloudflare/cloudflare) (not a second API deploy target) |
 | Release/install automation | [`scripts`](../scripts) |
 | Canonical documentation | [`docs`](README.md) and [shared DSP README](../shared-dsp/README.md) |
 

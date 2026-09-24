@@ -5,14 +5,14 @@ import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {createRequire} from 'node:module';
 
-const root=resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const root=resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const source=join(root,'apps/website');
 const require=createRequire(join(root,'apps/package.json'));
 const {build}=require('esbuild');
 const branch=process.argv[2];
 if(!branch || !/^[a-zA-Z0-9._/-]+$/.test(branch))throw new Error('Provide the Pages branch explicitly.');
 for(const check of ['check-website-modules.mjs','check-website-assets.mjs']) {
- const result=spawnSync(process.execPath,[join(root,'tools',check)],{cwd:root,stdio:'inherit'});
+ const result=spawnSync(process.execPath,[join(root,'apps','website','tools',check)],{cwd:root,stdio:'inherit'});
  if(result.status)process.exit(result.status);
 }
 // Pages does not honor .assetsignore. Package only this source directory's

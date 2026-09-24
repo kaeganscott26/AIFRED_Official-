@@ -5,30 +5,17 @@
 #include "AifredVisualizationAssets.h"
 #endif
 
-
-#include <BinaryData.h>
-#include <juce_audio_formats/juce_audio_formats.h>
-
-#include <array>
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-namespace aifred {
-
-
+namespace
+{
 constexpr int refreshHz = 60;
 
-constexpr float spectrumCeilingDb = 6.0f;
+constexpr float spectrumCeilingDb = 0.0f;
 constexpr float minimumFrequencyHz = 20.0f;
 constexpr float maximumFrequencyHz = 20000.0f;
-constexpr int kDesignWidth = 1360;
-constexpr int kDesignHeight = 820;
-constexpr int kHeaderHeight = 76;
-constexpr int kRightCardHeight = 54;
-juce::FontOptions uiFont(float basePx, float minPx, int style = juce::Font::plain) {
-  return juce::FontOptions(juce::jmax(minPx, basePx), style);
-}
 
 const juce::Colour backgroundTop { 0xff09101a };
 const juce::Colour backgroundBottom { 0xff030609 };
@@ -46,32 +33,6 @@ constexpr std::array<float, 12> frequencyLandmarks {
     20.0f, 40.0f, 80.0f, 160.0f, 315.0f, 630.0f,
     1000.0f, 2000.0f, 4000.0f, 8000.0f, 16000.0f, 20000.0f
 };
-
-juce::Colour accentForMode(AnalysisMode mode) {
-  if (mode == AnalysisMode::Compare) return Colours::green;
-  if (mode == AnalysisMode::Reference) return Colours::violet;
-  return Colours::cyan;
-}
-
-juce::Colour appearanceColour(int appearanceId) {
-  switch (appearanceId) {
-    case 2: return juce::Colour(0xffffcf33);
-    case 3: return juce::Colour(0xff23e3ff);
-    case 4: return juce::Colour(0xffb86cff);
-    case 5: return juce::Colour(0xff496170);
-    default: return juce::Colour(0xff8cff45);
-  }
-}
-
-const char* appearanceName(int appearanceId) {
-  switch (appearanceId) {
-    case 2: return "Pulse";
-    case 3: return "Spectrum Glow";
-    case 4: return "Minimal";
-    case 5: return "Dark / Static";
-    default: return "Aurora";
-  }
-}
 
 juce::Font makeFont(float height, juce::Font::FontStyleFlags style = juce::Font::plain)
 {

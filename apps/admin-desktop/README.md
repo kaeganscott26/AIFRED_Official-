@@ -2,7 +2,9 @@
 
 Desktop Admin combines the authenticated production `/ops` control surface with local AIFRED cold storage. It never contains Cloudflare or admin credentials.
 
-Windows uses `apps/admin-android/tools/windows-admin/AIFRED-Admin-Desktop.ps1`. macOS source is in `macos/`; build locally with `./apps/admin-desktop/macos/build.sh`. Generated application bundles stay under the ignored `apps/admin-desktop/build/` directory.
+Windows uses `apps/admin-android/tools/windows-admin/AIFRED-Admin-Desktop.ps1`. macOS source is in `macos/`; build with `./apps/admin-desktop/macos/build.sh` or build and install to `~/Applications` with `./apps/admin-desktop/macos/install.sh`. Generated application bundles stay under `out/macos-arm64/build/admin/`.
+
+Remove only the installed macOS application with `./apps/admin-desktop/macos/uninstall.sh`. Archive data and local settings are preserved.
 
 Set `AIFRED_REPO_ROOT` when launching an installed desktop client from outside the repository. `AIFRED_API_BASE_URL` may select a development origin; production defaults to `https://north3rnlight3r.com`. Stored legacy forms ending in `/api`, `/api/v1`, or `/v1` are normalized for compatibility.
 

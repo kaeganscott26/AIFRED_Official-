@@ -1,8 +1,8 @@
 # Future architecture
 
-## Next gate: production ownership migration
+## Next gate: grounded intelligence
 
-Complete the staged `/api/*` Worker cutover, move Pages source authority to Official, validate all administration clients, and retain a working Beta rollback before starting the intelligence layer. See the [migration checklist](CLOUDFLARE_MIGRATION_CHECKLIST.md).
+The unified Pages source is now in Official. Production and client evidence must remain separate, but the repository gate for Phase 1 design is open. Complete the typed, evidence-bound grounded conversation layer before any memory work.
 
 ## Later gate: intelligence layer
 
@@ -19,7 +19,7 @@ DAW audio
   -> IntelligenceCore
 ```
 
-The repository does not contain an active intelligence scaffold or runtime. The architecture below remains a future contract until the migration gate passes.
+The repository contains provider transport and a Phase 1 design scaffold. It does not contain a general IntelligenceCore, typed read-only tool execution, session memory, DAW awareness, or autonomous maintenance. Those capabilities remain future contracts until their ordered gates pass.
 
 Permanent rules:
 - intelligence consumes the deterministic `FilteredMixContext` boundary and cannot redefine measurements;

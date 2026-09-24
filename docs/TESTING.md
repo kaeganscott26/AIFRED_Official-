@@ -8,6 +8,12 @@ Official:
 pwsh -NoProfile -File scripts/windows/build.ps1 -Action test
 ```
 
+macOS arm64:
+
+```sh
+./scripts/macos/build.sh test
+```
+
 Beta runs the same C++/.NET/Python checks plus its API/archive Node suites and website checks:
 
 ```powershell
@@ -38,7 +44,8 @@ python -B scripts/common/validate_meter_reference.py
 | Intelligence Host identity and provider routing | [host tests](../tools/AifredIntelligenceHost.Tests/Program.cs) |
 | Repository links/layout and shared parity | [repository check](../scripts/common/check_repository.py), [shared-core check](../scripts/common/check_shared_core.py) |
 | Release failure preservation and ownership | [release tests](../scripts/tests/test_release.py) |
-| Stage/current/install hashes | [release verifier](../scripts/common/release.py), [install ownership](../scripts/common/install-ownership.ps1) |
+| Stage/current/install hashes | [release verifier](../scripts/common/release.py), Windows [install ownership](../scripts/common/install-ownership.ps1), macOS [install ownership](../scripts/macos/common.sh) |
+| Archive rotation/search/restore/prune safety | [archive test](../tests/archive.test.mjs) |
 
 The profile tests compare exact configuration and observable FFT/window/observation/stereo behavior. They do not accept profile names as proof.
 
@@ -54,7 +61,8 @@ The generated FFmpeg fixture compares a 48 kHz stereo 1 kHz two-plateau programm
 - Waves, Voxengo SPAN, FabFilter, and iZotope/Ozone comparisons with matched settings and source audio
 - full EBU loudness test set and true-peak edge cases
 - realtime CPU profiling for all four profiles
-- macOS and Linux build, package, install, and runtime validation
+- Windows x64 revalidation after this repair and Linux build/package/install validation
+- macOS DAW scan/load and signed/notarized distribution validation
 
 ## Related
 

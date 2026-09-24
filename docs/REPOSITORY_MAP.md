@@ -27,8 +27,7 @@ Pages owns both static and API behavior through `_worker.js`, with static fallth
 
 | Path | Responsibility |
 | --- | --- |
-| [`infra/cloudflare/aifred-api`](../infra/cloudflare/aifred-api) | Abandoned split-Worker migration history; reusable schema/tests only, not deploy authority |
-| [`infra/cloudflare/docs`](../infra/cloudflare/docs) | Supporting storage and deployment notes |
+| [`infra/cloudflare/cloudflare`](../infra/cloudflare/cloudflare) | Retained mailer helper; not a second production API router |
 | [`docs/cloudflare`](cloudflare) | Dated recovery inventory and traffic policy |
 
 Target routing:
@@ -41,7 +40,7 @@ Source presence does not prove staging or production deployment. Use the [migrat
 
 ## Phase boundary
 
-This repository contains no active new intelligence layer or Babylon implementation. The stable path ends at `FilteredMixContext -> AifredIntelligenceHost`. Infrastructure convergence must finish before the next intelligence phase starts.
+This repository contains the active host transport and Phase 1 design scaffold, but no general IntelligenceCore, session memory, DAW-awareness layer, maintenance autonomy, or Babylon implementation. The stable path ends at `FilteredMixContext -> AifredIntelligenceHost`.
 
 ## Related
 

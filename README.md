@@ -1,13 +1,13 @@
 # AIFRED Official 4.0.0-alpha.2
 
-AIFRED Official is a transparent Windows x64 VST3 analyzer. The current source implements the measurement, observation, and deterministic filtering machine:
+AIFRED Official is a transparent Windows x64 and locally validated macOS arm64 VST3 analyzer. The current source implements the measurement, observation, and deterministic filtering machine:
 
 ```text
 DAW audio -> shared DSP analyzer -> EngineSnapshot -> BufferHunter
           -> ObservationSnapshot -> aifred_filter -> FilteredMixContext
 ```
 
-The existing `AifredIntelligenceHost` transports filtered context on the Official channel. This phase does not implement a new intelligence layer or the Babylon GUI.
+The existing `AifredIntelligenceHost` transports filtered context on the Official channel. Phase 1 design material is present, but session memory, DAW awareness, autonomous maintenance, and Babylon are not implemented.
 
 The plugin exposes four validated DSP profiles: MIX BALANCED, SPECTRUM SURGICAL, MASTERING PRECISION, and STEREO / PHASE DIAGNOSTIC. Profiles select one shared algorithm library. The default spectrum viewport is `-96..0 dBFS`; `-120`, `-72`, and `-48 dBFS` floors are presentation-only choices. Full-resolution FFT power remains unclipped.
 
@@ -53,6 +53,8 @@ The owned install locations are:
 - host port: `8788`
 
 Generated build and release output belongs under `out/windows-x64`. Do not commit it.
+
+On Apple Silicon, run `./scripts/macos/build.sh release`, `./scripts/macos/install.sh`, and `./apps/admin-desktop/macos/install.sh`. macOS output belongs under `out/macos-arm64` and is locally validated but unsigned. Android Admin builds from the single canonical `apps/admin-android` workspace.
 
 ## Documentation
 

@@ -3,7 +3,7 @@ import { join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const website = join(root, "apps", "website");
 const files = [];
 

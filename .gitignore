@@ -82,3 +82,10 @@ local-model-test/
 # FORGE local metadata
 .forge/metadata.sqlite*
 .forge/
+runtime/
+integrations/forge/exports/
+integrations/forge/archive-workspace/
+
+# Local configuration and retired duplicate Android workspace
+local.properties
+apps/android_admin/
