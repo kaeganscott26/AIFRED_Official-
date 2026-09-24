@@ -49,7 +49,8 @@ assert_owned_path() {
 }
 
 install_owned_tree() {
-  local source="$1" parent="$2" name="$3" target="$parent/$name" candidate="$parent/$name.candidate" previous="$parent/$name.previous"
+  local source="$1" parent="$2" name="$3"
+  local target="$parent/$name" candidate="$parent/$name.candidate" previous="$parent/$name.previous"
   assert_owned_path "$target" "$parent"; assert_owned_path "$candidate" "$parent"; assert_owned_path "$previous" "$parent"
   [[ ! -e "$candidate" && ! -e "$previous" ]] || { echo "Retained installation recovery requires inspection: $target" >&2; exit 1; }
   mkdir -p "$parent"
