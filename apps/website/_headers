@@ -1,6 +1,6 @@
 /
   Cache-Control: public, max-age=0, must-revalidate
-  Content-Security-Policy: default-src 'self'; base-uri 'self'; connect-src 'self' https://north3rnlight3r.com https://www.north3rnlight3r.com; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; img-src 'self' data:; media-src 'self'; object-src 'none'; script-src 'self' https://static.cloudflareinsights.com/beacon.min.js; style-src 'self' https://fonts.googleapis.com; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; connect-src 'self' https://north3rnlight3r.com https://www.north3rnlight3r.com; font-src 'self' https://fonts.gstatic.com; form-action 'self'; frame-ancestors 'self'; img-src 'self' data:; media-src 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' https://fonts.googleapis.com; upgrade-insecure-requests
   Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()
   Referrer-Policy: strict-origin-when-cross-origin
   X-Content-Type-Options: nosniff
@@ -8,7 +8,7 @@
 
 /ops
   Cache-Control: no-store
-  Content-Security-Policy: default-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self'; upgrade-insecure-requests
   Referrer-Policy: no-referrer
   X-Frame-Options: DENY
   X-Robots-Tag: noindex, nofollow, noarchive
